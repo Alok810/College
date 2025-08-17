@@ -3,11 +3,17 @@ import { NavLink, useNavigate } from "react-router-dom";
 
 import homeIcon from "../assets/house.png";
 import leftArrow from "../assets/left.png";
-import rightArrow from "../assets/right.png";
 import profileIcon from "../assets/profile.png";
 import settingsIcon from "../assets/setting.png";
 import logoutIcon from "../assets/logout.png";
 import appearanceIcon from "../assets/appearance.png";
+import rigyaLogo from "../assets/rigya.png";
+
+// ✅ Newly added icons
+import friendIcon from "../assets/friend.png";
+import voiceIcon from "../assets/voice.png";
+import resultIcon from "../assets/result.png";
+import departmentIcon from "../assets/department.png";
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -31,11 +37,12 @@ export default function Sidebar() {
 
   return (
     <aside
-      className={`shadow-lg flex flex-col justify-between transition-all duration-300 ${
+      className={`shadow-xl flex flex-col justify-between transition-all duration-300 ${
         collapsed ? "w-20" : "w-64"
-      } min-h-screen p-4 relative`}
+      } min-h-screen p-4 relative rounded-xl`}
       style={{
-        background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
+        background:
+          "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
       }}
     >
       <div>
@@ -45,17 +52,34 @@ export default function Sidebar() {
             collapsed ? "justify-center" : "justify-between"
           }`}
         >
-          {!collapsed && <h1 className="text-xl font-bold">Rigya</h1>}
-          <button
+          <div
+            className="flex items-center gap-3 cursor-pointer"
             onClick={() => setCollapsed(!collapsed)}
-            className="p-1 hover:bg-gray-200 rounded"
           >
             <img
-              src={collapsed ? rightArrow : leftArrow}
-              alt="Toggle"
-              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+              src={rigyaLogo}
+              alt="Rigya Logo"
+              className="w-10 h-10 min-w-[40px] min-h-[40px] object-contain"
             />
-          </button>
+            {!collapsed && (
+              <h1 className="text-xl font-bold" style={{ color: "#FFA500" }}>
+                Rigya
+              </h1>
+            )}
+          </div>
+
+          {!collapsed && (
+            <button
+              onClick={() => setCollapsed(true)}
+              className="p-1 hover:bg-gray-200 rounded"
+            >
+              <img
+                src={leftArrow}
+                alt="Collapse"
+                className="w-6 h-6 min-w-[24px] min-h-[24px]"
+              />
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
@@ -73,11 +97,70 @@ export default function Sidebar() {
             />
             {!collapsed && "Home"}
           </NavLink>
-          {/* Add more NavLinks here if needed */}
+
+          {/* Friends */}
+          <NavLink
+            to="/friends"
+            className={`${linkClass} ${
+              collapsed ? "justify-center" : "justify-start"
+            }`}
+          >
+            <img
+              src={friendIcon}
+              alt="Friends"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {!collapsed && "Friends"}
+          </NavLink>
+
+          {/* Results */}
+          <NavLink
+            to="/result"
+            className={`${linkClass} ${
+              collapsed ? "justify-center" : "justify-start"
+            }`}
+          >
+            <img
+              src={resultIcon}
+              alt="Result"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {!collapsed && "Result"}
+          </NavLink>
+
+          {/* TalkHive (Voice) */}
+          <NavLink
+            to="/voice"
+            className={`${linkClass} ${
+              collapsed ? "justify-center" : "justify-start"
+            }`}
+          >
+            <img
+              src={voiceIcon}
+              alt="TalkHive"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {!collapsed && "TalkHive"}
+          </NavLink>
+
+          {/* Department */}
+          <NavLink
+            to="/department"
+            className={`${linkClass} ${
+              collapsed ? "justify-center" : "justify-start"
+            }`}
+          >
+            <img
+              src={departmentIcon}
+              alt="Department"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {!collapsed && "Department"}
+          </NavLink>
         </nav>
       </div>
 
-      {/* Profile & Menu */}
+      {/* Profile & Dropdown Menu */}
       <div className="relative" ref={menuRef}>
         <div
           onClick={() => setMenuOpen(!menuOpen)}
@@ -97,7 +180,6 @@ export default function Sidebar() {
           )}
         </div>
 
-        {/* Dropdown Menu */}
         {menuOpen && (
           <div className="absolute bottom-16 left-0 w-50 bg-white border border-gray-200 rounded-lg shadow-lg overflow-hidden z-50">
             <button
