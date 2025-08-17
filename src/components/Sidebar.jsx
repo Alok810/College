@@ -14,6 +14,7 @@ import friendIcon from "../assets/friend.png";
 import voiceIcon from "../assets/voice.png";
 import resultIcon from "../assets/result.png";
 import departmentIcon from "../assets/department.png";
+import adminIcon from "../assets/admin.png";
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -156,6 +157,21 @@ export default function Sidebar() {
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
             {!collapsed && "Department"}
+          </NavLink>
+
+          {/* Admin Dashboard */}
+          <NavLink
+            to="/admin"
+            className={`${linkClass} ${
+              collapsed ? "justify-center" : "justify-start"
+            }`}
+          >
+            <img
+              src={adminIcon}
+              alt="Admin"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {!collapsed && "Admin Dashboard"}
           </NavLink>
         </nav>
       </div>

@@ -17,18 +17,23 @@ export default function AuthPage() {
     password: "",
     confirmPassword: "",
     captcha: "",
+    name: "",
+    id: "",
     instituteName: "",
     instituteType: "",
     affiliationNumber: "",
     instituteEmail: "",
     logo: null,
+    designation: "",
+    department: "",
   });
+
   const [userType, setUserType] = useState("Teacher");
   const [showPassword, setShowPassword] = useState(false);
   const [mathQuestion, setMathQuestion] = useState(generateCaptcha());
   const [error, setError] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
-  const [step, setStep] = useState(1); // multi-step
+  const [step, setStep] = useState(1);
   const navigate = useNavigate();
 
   const resetForm = () => {
@@ -37,11 +42,15 @@ export default function AuthPage() {
       password: "",
       confirmPassword: "",
       captcha: "",
+      name: "",
+      id: "",
       instituteName: "",
       instituteType: "",
       affiliationNumber: "",
       instituteEmail: "",
       logo: null,
+      designation: "",
+      department: "",
     });
     setMathQuestion(generateCaptcha());
     setStep(1);
@@ -69,7 +78,7 @@ export default function AuthPage() {
       return;
     }
     if (!formData.email || !formData.password) {
-      setError("Please fill in all fields.");
+      setError("Please fill in all required fields.");
       return;
     }
 
@@ -82,27 +91,33 @@ export default function AuthPage() {
       const newUser = {
         password: formData.password,
         userType,
+        name: formData.name || "",
+        id: formData.id || "",
         instituteName: formData.instituteName || "",
         instituteType: formData.instituteType || "",
         affiliationNumber: formData.affiliationNumber || "",
         instituteEmail: formData.instituteEmail || "",
         logo: formData.logo || null,
+        designation: formData.designation || "",
+        department: formData.department || "",
       };
 
-      // Save user record
       localStorage.setItem(`user:${formData.email}`, JSON.stringify(newUser));
 
-      // ✅ Also set active auth (auto-login after registration)
       localStorage.setItem(
         "auth",
         JSON.stringify({
           email: formData.email,
           userType: newUser.userType,
+          name: newUser.name,
+          id: newUser.id,
           instituteName: newUser.instituteName,
           instituteType: newUser.instituteType,
           affiliationNumber: newUser.affiliationNumber,
           instituteEmail: newUser.instituteEmail,
           logo: newUser.logo,
+          designation: newUser.designation,
+          department: newUser.department,
         })
       );
 
@@ -110,7 +125,6 @@ export default function AuthPage() {
       alert("Registration successful!");
       navigate("/");
     } else {
-      // Login
       const user = localStorage.getItem(`user:${formData.email}`);
       if (!user) {
         setError("No user found.");
@@ -122,17 +136,20 @@ export default function AuthPage() {
         return;
       }
 
-      // ✅ Store active auth
       localStorage.setItem(
         "auth",
         JSON.stringify({
           email: formData.email,
           userType: parsed.userType,
+          name: parsed.name || "",
+          id: parsed.id || "",
           instituteName: parsed.instituteName || "",
           instituteType: parsed.instituteType || "",
           affiliationNumber: parsed.affiliationNumber || "",
           instituteEmail: parsed.instituteEmail || "",
           logo: parsed.logo || null,
+          designation: parsed.designation || "",
+          department: parsed.department || "",
         })
       );
 
@@ -164,7 +181,7 @@ export default function AuthPage() {
           </blockquote>
         </div>
 
-        {/* Form Side */}
+        {/* Form */}
         <div className="flex-1 flex items-center justify-center p-6">
           <motion.div
             key={isSignUp ? "signup" : "signin"}
@@ -207,7 +224,135 @@ export default function AuthPage() {
                 </div>
               </div>
 
-              {/* Registration for Institute → Step 1 */}
+              {/* Student & Teacher */}
+              {isSignUp &&
+                (userType === "Student" || userType === "Teacher") && (
+                  <>
+                    <input
+                      name="name"
+                      type="text"
+                      value={formData.name}
+                      placeholder={`${userType} Name`}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border rounded-lg"
+                      required
+                    />
+                    <input
+                      name="id"
+                      type="text"
+                      value={formData.id}
+                      placeholder={
+                        userType === "Student"
+                          ? "Student ID"
+                          : "Teacher ID"
+                      }
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border rounded-lg"
+                      required
+                    />
+                  </>
+                )}
+
+              {/* Officials */}
+              {isSignUp && userType === "Officials" && (
+                <>
+                  <input
+                    name="name"
+                    type="text"
+                    value={formData.name}
+                    placeholder="Full Name"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  />
+                  <input
+                    name="id"
+                    type="text"
+                    value={formData.id}
+                    placeholder="Employee / Staff ID"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  />
+
+                  <select
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Select Designation</option>
+                    <option value="Director">Director</option>
+                    <option value="Dean">Dean</option>
+                    <option value="HOD">HOD</option>
+
+                    <option value="Registrar">Registrar</option>
+                    <option value="Faculty Member">Faculty Member</option>
+                    <option value="Support Staff">Support Staff</option>
+                  </select>
+                  {formData.designation === "HOD" && (
+                    <select
+                      name="department"
+                      value={formData.department}
+                      onChange={handleChange}
+                      className="w-full px-4 py-2 border rounded-lg"
+                      required
+                    >
+                      <option value="">Select Department</option>
+                      <option value="CSE">Computer Science</option>
+                      <option value="ECE">Electronics</option>
+                      <option value="ME">Mechanical</option>
+                      <option value="CE">Civil</option>
+                      <option value="MBA">MBA</option>
+                      <option value="Other">Other</option>
+                    </select>
+                  )}
+                </>
+              )}
+
+              {/* Other Staff */}
+              {isSignUp && userType === "Other" && (
+                <>
+                  <input
+                    name="name"
+                    type="text"
+                    value={formData.name}
+                    placeholder="Full Name"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  />
+                  <input
+                    name="id"
+                    type="text"
+                    value={formData.id}
+                    placeholder="Staff ID"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  />
+
+                  <select
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Select Role</option>
+                    <option value="Librarian">Librarian</option>
+                    <option value="Warden">Warden</option>
+                    <option value="Lab Assistant">Lab Assistant</option>
+                    <option value="Accountant">Accountant</option>
+                    <option value="Security Staff">Security Staff</option>
+                    <option value="Technical Staff">Technical Staff</option>
+                    <option value="Clerk">Clerk</option>
+                  </select>
+                </>
+              )}
+
+              {/* Institute Step 1 */}
               {isSignUp && userType === "Institute" && step === 1 && (
                 <>
                   <input
@@ -219,7 +364,6 @@ export default function AuthPage() {
                     className="w-full px-4 py-2 border rounded-lg"
                     required
                   />
-
                   <select
                     name="instituteType"
                     value={formData.instituteType}
@@ -233,17 +377,15 @@ export default function AuthPage() {
                     <option value="School">School</option>
                     <option value="Other">Other</option>
                   </select>
-
                   <input
                     name="affiliationNumber"
                     type="text"
                     value={formData.affiliationNumber}
-                    placeholder="Affiliation Number"
+                    placeholder="Registration Number"
                     onChange={handleChange}
                     className="w-full px-4 py-2 border rounded-lg"
                     required
                   />
-
                   <input
                     name="instituteEmail"
                     type="email"
@@ -253,8 +395,6 @@ export default function AuthPage() {
                     className="w-full px-4 py-2 border rounded-lg"
                     required
                   />
-
-                  {/* Logo Upload Box */}
                   <div className="border border-gray-300 rounded-lg p-3 bg-gray-50">
                     <label className="block text-sm font-medium text-gray-700 mb-2">
                       Upload Logo
@@ -264,9 +404,9 @@ export default function AuthPage() {
                       accept="image/*"
                       onChange={handleLogoUpload}
                       className="block w-full text-sm text-gray-700 border rounded-lg cursor-pointer 
-                   file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 
-                   file:text-sm file:font-medium file:bg-purple-600 file:text-white 
-                   hover:file:bg-purple-700"
+                        file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 
+                        file:text-sm file:font-medium file:bg-purple-600 file:text-white 
+                        hover:file:bg-purple-700"
                       required
                     />
                     {formData.logo && (
@@ -279,7 +419,6 @@ export default function AuthPage() {
                       </div>
                     )}
                   </div>
-
                   <button
                     type="button"
                     className="w-full mt-3 bg-teal-500 text-white py-2 rounded-lg hover:bg-teal-600"
@@ -290,19 +429,109 @@ export default function AuthPage() {
                 </>
               )}
 
-              {/* Step 2 → Credentials */}
-              {(!isSignUp || userType !== "Institute" || step === 2) && (
+               {isSignUp && userType === "Institute" && step === 2 && (
                 <>
                   <input
-                    name="email"
-                    type="email"
-                    value={formData.email}
-                    placeholder="Enter User ID / Email"
+                    name="adminName"
+                    type="text"
+                    value={formData.adminName}
+                    placeholder="Admin Full Name"
                     onChange={handleChange}
                     className="w-full px-4 py-2 border rounded-lg"
                     required
                   />
 
+                  <select
+                    name="designation"
+                    value={formData.designation}
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  >
+                    <option value="">Select Role</option>
+                    <option value="Librarian">Director</option>
+                    <option value="Warden">Dean</option>
+                    <option value="Lab Assistant">Professor</option>
+                    <option value="Accountant">Head Master</option>
+                    <option value="Security Staff">Teacher</option>
+                  </select>
+
+
+                  <input
+                    name="adminId"
+                    type="text"
+                    value={formData.adminId}
+                    placeholder="Admin ID"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  />
+                  <input
+                    name="adminEmail"
+                    type="email"
+                    value={formData.adminEmail}
+                    placeholder="Admin Email"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  />
+                  <input
+                    name="adminPhone"
+                    type="text"
+                    value={formData.adminPhone}
+                    placeholder="Admin Phone No."
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+
+                  <input
+                    name="adminPhone"
+                    type="text"
+                    value={formData.adminPhone}
+                    placeholder="Alternate Contact (Optional)"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                  />
+
+                  <div className="flex gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setStep(1)}
+                      className="flex-1 bg-gray-300 py-2 rounded-lg hover:bg-gray-400"
+                    >
+                      ← Back
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setStep(3)}
+                      className="flex-1 bg-teal-500 text-white py-2 rounded-lg hover:bg-teal-600"
+                    >
+                      Continue →
+                    </button>
+                  </div>
+                </>
+              )}
+
+              {/* Common Credentials */}
+              {(!isSignUp || userType !== "Institute" || step === 3) && (
+                <>
+                <input
+                    name="Institute Registration No."
+                    type="text"
+                    value={formData.adminPhone}
+                    placeholder="Institute Registration No."
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    />
+                  <input
+                    name="email"
+                    type="email"
+                    value={formData.email}
+                    placeholder="Email"
+                    onChange={handleChange}
+                    className="w-full px-4 py-2 border rounded-lg"
+                    required
+                  />
                   <div className="relative">
                     <input
                       name="password"
@@ -320,7 +549,6 @@ export default function AuthPage() {
                       className="w-5 h-5 absolute right-3 top-2.5 cursor-pointer"
                     />
                   </div>
-
                   {isSignUp && (
                     <input
                       name="confirmPassword"
@@ -332,8 +560,6 @@ export default function AuthPage() {
                       required
                     />
                   )}
-
-                  {/* Captcha */}
                   <div>
                     <label className="block text-sm text-gray-600 mb-1">
                       Solve:{" "}
@@ -357,11 +583,9 @@ export default function AuthPage() {
                       </button>
                     </div>
                   </div>
-
                   {error && <p className="text-sm text-red-600">{error}</p>}
-
                   <div className="flex gap-2">
-                    {isSignUp && userType === "Institute" && step === 2 && (
+                    {isSignUp && userType === "Institute" && step === 3 && (
                       <button
                         type="button"
                         onClick={() => setStep(1)}

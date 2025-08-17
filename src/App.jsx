@@ -10,6 +10,7 @@ import AuthPage from "./pages/AuthPage";
 import Department from "./pages/Department"; // ✅ NEW PAGE
 import Result from "./pages/Result"; // ✅ NEW PAGE
 import Voice from "./pages/Voice"; // ✅ NEW PAGE
+import AdminDashboard from "./pages/AdminDashboard"; // ✅ ADMIN DASHBOARD
 
 export default function App() {
   const location = useLocation();
@@ -77,6 +78,9 @@ export default function App() {
           <Route path="/department" element={<Department />} />
           <Route path="/result" element={<Result />} />
           <Route path="/voice" element={<Voice />} />
+
+          {/* ✅ ADMIN DASHBOARD */}
+          <Route path="/admin" element={<AdminDashboard />} />
         </Routes>
       </div>
     </div>
