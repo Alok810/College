@@ -15,9 +15,9 @@ import voiceIcon from "../assets/voice.png";
 import resultIcon from "../assets/result.png";
 import departmentIcon from "../assets/department.png";
 import adminIcon from "../assets/admin.png";
+import interactionIcon from "../assets/interaction.png";
 
-export default function Sidebar() {
-  const [collapsed, setCollapsed] = useState(false);
+export default function Sidebar({ isOpen, setIsOpen }) {
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -39,7 +39,7 @@ export default function Sidebar() {
   return (
     <aside
       className={`shadow-xl flex flex-col justify-between transition-all duration-300 ${
-        collapsed ? "w-20" : "w-64"
+        !isOpen ? "w-20" : "w-64"
       } min-h-screen p-4 relative rounded-xl`}
       style={{
         background:
@@ -50,28 +50,28 @@ export default function Sidebar() {
         {/* Header */}
         <div
           className={`flex items-center mb-6 ${
-            collapsed ? "justify-center" : "justify-between"
+            !isOpen ? "justify-center" : "justify-between"
           }`}
         >
           <div
             className="flex items-center gap-3 cursor-pointer"
-            onClick={() => setCollapsed(!collapsed)}
+            onClick={() => setIsOpen(!isOpen)}
           >
             <img
               src={rigyaLogo}
               alt="Rigya Logo"
               className="w-10 h-10 min-w-[40px] min-h-[40px] object-contain"
             />
-            {!collapsed && (
+            {isOpen && (
               <h1 className="text-xl font-bold" style={{ color: "#FFA500" }}>
                 Rigya
               </h1>
             )}
           </div>
 
-          {!collapsed && (
+          {isOpen && (
             <button
-              onClick={() => setCollapsed(true)}
+              onClick={() => setIsOpen(false)}
               className="p-1 hover:bg-gray-200 rounded"
             >
               <img
@@ -87,101 +87,96 @@ export default function Sidebar() {
         <nav className="space-y-2">
           <NavLink
             to="/"
-            className={`${linkClass} ${
-              collapsed ? "justify-center" : "justify-start"
-            }`}
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
           >
             <img
               src={homeIcon}
               alt="Home"
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
-            {!collapsed && "Home"}
+            {isOpen && "Home"}
           </NavLink>
 
-          {/* Friends */}
           <NavLink
             to="/friends"
-            className={`${linkClass} ${
-              collapsed ? "justify-center" : "justify-start"
-            }`}
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
           >
             <img
               src={friendIcon}
               alt="Friends"
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
-            {!collapsed && "Friends"}
+            {isOpen && "Friends"}
           </NavLink>
 
-          {/* Results */}
           <NavLink
             to="/result"
-            className={`${linkClass} ${
-              collapsed ? "justify-center" : "justify-start"
-            }`}
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
           >
             <img
               src={resultIcon}
               alt="Result"
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
-            {!collapsed && "Result"}
+            {isOpen && "Result"}
           </NavLink>
 
-          {/* TalkHive (Voice) */}
           <NavLink
             to="/voice"
-            className={`${linkClass} ${
-              collapsed ? "justify-center" : "justify-start"
-            }`}
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
           >
             <img
               src={voiceIcon}
               alt="TalkHive"
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
-            {!collapsed && "TalkHive"}
+            {isOpen && "TalkHive"}
           </NavLink>
 
-          {/* Department */}
           <NavLink
             to="/department"
-            className={`${linkClass} ${
-              collapsed ? "justify-center" : "justify-start"
-            }`}
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
           >
             <img
               src={departmentIcon}
               alt="Department"
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
-            {!collapsed && "Department"}
+            {isOpen && "Department"}
           </NavLink>
 
-          {/* Admin Dashboard */}
           <NavLink
             to="/admin"
-            className={`${linkClass} ${
-              collapsed ? "justify-center" : "justify-start"
-            }`}
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
           >
             <img
               src={adminIcon}
               alt="Admin"
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
-            {!collapsed && "Admin Dashboard"}
+            {isOpen && "Admin"}
+          </NavLink>
+
+          <NavLink
+            to="/interaction"
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
+          >
+            <img
+              src={interactionIcon}
+              alt="Interaction"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {isOpen && "Interaction"}
           </NavLink>
         </nav>
       </div>
 
-      {/* Profile & Dropdown Menu */}
+      {/* Profile & Dropdown */}
       <div className="relative" ref={menuRef}>
         <div
           onClick={() => setMenuOpen(!menuOpen)}
           className={`flex items-center gap-3 mt-6 bg-gray-100 p-3 rounded-lg shadow-inner cursor-pointer hover:bg-gray-200 ${
-            collapsed ? "justify-center" : ""
+            !isOpen ? "justify-center" : ""
           }`}
         >
           <img
@@ -189,7 +184,7 @@ export default function Sidebar() {
             alt="Profile"
             className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full"
           />
-          {!collapsed && (
+          {isOpen && (
             <div className="flex flex-col">
               <p className="font-semibold">John Doe</p>
             </div>

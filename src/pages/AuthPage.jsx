@@ -176,8 +176,8 @@ export default function AuthPage() {
           <img src={RigyaIcon} alt="Rigya Logo" className="w-72 mb-6" />
           <blockquote className="italic text-center text-lg leading-relaxed max-w-md bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-teal-600">
             {isSignUp
-              ? "“Curiosity is the root of learning... progress is the soul of Rigya”"
-              : "“Education is the key to success... happiness is the key to harmony”"}
+              ? "“Curiosity is the root of learning, Learning is the path to wisdom, Wisdom is the bridge to innovation, Innovation is the spark of progress, And progress is the soul of Rigya”"
+              :  "“Education is the key to success, Success is the key to achievement, Achievement is the key to hope, Hope is the key to happiness, And happiness is the key to harmony”"}
           </blockquote>
         </div>
 

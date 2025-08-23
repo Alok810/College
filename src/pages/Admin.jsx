@@ -6,7 +6,7 @@ const mockUsers = [
   { id: 3, name: "Mr. C. Singh", role: "Librarian", verified: false },
 ];
 
-export default function AdminDashboard() {
+export default function Admin() {
   const [users, setUsers] = useState([]);
 
   // ✅ Example Admin Profile Data (taken from registration form)
@@ -38,7 +38,7 @@ export default function AdminDashboard() {
   };
 
   return (
-    <div className="p-6 mt-20">
+    <div className="p-6 mt-4">
       {/* ✅ Admin Profile Section */}
       <div className="bg-white shadow-md rounded-lg border p-6 mb-8">
         <h1 className="text-2xl font-semibold text-[#2d2d6f] mb-4">

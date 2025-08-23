@@ -1,19 +1,34 @@
-// import React from "react";
-// import { Outlet } from "react-router-dom";
-// import Sidebar from "./components";
+import React from "react";
+import AdminDashboard from "../pages/AdminDashboard";
 
-// export default function Layout() {
-//   return (
-//     <div className="flex min-h-screen">
-//       <Sidebar />
-//       <main
-//         className="flex-1 p-6"
-//         style={{
-//           background: "linear-gradient(135deg, rgb(224, 232, 249), rgb(227, 224, 250), rgb(239, 233, 244))",
-//         }}
-//       >
-//         <Outlet />
-//       </main>
-//     </div>
-//   );
-// }
+export default function Layout() {
+  return (
+    <div className="flex h-screen">
+      {/* Sidebar (fixed, non-scrollable) */}
+      <aside className="w-64 bg-[#2d2d6f] text-white fixed h-screen flex-shrink-0">
+        <div className="p-4 text-xl font-bold border-b border-gray-600">
+          Admin Panel
+        </div>
+        <ul className="space-y-4 p-4">
+          <li className="hover:bg-[#3a3a80] p-2 rounded cursor-pointer">
+            Dashboard
+          </li>
+          <li className="hover:bg-[#3a3a80] p-2 rounded cursor-pointer">
+            Users
+          </li>
+          <li className="hover:bg-[#3a3a80] p-2 rounded cursor-pointer">
+            Reports
+          </li>
+          <li className="hover:bg-[#3a3a80] p-2 rounded cursor-pointer">
+            Settings
+          </li>
+        </ul>
+      </aside>
+
+      {/* Main content (scrollable) */}
+      <main className="ml-64 flex-1 overflow-y-auto bg-gray-100">
+        <AdminDashboard />
+      </main>
+    </div>
+  );
+}
