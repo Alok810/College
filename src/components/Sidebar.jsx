@@ -16,7 +16,7 @@ import adminIcon from "../assets/admin.png";
 import interactionIcon from "../assets/interaction.png";
 import libraryIcon from "../assets/Library.png";
 import hostelIcon from "../assets/hostel.png";
-import clubIcon from "../assets/club.png";
+import clubIcon from "../assets/Club.png";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const [darkMode, setDarkMode] = useState(false);
