@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState /*, useEffect, useRef*/ } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
+import InstituteHeader from "./pages/InstituteHeader";
 import Home from "./pages/Home";
 import Friend from "./pages/Friend";
 import Profile from "./pages/Profile";
@@ -12,25 +13,19 @@ import Result from "./pages/Result";
 import Voice from "./pages/Voice";
 import Admin from "./pages/Admin";
 import Interaction from "./pages/Interaction";
+import Library from "./pages/Library";
+import Hostel from "./pages/Hostel";
+import Club from "./pages/Club";
 
 export default function App() {
   const location = useLocation();
   const hideSidebar = location.pathname === "/auth";
-
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-  const headerRef = useRef(null); // Ref to measure header height
-  const [headerHeight, setHeaderHeight] = useState(0);
 
+  // Read auth data once
   const authData = JSON.parse(localStorage.getItem("auth") || "{}");
   const instituteName = authData.instituteName || "Your Institute";
   const instituteLogo = authData.logo || null;
-
-  // Update headerHeight dynamically
-  useEffect(() => {
-    if (headerRef.current) {
-      setHeaderHeight(headerRef.current.offsetHeight + 12); // +12px margin
-    }
-  }, [headerRef, isSidebarOpen]);
 
   return (
     <div
@@ -38,7 +33,7 @@ export default function App() {
       style={{
         background:
           "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
-        backgroundAttachment: "fixed", // ✅ Makes background fixed
+        backgroundAttachment: "fixed",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
       }}
@@ -57,37 +52,16 @@ export default function App() {
           className="flex-1 p-6 overflow-y-auto transition-all duration-300 z-10"
           style={{
             marginLeft: !hideSidebar ? (isSidebarOpen ? "16rem" : "5rem") : "0",
-            paddingTop: headerHeight, // Dynamically adjust top padding
+            paddingTop: "7rem", // Fixed padding for header space
           }}
         >
           {/* Institute Header */}
           {!hideSidebar && (
-            <div
-              ref={headerRef}
-              className="fixed top-4 left-1/2 transform -translate-x-1/2 rounded-2xl px-8 py-3 flex items-center gap-4 z-30 shadow-lg transition-all duration-300"
-              style={{
-                background:
-                  "linear-gradient(to right, #d6f8df, rgb(227,224,250), #88e4f4)",
-              }}
-            >
-              {instituteLogo ? (
-                <img
-                  src={instituteLogo}
-                  alt="Institute Logo"
-                  className="w-14 h-14 object-contain rounded-md"
-                />
-              ) : (
-                <div className="w-14 h-14 flex items-center justify-center bg-gray-200 rounded-md text-gray-600 text-sm">
-                  LOGO
-                </div>
-              )}
-              <span
-                className="font-semibold text-xl whitespace-nowrap drop-shadow-sm"
-                style={{ color: "#2d2d6f" }}
-              >
-                {instituteName}
-              </span>
-            </div>
+            <InstituteHeader
+              isSidebarOpen={isSidebarOpen}
+              instituteName={instituteName}
+              instituteLogo={instituteLogo}
+            />
           )}
 
           {/* Routes */}
@@ -103,6 +77,9 @@ export default function App() {
             <Route path="/voice" element={<Voice />} />
             <Route path="/admin" element={<Admin />} />
             <Route path="/interaction" element={<Interaction />} />
+            <Route path="/Library" element={<Library />} /> 
+            <Route path="/hostel" element={<Hostel />} />
+            <Route path="/club" element={<Club />} />           
           </Routes>
         </div>
       </div>

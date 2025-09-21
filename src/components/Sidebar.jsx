@@ -8,14 +8,15 @@ import settingsIcon from "../assets/setting.png";
 import logoutIcon from "../assets/logout.png";
 import appearanceIcon from "../assets/appearance.png";
 import rigyaLogo from "../assets/rigya.png";
-
-// ✅ Newly added icons
 import friendIcon from "../assets/friend.png";
 import voiceIcon from "../assets/voice.png";
 import resultIcon from "../assets/result.png";
 import departmentIcon from "../assets/department.png";
 import adminIcon from "../assets/admin.png";
 import interactionIcon from "../assets/interaction.png";
+import libraryIcon from "../assets/library.png";
+import hostelIcon from "../assets/hostel.png";
+import clubIcon from "../assets/club.png";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
   const [darkMode, setDarkMode] = useState(false);
@@ -143,6 +144,42 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               className="w-6 h-6 min-w-[24px] min-h-[24px]"
             />
             {isOpen && "Department"}
+          </NavLink>
+          
+          <NavLink
+            to="/library"
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
+          >
+            <img
+              src={libraryIcon}
+              alt="Library"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {isOpen && "Library"}
+          </NavLink>
+
+          <NavLink
+            to="/hostel"
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
+          >
+            <img
+              src={hostelIcon}
+              alt="Hostel"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {isOpen && "Hostel"}
+          </NavLink>
+
+          <NavLink
+            to="/club"
+            className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}
+          >
+            <img
+              src={clubIcon}
+              alt="Club"
+              className="w-6 h-6 min-w-[24px] min-h-[24px]"
+            />
+            {isOpen && "Club"}
           </NavLink>
 
           <NavLink

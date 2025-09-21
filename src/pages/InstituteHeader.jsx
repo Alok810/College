@@ -1,47 +1,71 @@
 import React, { useEffect, useState } from "react";
 
-export default function InstituteHeader({ isSidebarOpen }) {
-  const auth = JSON.parse(localStorage.getItem("auth"));
-  const [leftOffset, setLeftOffset] = useState("50%");
+// Function to calculate the left offset
+const calculateLeftOffset = (isSidebarOpen) => {
+  const sidebarWidth = isSidebarOpen ? 256 : 80;
+  const windowWidth = window.innerWidth;
+  const mainContentWidth = windowWidth - sidebarWidth;
+  return `${sidebarWidth + mainContentWidth / 2}px`;
+};
 
-  if (!auth?.instituteName) return null;
+export default function InstituteHeader({
+  isSidebarOpen,
+  instituteName,
+  instituteLogo,
+}) {
+  const [leftOffset, setLeftOffset] = useState(() =>
+    calculateLeftOffset(isSidebarOpen)
+  );
 
-  // Update header left position based on sidebar state
   useEffect(() => {
-    const sidebarWidth = isSidebarOpen ? 256 : 80; // Sidebar width in px (matches your Sidebar)
-    const windowWidth = window.innerWidth;
-    const mainContentWidth = windowWidth - sidebarWidth;
-    setLeftOffset(sidebarWidth + mainContentWidth / 2);
+    // 1. Update on sidebar state change
+    setLeftOffset(calculateLeftOffset(isSidebarOpen));
+
+    // 2. Add an event listener to update on window resize
+    const handleResize = () => {
+      setLeftOffset(calculateLeftOffset(isSidebarOpen));
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    // Cleanup the event listener when the component unmounts
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
   }, [isSidebarOpen]);
+
+  // Hide the header if institute name is not available
+  if (!instituteName || instituteName === "Your Institute") return null;
 
   return (
     <div
-      className="fixed top-4 z-30 rounded-2xl px-6 py-3 flex items-center gap-3 shadow-lg transition-all duration-500"
+      className="fixed top-4 z-30 rounded-2xl px-6 py-3 flex items-center gap-3 transition-all duration-500"
       style={{
-        left: `${leftOffset}px`,
+        left: leftOffset,
         transform: "translateX(-50%)",
         background:
           "linear-gradient(to right, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         width: "auto",
         maxWidth: "90%",
+        boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
       }}
     >
       {/* Show uploaded logo or fallback */}
-      {auth.logo ? (
+      {instituteLogo ? (
         <img
-          src={auth.logo}
+          src={instituteLogo}
           alt="Institute Logo"
-          className="w-12 h-12 object-contain rounded-md shadow"
+          className="w-12 h-12 object-contain rounded-md"
         />
       ) : (
-        <div className="w-12 h-12 flex items-center justify-center bg-gray-200 rounded-md shadow text-gray-600 text-sm">
+        <div className="w-12 h-12 flex items-center justify-center bg-gray-200 rounded-md text-gray-600 text-sm">
           LOGO
         </div>
       )}
 
       {/* Institute Name */}
       <h2 className="text-lg font-semibold text-gray-800 drop-shadow-sm">
-        {auth.instituteName}
+        {instituteName}
       </h2>
     </div>
   );
