@@ -14,7 +14,7 @@ import resultIcon from "../assets/result.png";
 import departmentIcon from "../assets/department.png";
 import adminIcon from "../assets/admin.png";
 import interactionIcon from "../assets/interaction.png";
-import libraryIcon from "../assets/library.png";
+import libraryIcon from "../assets/Library.png";
 import hostelIcon from "../assets/hostel.png";
 import clubIcon from "../assets/club.png";
 
