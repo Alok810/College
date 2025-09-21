@@ -7,18 +7,42 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-dist
-dist-ssr
+# Diagnostic reports (https://nodejs.org/api/report.html)
+.report/
+
+# Node.js
+# /node_modules
+node_modules/
+dist/
+dist-ssr/
 *.local
 
-# Editor directories and files
-.vscode/*
-!.vscode/extensions.json
-.idea
+# macOS
 .DS_Store
-*.suo
-*.ntvs*
-*.njsproj
-*.sln
-*.sw?
+
+# VS Code
+.vscode/
+.vscode-test/
+
+# Runtime files
+*.iml
+*.iws
+*.ipr
+.idea
+.classpath
+.project
+.settings
+
+# Misc
+.cache/
+.eslintcache
+.rollup.cache
+*.tsbuildinfo
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Vite
+.vite/
