@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 import Sidebar from "./components/Sidebar";
 import InstituteHeader from "./pages/InstituteHeader";
@@ -27,26 +27,52 @@ const AppContent = () => {
   const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password";
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // No longer need to destructure anything from useAuth() here.
-  useAuth();
+  // Safely retrieve authData and loading state from the context
+  const { authData, instituteData, loading } = useAuth();
 
-  // Removed the connectionStatus state.
+  const headerRef = useRef(null);
+  const [headerHeight, setHeaderHeight] = useState("0px");
+
+  useEffect(() => {
+    if (headerRef.current) {
+      setHeaderHeight(`${headerRef.current.offsetHeight}px`);
+    }
+  }, [isSidebarOpen, instituteData]);
+
   useEffect(() => {
     const testConnection = async () => {
       try {
         const status = await checkBackendConnection();
         console.log("✅ Frontend received confirmation:", status.message);
       } catch {
-        // Removed the 'error' variable from the catch block.
         console.error("❌ Frontend failed to connect to backend.");
       }
     };
     testConnection();
   }, []);
 
-  const authData = {};
-  const instituteName = authData.instituteName || "Your Institute";
-  const instituteLogo = authData.logo || null;
+  // Use instituteData from the context directly
+  const instituteName = instituteData?.instituteName || "Your Institute";
+  const instituteLogo = instituteData?.instituteLogo || null;
+
+  // FIX: Determine user role by checking if the designation is 'Librarian' AND 
+  // the userType is either 'Official' or 'Other' (matching your MongoDB structure).
+  const isLibrarianDesignation = authData?.designation === "Librarian";
+  const isLibrarianUserType = authData?.userType === "Librarian";
+  const isLibrarianRole = isLibrarianUserType || 
+                         (isLibrarianDesignation && 
+                          (authData?.userType === "Official" || authData?.userType === "Other"));
+
+  const userRole = isLibrarianRole ? 'librarian' : 'user';
+
+  // CONDITIONAL RENDERING: Display a loading message while auth data is being fetched
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <h1 className="text-xl font-bold">Loading...</h1>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -70,12 +96,12 @@ const AppContent = () => {
           className="flex-1 p-6 overflow-y-auto transition-all duration-300 z-10"
           style={{
             marginLeft: !hideSidebar ? (isSidebarOpen ? "16rem" : "5rem") : "0",
-            paddingTop: "7rem",
+            paddingTop: `calc(${headerHeight} + 0.1rem)`,
           }}
         >
-          {/* Removed the div that displayed the connectionStatus on the page */}
           {!hideSidebar && (
             <InstituteHeader
+              ref={headerRef}
               isSidebarOpen={isSidebarOpen}
               instituteName={instituteName}
               instituteLogo={instituteLogo}
@@ -84,7 +110,6 @@ const AppContent = () => {
 
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
-            {/* Added a new route for the password reset page */}
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<Home />} />
@@ -97,7 +122,7 @@ const AppContent = () => {
               <Route path="/voice" element={<Voice />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/interaction" element={<Interaction />} />
-              <Route path="/Library" element={<Library />} />
+              <Route path="/Library" element={<Library userRole={userRole} />} />
               <Route path="/hostel" element={<Hostel />} />
               <Route path="/club" element={<Club />} />
             </Route>

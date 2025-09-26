@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, forwardRef } from "react";
 
 // Function to calculate the left offset
 const calculateLeftOffset = (isSidebarOpen) => {
@@ -8,11 +8,11 @@ const calculateLeftOffset = (isSidebarOpen) => {
   return `${sidebarWidth + mainContentWidth / 2}px`;
 };
 
-export default function InstituteHeader({
+const InstituteHeader = forwardRef(({
   isSidebarOpen,
   instituteName,
   instituteLogo,
-}) {
+}, ref) => {
   const [leftOffset, setLeftOffset] = useState(() =>
     calculateLeftOffset(isSidebarOpen)
   );
@@ -39,7 +39,8 @@ export default function InstituteHeader({
 
   return (
     <div
-      className="fixed top-4 z-30 rounded-2xl px-6 py-3 flex items-center gap-3 transition-all duration-500"
+      ref={ref}
+      className="fixed top-2 z-30 rounded-2xl px-6 py-2 flex items-center gap-3 transition-all duration-500"
       style={{
         left: leftOffset,
         transform: "translateX(-50%)",
@@ -69,4 +70,6 @@ export default function InstituteHeader({
       </h2>
     </div>
   );
-}
+});
+
+export default InstituteHeader;

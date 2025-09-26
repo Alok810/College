@@ -38,7 +38,7 @@ export default function Admin() {
   };
 
   return (
-    <div className="p-6 mt-4">
+    <div className="p-6">
       {/* ✅ Admin Profile Section */}
       <div className="bg-white shadow-md rounded-lg border p-6 mb-8">
         <h1 className="text-2xl font-semibold text-[#2d2d6f] mb-4">

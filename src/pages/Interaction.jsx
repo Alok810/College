@@ -38,7 +38,7 @@ export default function Interaction() {
 
   return (
     <div className="flex justify-center items-center min-h-screen p-6 ">
-      {/* 👆 Added mt-24 to push content below fixed header */}
+      {/* 👆 Removed the mt-24 class from here */}
       <div className="bg-white shadow-xl rounded-2xl p-8 w-full max-w-lg">
         <h1 className="text-2xl font-bold text-center mb-6 text-gray-700">
           Student Interaction Form

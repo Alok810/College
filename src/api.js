@@ -26,12 +26,13 @@ export const checkBackendConnection = async () => {
   }
 };
 
+// --- AUTHENTICATION ENDPOINTS ---
+
 export const registerUser = async (payload) => {
   try {
     const isFormData = payload instanceof FormData;
     const headers = {};
 
-    // FIX: Explicitly set Content-Type header for FormData
     if (isFormData) {
       headers['Content-Type'] = 'multipart/form-data';
     } else {
@@ -76,7 +77,6 @@ export const verifyOtp = async (email, otp) => {
   }
 };
 
-// Renamed this function to reflect the token-based link flow
 export const sendPasswordResetLink = async (data) => {
   try {
     const response = await api.post("/auth/forgot-password", data);
@@ -116,5 +116,106 @@ export const logoutUser = async () => {
     throw new Error(errorMessage);
   }
 };
+
+export const getInstituteByRegNumber = async (instituteRegistrationNumber) => {
+  try {
+    const response = await api.get(
+      `/institutes/details?regNumber=${instituteRegistrationNumber}`
+    );
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch institute details.";
+    throw new Error(errorMessage);
+  }
+};
+
+// --- LIBRARY MANAGEMENT ENDPOINTS ---
+
+export const getAllBooks = async () => {
+  try {
+    const response = await api.get("/books/all");
+    return response.data.books;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch all books.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const addBook = async (bookData) => {
+  try {
+    const response = await api.post("/books/admin/add", bookData);
+    return response.data.book;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to add book.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const updateBook = async (id, bookData) => {
+  try {
+    const response = await api.put(`/books/admin/update/${id}`, bookData);
+    return response.data.book;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to update book.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const deleteBook = async (id) => {
+  try {
+    const response = await api.delete(`/books/admin/delete/${id}`); // FIX: Updated endpoint to match bookRouter.js
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to delete book.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const getBorrowedBooksForUser = async () => {
+  try {
+    const response = await api.get("/borrows/my-borrowed-books");
+    return response.data.myBorrowedBooks;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch your borrowed books.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const getBorrowedBooksForAdmin = async () => {
+  try {
+    const response = await api.get("/borrows/borrowed-books-by-users");
+    return response.data.borrowedBooks;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch all borrowed books.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const borrowBook = async (id) => {
+  try {
+    const response = await api.post(`/borrows/record-borrow-book/${id}`);
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to borrow book.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const returnBook = async (id) => {
+  try {
+    const response = await api.put(`/borrows/return-borrowed-book/${id}`);
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to return book.";
+    throw new Error(errorMessage);
+  }
+};
+
+// NOTE: Your backend has not provided a route for returned books yet.
+// For now, this will return an empty array. You will need to implement a backend endpoint.
+export const getReturnedBooksForUser = async () => {
+    return [];
+};
+
 
 export default api;

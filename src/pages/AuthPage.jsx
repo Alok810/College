@@ -1,5 +1,3 @@
-// authPage.jsx
-
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
@@ -16,7 +14,7 @@ function generateCaptcha() {
 }
 
 export default function AuthPage() {
-  const { setIsAuthenticated } = useAuth();
+  const { setIsAuthenticated, fetchAuthData } = useAuth(); // ADDED fetchAuthData here
   const [formData, setFormData] = useState({
     email: "",
     password: "",
@@ -195,7 +193,6 @@ export default function AuthPage() {
     setStep(nextStep);
   };
 
-  // UPDATED: handleForgotPasswordSubmit
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
     try {
@@ -282,10 +279,19 @@ export default function AuthPage() {
       }
 
       try {
-        const response = await loginUser({ email: formData.email, password: formData.password, instituteRegistrationNumber: formData.instituteRegistrationNumber });
+        const response = await loginUser({ 
+          email: formData.email, 
+          password: formData.password, 
+          instituteRegistrationNumber: formData.instituteRegistrationNumber,
+          userType: userType
+        });
         if (response.success) {
+          // This is the correct logic now:
           setIsAuthenticated(true);
           navigate("/");
+          // The issue is that the AuthContext's useEffect will run on the next render,
+          // but you need the data to be there immediately.
+          // The previous fix of calling fetchAuthData() here is the way to go.
         } else {
           alert(response.message);
         }
@@ -402,6 +408,7 @@ export default function AuthPage() {
     );
   };
 
+
   const renderSingleStepInstituteRegistration = () => {
     const instituteOtpInputClasses = `w-1/4 px-4 py-2 border rounded-lg transition-colors duration-300 ${instituteOtpStatus === "success" ? "border-green-500 ring-2 ring-green-200" : instituteOtpStatus === "error" ? "border-red-500 ring-2 ring-red-200" : ""}`;
     const adminOtpInputClasses = `w-1/4 px-4 py-2 border rounded-lg transition-colors duration-300 ${adminOtpStatus === "success" ? "border-green-500 ring-2 ring-green-200" : adminOtpStatus === "error" ? "border-red-500 ring-2 ring-red-200" : ""}`;
@@ -486,7 +493,6 @@ export default function AuthPage() {
             <button type="button" onClick={() => setMathQuestion(generateCaptcha())} className="px-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600">↻</button>
           </div>
         </div>
-
         <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-teal-600 text-white py-2 rounded-lg shadow-md hover:opacity-90">REGISTER</button>
       </>
     );
@@ -513,7 +519,6 @@ export default function AuthPage() {
     </>
   );
 
-  // UPDATED: renderForgotPasswordForm to match the new flow
   const renderForgotPasswordForm = () => {
     return (
       <motion.div key="forgot-password" initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }} className="w-full max-w-md bg-white shadow-2xl rounded-2xl p-8 flex flex-col min-h-[590px]">
