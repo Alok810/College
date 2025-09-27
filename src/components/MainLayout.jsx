@@ -35,7 +35,7 @@ export default function MainLayout() {
           className="flex-1 p-6 overflow-y-auto transition-all duration-300 z-10"
           style={{
             marginLeft: !hideSidebar ? (isSidebarOpen ? "16rem" : "5rem") : "0",
-            paddingTop: "7rem",
+            paddingTop: "1rem",
           }}
         >
           {!hideSidebar && (

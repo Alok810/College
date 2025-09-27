@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
+// FIX: Removing file extensions, relying on environment's default module resolution
 import Sidebar from "./components/Sidebar";
 import InstituteHeader from "./pages/InstituteHeader";
 import Home from "./pages/Home";
@@ -55,21 +56,24 @@ const AppContent = () => {
   const instituteName = instituteData?.instituteName || "Your Institute";
   const instituteLogo = instituteData?.instituteLogo || null;
 
-  // FIX: Determine user role by checking if the designation is 'Librarian' AND 
-  // the userType is either 'Official' or 'Other' (matching your MongoDB structure).
+  // Logic to determine if the user is a Librarian
   const isLibrarianDesignation = authData?.designation === "Librarian";
   const isLibrarianUserType = authData?.userType === "Librarian";
   const isLibrarianRole = isLibrarianUserType || 
                          (isLibrarianDesignation && 
-                          (authData?.userType === "Official" || authData?.userType === "Other"));
+                         (authData?.userType === "Official" || authData?.userType === "Other"));
 
   const userRole = isLibrarianRole ? 'librarian' : 'user';
 
   // CONDITIONAL RENDERING: Display a loading message while auth data is being fetched
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <h1 className="text-xl font-bold">Loading...</h1>
+      <div className="flex flex-col items-center justify-center min-h-screen bg-white shadow-xl">
+        {/* Simplified loading indicator */}
+        <div className="w-12 h-12 border-4 border-t-4 border-purple-600 rounded-full animate-spin mb-4"></div>
+        <h1 className="text-xl font-bold text-gray-700">
+            Loading...
+        </h1>
       </div>
     );
   }
@@ -122,7 +126,8 @@ const AppContent = () => {
               <Route path="/voice" element={<Voice />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/interaction" element={<Interaction />} />
-              <Route path="/Library" element={<Library userRole={userRole} />} />
+              {/* FIXED: Path changed to lowercase for consistency */}
+              <Route path="/library" element={<Library userRole={userRole} />} />
               <Route path="/hostel" element={<Hostel />} />
               <Route path="/club" element={<Club />} />
             </Route>

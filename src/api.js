@@ -10,13 +10,15 @@ export const checkBackendConnection = async () => {
     const response = await api.get("/status/check");
     return {
       success: true,
-      message: response.data.message || "Connection successful.",
+      message:
+        "✅ Backend connection confirmed. Missing 'status/check' endpoint.",
     };
   } catch (error) {
     if (error.response && error.response.status === 404) {
       return {
         success: true,
-        message: "✅ Backend connection confirmed. Missing 'status/check' endpoint.",
+        message:
+          "✅ Backend connection confirmed. Missing 'status/check' endpoint.",
       };
     }
     return {
@@ -26,23 +28,23 @@ export const checkBackendConnection = async () => {
   }
 };
 
-// --- AUTHENTICATION ENDPOINTS ---
-
+// --- AUTHENTICATION ENDPOINTS (Skipped for brevity) ---
 export const registerUser = async (payload) => {
   try {
     const isFormData = payload instanceof FormData;
     const headers = {};
 
     if (isFormData) {
-      headers['Content-Type'] = 'multipart/form-data';
+      headers["Content-Type"] = "multipart/form-data";
     } else {
-      headers['Content-Type'] = 'application/json';
+      headers["Content-Type"] = "application/json";
     }
 
     const response = await api.post("/auth/register", payload, { headers });
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Registration failed.";
+    const errorMessage =
+      error.response?.data?.message || "Registration failed.";
     throw new Error(errorMessage);
   }
 };
@@ -72,7 +74,8 @@ export const verifyOtp = async (email, otp) => {
     const response = await api.post("/auth/verify-otp", { email, otp });
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "OTP verification failed.";
+    const errorMessage =
+      error.response?.data?.message || "OTP verification failed.";
     throw new Error(errorMessage);
   }
 };
@@ -82,7 +85,8 @@ export const sendPasswordResetLink = async (data) => {
     const response = await api.post("/auth/forgot-password", data);
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to initiate password reset.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to initiate password reset.";
     throw new Error(errorMessage);
   }
 };
@@ -92,7 +96,8 @@ export const resetPassword = async (credentials) => {
     const response = await api.put("/auth/reset-password", credentials);
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to reset password.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to reset password.";
     throw new Error(errorMessage);
   }
 };
@@ -102,7 +107,8 @@ export const getUserProfile = async () => {
     const response = await api.get("/auth/me");
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to fetch user profile.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch user profile.";
     throw new Error(errorMessage);
   }
 };
@@ -124,7 +130,8 @@ export const getInstituteByRegNumber = async (instituteRegistrationNumber) => {
     );
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to fetch institute details.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch institute details.";
     throw new Error(errorMessage);
   }
 };
@@ -133,10 +140,11 @@ export const getInstituteByRegNumber = async (instituteRegistrationNumber) => {
 
 export const getAllBooks = async () => {
   try {
-    const response = await api.get("/books/all");
+    const response = await api.get("/books/all"); // Assuming controller returns { success: true, books: [...] }
     return response.data.books;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to fetch all books.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch all books.";
     throw new Error(errorMessage);
   }
 };
@@ -156,66 +164,109 @@ export const updateBook = async (id, bookData) => {
     const response = await api.put(`/books/admin/update/${id}`, bookData);
     return response.data.book;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to update book.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to update book.";
     throw new Error(errorMessage);
   }
 };
 
 export const deleteBook = async (id) => {
   try {
-    const response = await api.delete(`/books/admin/delete/${id}`); // FIX: Updated endpoint to match bookRouter.js
+    const response = await api.delete(`/books/admin/delete/${id}`);
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to delete book.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to delete book.";
     throw new Error(errorMessage);
   }
 };
 
+// FIX 1: Update path to new active borrowed route
 export const getBorrowedBooksForUser = async () => {
   try {
-    const response = await api.get("/borrows/my-borrowed-books");
+    // Path changed from /my-borrowed-books to /my-borrowed-active
+    const response = await api.get("/borrows/my-borrowed-active"); // Assuming controller returns { success: true, myBorrowedBooks: [...] }
     return response.data.myBorrowedBooks;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to fetch your borrowed books.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch your borrowed books.";
     throw new Error(errorMessage);
   }
 };
 
+// FIX 2: Update path to new admin borrowed route
 export const getBorrowedBooksForAdmin = async () => {
   try {
-    const response = await api.get("/borrows/borrowed-books-by-users");
+    // Path changed from /borrowed-books-by-users to /admin/borrowed-active
+    const response = await api.get("/borrows/admin/borrowed-active"); // Assuming controller returns { success: true, borrowedBooks: [...] }
     return response.data.borrowedBooks;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to fetch all borrowed books.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch all borrowed books.";
     throw new Error(errorMessage);
   }
 };
 
 export const borrowBook = async (id) => {
   try {
-    const response = await api.post(`/borrows/record-borrow-book/${id}`);
+    const response = await api.post(`/borrows/borrow/${id}`);
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to borrow book.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to borrow book.";
     throw new Error(errorMessage);
   }
 };
 
 export const returnBook = async (id) => {
   try {
-    const response = await api.put(`/borrows/return-borrowed-book/${id}`);
+    const response = await api.put(`/borrows/return/${id}`);
     return response.data;
   } catch (error) {
-    const errorMessage = error.response?.data?.message || "Failed to return book.";
+    const errorMessage =
+      error.response?.data?.message || "Failed to return book.";
     throw new Error(errorMessage);
   }
 };
 
-// NOTE: Your backend has not provided a route for returned books yet.
-// For now, this will return an empty array. You will need to implement a backend endpoint.
 export const getReturnedBooksForUser = async () => {
-    return [];
+  try {
+    // Path: /my-returned-history (Matches router)
+    const response = await api.get("/borrows/my-returned-history"); // Assuming controller returns { success: true, returnedBooks: [...] }
+    return response.data.returnedBooks;
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch your returned books.";
+    throw new Error(errorMessage);
+  }
 };
 
+// --- NEW ENDPOINT: Get All Users for Admin ---
+export const getAllUsersForAdmin = async () => {
+  try {
+    const response = await api.get("/user/admin/all");
+    return response.data.users;
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch all users.";
+    throw new Error(errorMessage);
+  }
+};
+
+// NEW: API function for librarian to assign a book to a user
+export const borrowBookByLibrarian = async (userId, bookId, dueDate) => {
+  try {
+    const response = await api.post("/borrows/admin/borrow", {
+      userId,
+      bookId,
+      dueDate,
+    });
+    return response.data;
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.message || "Failed to assign book.";
+    throw new Error(errorMessage);
+  }
+};
 
 export default api;
