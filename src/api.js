@@ -28,7 +28,7 @@ export const checkBackendConnection = async () => {
   }
 };
 
-// --- AUTHENTICATION ENDPOINTS (Skipped for brevity) ---
+// --- AUTHENTICATION ENDPOINTS ---
 export const registerUser = async (payload) => {
   try {
     const isFormData = payload instanceof FormData;
@@ -140,7 +140,7 @@ export const getInstituteByRegNumber = async (instituteRegistrationNumber) => {
 
 export const getAllBooks = async () => {
   try {
-    const response = await api.get("/books/all"); // Assuming controller returns { success: true, books: [...] }
+    const response = await api.get("/books/all");
     return response.data.books;
   } catch (error) {
     const errorMessage =
@@ -181,11 +181,9 @@ export const deleteBook = async (id) => {
   }
 };
 
-// FIX 1: Update path to new active borrowed route
 export const getBorrowedBooksForUser = async () => {
   try {
-    // Path changed from /my-borrowed-books to /my-borrowed-active
-    const response = await api.get("/borrows/my-borrowed-active"); // Assuming controller returns { success: true, myBorrowedBooks: [...] }
+    const response = await api.get("/borrows/my-borrowed-active");
     return response.data.myBorrowedBooks;
   } catch (error) {
     const errorMessage =
@@ -194,11 +192,9 @@ export const getBorrowedBooksForUser = async () => {
   }
 };
 
-// FIX 2: Update path to new admin borrowed route
 export const getBorrowedBooksForAdmin = async () => {
   try {
-    // Path changed from /borrowed-books-by-users to /admin/borrowed-active
-    const response = await api.get("/borrows/admin/borrowed-active"); // Assuming controller returns { success: true, borrowedBooks: [...] }
+    const response = await api.get("/borrows/admin/borrowed-active");
     return response.data.borrowedBooks;
   } catch (error) {
     const errorMessage =
@@ -218,6 +214,18 @@ export const borrowBook = async (id) => {
   }
 };
 
+// NEW: API function for admin to return a book
+export const returnBookByAdmin = async (id) => {
+  try {
+    const response = await api.put(`/borrows/admin/return/${id}`);
+    return response.data;
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.message || "Failed to return book (Admin).";
+    throw new Error(errorMessage);
+  }
+};
+
 export const returnBook = async (id) => {
   try {
     const response = await api.put(`/borrows/return/${id}`);
@@ -231,8 +239,7 @@ export const returnBook = async (id) => {
 
 export const getReturnedBooksForUser = async () => {
   try {
-    // Path: /my-returned-history (Matches router)
-    const response = await api.get("/borrows/my-returned-history"); // Assuming controller returns { success: true, returnedBooks: [...] }
+    const response = await api.get("/borrows/my-returned-history");
     return response.data.returnedBooks;
   } catch (error) {
     const errorMessage =
@@ -241,7 +248,17 @@ export const getReturnedBooksForUser = async () => {
   }
 };
 
-// --- NEW ENDPOINT: Get All Users for Admin ---
+export const getReturnedBooksForAdmin = async () => {
+  try {
+    const response = await api.get("/borrows/admin/returned-history");
+    return response.data.returnedBooks;
+  } catch (error) {
+    const errorMessage =
+      error.response?.data?.message || "Failed to fetch all returned books.";
+    throw new Error(errorMessage);
+  }
+};
+
 export const getAllUsersForAdmin = async () => {
   try {
     const response = await api.get("/user/admin/all");
@@ -253,7 +270,6 @@ export const getAllUsersForAdmin = async () => {
   }
 };
 
-// NEW: API function for librarian to assign a book to a user
 export const borrowBookByLibrarian = async (userId, bookId, dueDate) => {
   try {
     const response = await api.post("/borrows/admin/borrow", {
