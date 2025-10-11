@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
-// FIX: Removing file extensions, relying on environment's default module resolution
+// Your original imports
 import Sidebar from "./components/Sidebar";
 import InstituteHeader from "./pages/InstituteHeader";
 import Home from "./pages/Home";
@@ -28,11 +28,22 @@ const AppContent = () => {
   const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password";
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // Safely retrieve authData and loading state from the context
   const { authData, instituteData, loading } = useAuth();
 
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState("0px");
+
+  // --- START: MODIFIED LOGIC FOR CUSTOM HOME PAGE ALIGNMENT ---
+  const isHomePage = location.pathname === '/';
+
+  // Tweak these values to get the perfect alignment
+  const HEADER_SHIFT_LEFT = -85; // Negative value shifts header left
+  const CONTENT_SHIFT_RIGHT = 85; // Positive value shifts content right
+
+  // Apply offsets only on the home page, otherwise they are 0
+  const headerOffset = isHomePage ? HEADER_SHIFT_LEFT : 0;
+  const contentOffset = isHomePage ? CONTENT_SHIFT_RIGHT : 0;
+  // --- END: MODIFIED LOGIC ---
 
   useEffect(() => {
     if (headerRef.current) {
@@ -52,38 +63,33 @@ const AppContent = () => {
     testConnection();
   }, []);
 
-  // Use instituteData from the context directly
   const instituteName = instituteData?.instituteName || "Your Institute";
   const instituteLogo = instituteData?.instituteLogo || null;
 
   // Logic to determine if the user is a Librarian
   const isLibrarianDesignation = authData?.designation === "Librarian";
   const isLibrarianUserType = authData?.userType === "Librarian";
-  const isLibrarianRole = isLibrarianUserType || 
-                         (isLibrarianDesignation && 
-                         (authData?.userType === "Official" || authData?.userType === "Other"));
+  const isLibrarianRole = isLibrarianUserType ||
+    (isLibrarianDesignation &&
+      (authData?.userType === "Official" || authData?.userType === "Other"));
 
   const userRole = isLibrarianRole ? 'librarian' : 'user';
 
-  // CONDITIONAL RENDERING: Display a loading message while auth data is being fetched
   if (loading) {
     return (
       <div className="flex flex-col items-center justify-center min-h-screen bg-white shadow-xl">
-        {/* Simplified loading indicator */}
         <div className="w-12 h-12 border-4 border-t-4 border-purple-600 rounded-full animate-spin mb-4"></div>
-        <h1 className="text-xl font-bold text-gray-700">
-            Loading...
-        </h1>
+        <h1 className="text-xl font-bold text-gray-700">Loading...</h1>
       </div>
     );
   }
 
   return (
     <div
-      className="relative min-h-screen w-full"
+      // 🛑 MODIFIED CLASS: Added 'overflow-x-hidden' to the main root wrapper
+      className="relative min-h-screen w-full **overflow-x-hidden**"
       style={{
-        background:
-          "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
+        background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         backgroundAttachment: "fixed",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
@@ -95,12 +101,13 @@ const AppContent = () => {
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
           </div>
         )}
-
         <div
-          className="flex-1 p-6 overflow-y-auto transition-all duration-300 z-10"
+          // Note: 'overflow-x-hidden' on this inner div is no longer strictly necessary 
+          // if it's applied to the root, but keeping it here for safety doesn't hurt.
+          className="flex-1 p-6 overflow-y-auto overflow-x-hidden transition-all duration-300 z-10"
           style={{
             marginLeft: !hideSidebar ? (isSidebarOpen ? "16rem" : "5rem") : "0",
-            paddingTop: `calc(${headerHeight} + 0.1rem)`,
+            paddingTop: `calc(${headerHeight} + 1.5rem)`,
           }}
         >
           {!hideSidebar && (
@@ -109,14 +116,17 @@ const AppContent = () => {
               isSidebarOpen={isSidebarOpen}
               instituteName={instituteName}
               instituteLogo={instituteLogo}
+              horizontalOffset={headerOffset} // Pass header-specific offset
             />
           )}
-
           <Routes>
             <Route path="/auth" element={<AuthPage />} />
             <Route path="/reset-password" element={<ResetPasswordPage />} />
             <Route element={<ProtectedRoute />}>
-              <Route path="/" element={<Home />} />
+              <Route
+                path="/"
+                element={<Home contentOffset={contentOffset} />} // Pass content-specific offset
+              />
               <Route path="/friends" element={<Friend />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="/settings" element={<Settings />} />
@@ -126,7 +136,6 @@ const AppContent = () => {
               <Route path="/voice" element={<Voice />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/interaction" element={<Interaction />} />
-              {/* FIXED: Path changed to lowercase for consistency */}
               <Route path="/library" element={<Library userRole={userRole} />} />
               <Route path="/hostel" element={<Hostel />} />
               <Route path="/club" element={<Club />} />
