@@ -1,19 +1,31 @@
-// src/assets/data.js (Final Update - Fixed Cover Photo Stability)
+// src/assets/data.js (Final Update with Profile Details)
 
 // ------------------- Current User Data -------------------
 export const dummyCurrentUser = {
   _id: "user_1",
   username: "current_user",
-  full_name: "Alok Kumar",
+  full_name: "Alok Kumar", 
   profilePicture: "https://i.pravatar.cc/150?u=user_1",
-  // 🛑 FIX: Removed "?random=1" to ensure the same image loads consistently.
   cover_photo: 'https://picsum.photos/1000/300', 
   bio: 'This is your own profile bio. You can edit this!',
   location: 'Ranchi, India',
   createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365 * 3), 
   followers: ["user_2", "user_3", "user_4", "user_guest"], 
   following: ["user_2", "user_3"],
+
+  // === PROFILE DETAILS ADDED FROM SCREENSHOTS ===
+  pronouns: 'He/Him',
+  work: 'Student', 
+  university: 'National Institute of Advanced Manufacturing Technology Ranchi', 
+  highSchool: 'Sarswati Shishu Vidya Mandir', 
+  currentCity: 'Sugauli',
+  hometown: 'Sugauli',
+  relationship: 'Single', // Based on "Add a relationship status"
+  joined: 'March 2019',
+  socialLink: 'alokgond.in', 
+  socialFollowers: 262, // From the social links line
 };
+
 
 // ------------------- Generic Guest Profile Data -------------------
 export const dummyGuestProfileData = {
@@ -21,17 +33,27 @@ export const dummyGuestProfileData = {
   username: 'profile_user_guest',
   full_name: 'Guest Profile',
   profilePicture: 'https://i.pravatar.cc/150?u=profile_user_guest',
-  // 🛑 FIX: Removed "?random=2" for stability. The image will be consistent.
   cover_photo: 'https://picsum.photos/1000/300', 
   bio: 'Software engineer and a passionate community builder, dedicated to open-source projects.',
   location: 'San Francisco, CA',
   createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 365 * 2), 
   followers: ["user_1", "user_3"],
   following: ["user_1", "user_2", "user_4"],
+  
+  // Default values for Guest Profile
+  pronouns: 'They/Them',
+  work: 'Software Engineer',
+  university: 'Stanford University',
+  highSchool: 'Local High School',
+  currentCity: 'San Francisco',
+  hometown: 'New York',
+  relationship: 'In a relationship',
+  joined: 'January 2021',
+  socialLink: 'guestprofile.dev',
+  socialFollowers: 1200,
 };
 
 // ------------------- Recent Messages Data -------------------
-// ... (Omitted for brevity, no changes)
 export const dummyRecentMessagesData = [
   {
     _id: "msg_1",
@@ -69,7 +91,6 @@ export const dummyRecentMessagesData = [
 ];
 
 // ------------------- Full Chat History Data -------------------
-// ... (Omitted for brevity, no changes)
 export const initialChatHistory = {
   "user_2": [
     { id: 1, senderId: "user_2", text: "Hi! Did you see the latest project update?", timestamp: Date.now() - 3600000 * 2 },
@@ -149,7 +170,7 @@ export const dummyPosts = [
     {
         _id: "post_4",
         content: "Just published my latest article on React performance! Check it out! #react #coding",
-        image_urls: ["https://images.unsplash.com/photo-1550592965-f938c823f95b"],
+        image_urls: ["https://picsum.photos/800/600?random=2"],
         user_id: "user_1", 
         user: dummyCurrentUser,
         likes: ["user_2", "user_3", "user_4"],

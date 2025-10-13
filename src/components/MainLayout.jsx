@@ -47,7 +47,7 @@ export default function MainLayout() {
           )}
 
           {/* This is where the nested routes will be rendered */}
-          <Outlet />
+          <Outlet  />
         </div>
       </div>
     </div>

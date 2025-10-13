@@ -128,7 +128,7 @@ const AppContent = () => {
                 element={<Home contentOffset={contentOffset} />} // Pass content-specific offset
               />
               <Route path="/friends" element={<Friend />} />
-              <Route path="/profile" element={<Profile />} />
+              <Route path="/profile" element={<Profile isSidebarOpen={isSidebarOpen} />} />
               <Route path="/settings" element={<Settings />} />
               <Route path="/logout" element={<Logout />} />
               <Route path="/department" element={<Department />} />
