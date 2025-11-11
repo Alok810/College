@@ -1,6 +1,7 @@
 // src/components/Message.jsx
 import React, { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom'; // 🛑 IMPORT LINK
+// 🛑 NEW: Import useLocation and useNavigate from react-router-dom
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Edit2, MessageSquare, ChevronUp, MoreHorizontal } from 'lucide-react';
 import { dummyRecentMessagesData, initialChatHistory } from '../assets/data'; 
 import ChatBox from './ChatBox'; 
@@ -25,6 +26,38 @@ const MessageSidebar = () => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [selectedChatUser, setSelectedChatUser] = useState(null); 
   const [chatHistory, setChatHistory] = useState(initialChatHistory);
+
+  // 🛑 NEW: Instantiate the hooks to read and modify the URL
+  const location = useLocation();
+  const navigate = useNavigate();
+
+  // 🛑 NEW: This effect runs when the component loads or the URL search param changes
+  useEffect(() => {
+    // Get URL search params (e.g., ?open_chat=USER_ID)
+    const params = new URLSearchParams(location.search);
+    const chatUserId = params.get('open_chat');
+
+    // If the 'open_chat' parameter exists in the URL...
+    if (chatUserId) {
+      // Find the user object from your existing messages list
+      const userToOpen = messages.find(
+        msg => msg.from_user_id._id === chatUserId
+      )?.from_user_id;
+
+      if (userToOpen) {
+        // If we found the user, open their chat
+        setSelectedChatUser(userToOpen);
+        setIsExpanded(true);
+      } else {
+        // Optional: Handle if the user isn't in the recent messages
+        console.warn(`User ID ${chatUserId} not found in recent messages.`);
+      }
+      
+      // Clear the URL parameter so it doesn't run again on refresh
+      // This changes "?open_chat=123" back to "/"
+      navigate(location.pathname, { replace: true });
+    }
+  }, [location.search, messages, navigate]); // Dependencies
 
   // Function to update the chat history and the sidebar's recent message list
   const updateChatHistory = (userId, newMessage, userDetails) => {
@@ -186,9 +219,9 @@ const MessageSidebar = () => {
                 >
                   {/* 🛑 WRAP AVATAR IN LINK */}
                   <Link 
-                      to={`/profile/${message.from_user_id._id}`} 
-                      onClick={(e) => e.stopPropagation()} // Prevent chat from opening
-                      className="flex-shrink-0 transition-transform hover:scale-105"
+                    to={`/profile/${message.from_user_id._id}`} 
+                    onClick={(e) => e.stopPropagation()} // Prevent chat from opening
+                    className="flex-shrink-0 transition-transform hover:scale-105"
                   >
                     <img
                       src={message.from_user_id.profile_picture}

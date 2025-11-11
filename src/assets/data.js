@@ -165,8 +165,6 @@ export const dummyPosts = [
     },
     
     // --- POSTS FOR ALOK KUMAR (user_1) START HERE ---
-
-    // Post 4 (Existing)
     {
         _id: "post_4",
         content: "Just published my latest article on React performance! Check it out! #react #coding",
@@ -176,8 +174,6 @@ export const dummyPosts = [
         likes: ["user_2", "user_3", "user_4"],
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24 * 7), 
     },
-    
-    // Post 6 (NEW) - Technical Post
     {
         _id: "post_6",
         content: "Spent the night debugging a complex async issue. Finally conquered it! Nothing beats that feeling. 😅 #javascript #debuglife",
@@ -187,8 +183,6 @@ export const dummyPosts = [
         likes: ["user_2", "user_guest"],
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 10), 
     },
-
-    // Post 7 (NEW) - Casual/Personal Post
     {
         _id: "post_7",
         content: "Ranchi weather is perfect today. Coffee and code session underway! ☕",
@@ -198,8 +192,6 @@ export const dummyPosts = [
         likes: ["user_3", "user_4", "user_2"],
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3), 
     },
-
-    // Post 8 (NEW) - Announcement/Academic Post
     {
         _id: "post_8",
         content: "Excited to start my final year project on AI in manufacturing! Wish me luck! 🤖 #NIAMTRanchi #Engineering",
@@ -209,7 +201,6 @@ export const dummyPosts = [
         likes: ["user_1", "user_2", "user_3", "user_4", "user_guest"],
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 1), // Most recent post
     },
-    
     // --- POSTS FOR ALOK KUMAR (user_1) END HERE ---
 
     // Post 5 (Guest Profile)
@@ -225,4 +216,73 @@ export const dummyPosts = [
         likes: ["user_1"],
         createdAt: new Date(Date.now() - 1000 * 60 * 60 * 12), 
     },
+];
+
+// ------------------- Notification Data (NEWLY ADDED) -------------------
+export const dummyNotificationData = [
+  {
+    _id: "notif_1",
+    user: dummyPosts[0].user, // Jane Doe
+    text: "liked your post.",
+    seen: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 2),
+  },
+  {
+    _id: "notif_2",
+    user: dummyPosts[1].user, // John Smith
+    text: "commented on your photo: \"Amazing shot!\"",
+    seen: false,
+    createdAt: new Date(Date.now() - 1000 * 60 * 30),
+  },
+  {
+    _id: "notif_3",
+    user: dummyPosts[2].user, // Alex Ray
+    text: "started following you.",
+    seen: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 3),
+  },
+  {
+    _id: "notif_4",
+    user: dummyGuestProfileData, // Guest Profile
+    text: "liked your comment.",
+    seen: true,
+    createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24),
+  },
+];
+
+// ------------------- Friend Data (NEW) -------------------
+// These are users who have sent a request TO the current user (user_1)
+export const dummyFriendRequestsData = [
+  {
+    _id: "user_4", // Alex Ray
+    full_name: "Alex Ray",
+    profile_picture: "https://i.pravatar.cc/150?u=user_4",
+    mutual_friends: 3,
+  },
+];
+
+// These are users who are already friends with the current user (user_1)
+export const dummyFriendsData = [
+  {
+    _id: "user_2", // Jane Doe
+    full_name: "Jane Doe",
+    profile_picture: "https://i.pravatar.cc/150?u=user_2",
+    mutual_friends: 12,
+  },
+  {
+    _id: "user_3", // John Smith
+    full_name: "John Smith",
+    profile_picture: "https://i.pravatar.cc/150?u=user_3",
+    mutual_friends: 8,
+  },
+];
+
+// ------------------- Searchable Users (FIXED) -------------------
+// This was 'dummyUsers', now renamed to match your import
+export const dummySearchableUsers = [
+  dummyCurrentUser, // user_1
+  dummyPosts[0].user, // user_2 (Jane Doe)
+  dummyPosts[1].user, // user_3 (John Smith)
+  dummyPosts[2].user, // user_4 (Alex Ray)
+  dummyGuestProfileData, // user_guest
 ];

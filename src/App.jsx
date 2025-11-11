@@ -1,3 +1,4 @@
+// src/App.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 // Your original imports
@@ -86,8 +87,8 @@ const AppContent = () => {
 
   return (
     <div
-      // 🛑 MODIFIED CLASS: Added 'overflow-x-hidden' to the main root wrapper
-      className="relative min-h-screen w-full **overflow-x-hidden**"
+      // MODIFIED CLASS: Added 'overflow-x-hidden' to the main root wrapper
+      className="relative min-h-screen w-full overflow-x-hidden"
       style={{
         background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         backgroundAttachment: "fixed",
@@ -128,7 +129,16 @@ const AppContent = () => {
                 element={<Home contentOffset={contentOffset} />} // Pass content-specific offset
               />
               <Route path="/friends" element={<Friend />} />
+              {/* 🛑 FIX 1: Route for the current user's profile (e.g., /profile) 
+                This path does not have an ID, so the Profile component knows to load the current user.
+             */}
               <Route path="/profile" element={<Profile isSidebarOpen={isSidebarOpen} />} />
+
+              {/* 🛑 FIX 2: Route for a guest user's profile (e.g., /profile/user123)
+                The colon (:) makes it a dynamic route, allowing useParams() in Profile.jsx to work correctly.
+             */}
+              <Route path="/profile/:ProfileId" element={<Profile isSidebarOpen={isSidebarOpen} />} />
+
               <Route path="/settings" element={<Settings />} />
               <Route path="/logout" element={<Logout />} />
               <Route path="/department" element={<Department />} />
