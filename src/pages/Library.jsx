@@ -685,7 +685,7 @@ const Library = ({ userRole }) => {
   });
 
   return (
-    <div className="flex flex-col items-center min-h-screen pt-4"
+    <div className="flex flex-col items-center min-h-screen"
       style={{ background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", backgroundAttachment: "fixed" }}>
       {showMessage && (
         <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg bg-white">

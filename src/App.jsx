@@ -1,4 +1,3 @@
-// src/App.jsx
 import React, { useState, useEffect, useRef } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 // Your original imports
@@ -19,14 +18,19 @@ import Interaction from "./pages/Interaction";
 import Library from "./pages/Library";
 import Hostel from "./pages/Hostel";
 import Club from "./pages/Club";
+import Tab from "./components/Tab"; 
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 import { checkBackendConnection } from "./api";
 
+// Import the initial posts
+import { dummyPosts } from "./assets/data.js"; 
+
 const AppContent = () => {
   const location = useLocation();
-  const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password";
+  const hideSidebar =
+    location.pathname === "/auth" || location.pathname === "/reset-password";
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   const { authData, instituteData, loading } = useAuth();
@@ -34,14 +38,20 @@ const AppContent = () => {
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState("0px");
 
+  // The state for posts and the handler function
+  const [posts, setPosts] = useState(dummyPosts);
+
+  const handleAddPost = (newPostData) => {
+    // This function adds the new post to the top of the list
+    setPosts(prevPosts => [newPostData, ...prevPosts]);
+  };
+
   // --- START: MODIFIED LOGIC FOR CUSTOM HOME PAGE ALIGNMENT ---
-  const isHomePage = location.pathname === '/';
+  const isHomePage = location.pathname === "/"; 
 
-  // Tweak these values to get the perfect alignment
-  const HEADER_SHIFT_LEFT = -85; // Negative value shifts header left
-  const CONTENT_SHIFT_RIGHT = 85; // Positive value shifts content right
+  const HEADER_SHIFT_LEFT = -75; 
+  const CONTENT_SHIFT_RIGHT = 75; 
 
-  // Apply offsets only on the home page, otherwise they are 0
   const headerOffset = isHomePage ? HEADER_SHIFT_LEFT : 0;
   const contentOffset = isHomePage ? CONTENT_SHIFT_RIGHT : 0;
   // --- END: MODIFIED LOGIC ---
@@ -67,14 +77,22 @@ const AppContent = () => {
   const instituteName = instituteData?.instituteName || "Your Institute";
   const instituteLogo = instituteData?.instituteLogo || null;
 
-  // Logic to determine if the user is a Librarian
   const isLibrarianDesignation = authData?.designation === "Librarian";
   const isLibrarianUserType = authData?.userType === "Librarian";
-  const isLibrarianRole = isLibrarianUserType ||
+  const isLibrarianRole =
+    isLibrarianUserType ||
     (isLibrarianDesignation &&
       (authData?.userType === "Official" || authData?.userType === "Other"));
+  const userRole = isLibrarianRole ? "librarian" : "user";
 
-  const userRole = isLibrarianRole ? 'librarian' : 'user';
+  const contentMarginLeft = !hideSidebar
+    ? isSidebarOpen
+      ? "16rem"
+      : "5rem"
+    : "0";
+  const contentPaddingTop = `calc(${headerHeight} + 1.5rem)`;
+  const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
+  const maskCutoffLine = `calc(${contentPaddingTop} - 0.40rem)`;
 
   if (loading) {
     return (
@@ -87,10 +105,10 @@ const AppContent = () => {
 
   return (
     <div
-      // MODIFIED CLASS: Added 'overflow-x-hidden' to the main root wrapper
       className="relative min-h-screen w-full overflow-x-hidden"
       style={{
-        background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
+        background:
+          "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         backgroundAttachment: "fixed",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
@@ -102,15 +120,15 @@ const AppContent = () => {
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
           </div>
         )}
+
+        {/* This outer div ONLY handles positioning (the margin-left) */}
         <div
-          // Note: 'overflow-x-hidden' on this inner div is no longer strictly necessary 
-          // if it's applied to the root, but keeping it here for safety doesn't hurt.
-          className="flex-1 p-6 overflow-y-auto overflow-x-hidden transition-all duration-300 z-10"
+          className="flex-1 transition-all duration-300"
           style={{
-            marginLeft: !hideSidebar ? (isSidebarOpen ? "16rem" : "5rem") : "0",
-            paddingTop: `calc(${headerHeight} + 1.5rem)`,
+            marginLeft: contentMarginLeft,
           }}
         >
+          {/* The Header is a sibling to the scrolling content */}
           {!hideSidebar && (
             <InstituteHeader
               ref={headerRef}
@@ -120,38 +138,72 @@ const AppContent = () => {
               horizontalOffset={headerOffset} // Pass header-specific offset
             />
           )}
-          <Routes>
-            <Route path="/auth" element={<AuthPage />} />
-            <Route path="/reset-password" element={<ResetPasswordPage />} />
-            <Route element={<ProtectedRoute />}>
-              <Route
-                path="/"
-                element={<Home contentOffset={contentOffset} />} // Pass content-specific offset
-              />
-              <Route path="/friends" element={<Friend />} />
-              {/* 🛑 FIX 1: Route for the current user's profile (e.g., /profile) 
-                This path does not have an ID, so the Profile component knows to load the current user.
-             */}
-              <Route path="/profile" element={<Profile isSidebarOpen={isSidebarOpen} />} />
 
-              {/* 🛑 FIX 2: Route for a guest user's profile (e.g., /profile/user123)
-                The colon (:) makes it a dynamic route, allowing useParams() in Profile.jsx to work correctly.
-             */}
-              <Route path="/profile/:ProfileId" element={<Profile isSidebarOpen={isSidebarOpen} />} />
-
-              <Route path="/settings" element={<Settings />} />
-              <Route path="/logout" element={<Logout />} />
-              <Route path="/department" element={<Department />} />
-              <Route path="/result" element={<Result />} />
-              <Route path="/voice" element={<Voice />} />
-              <Route path="/admin" element={<Admin />} />
-              <Route path="/interaction" element={<Interaction />} />
-              <Route path="/library" element={<Library userRole={userRole} />} />
-              <Route path="/hostel" element={<Hostel />} />
-              <Route path="/club" element={<Club />} />
-            </Route>
-          </Routes>
+          {/* This inner div is the SCROLLING container */}
+          <div
+            className={`p-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+            style={{
+              paddingTop: contentPaddingTop,
+              height: "100vh", 
+              WebkitMaskImage: `linear-gradient(
+                to bottom, 
+                transparent ${maskCutoffLine}, 
+                black ${maskCutoffLine}
+              )`,
+              maskImage: `linear-gradient(
+                to bottom, 
+                transparent ${maskCutoffLine}, 
+                black ${maskCutoffLine}
+              )`,
+            }}
+          >
+            {/* The Routes (and your feed) are inside the mask */}
+            <Routes>
+              <Route element={<ProtectedRoute />}>
+                <Route
+                  path="/"
+                  element={<Home posts={posts} contentOffset={contentOffset} />}
+                />
+                <Route path="/friends" element={<Friend />} />
+                
+                {/* ✅ UPDATED: Pass 'posts' state to both Profile routes */}
+                <Route
+                  path="/profile"
+                  element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />}
+                />
+                <Route
+                  path="/profile/:ProfileId"
+                  element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />}
+                />
+                
+                <Route path="/settings" element={<Settings />} />
+                <Route path="/logout" element={<Logout />} />
+                <Route path="/department" element={<Department />} />
+                <Route path="/result" element={<Result />} />
+                <Route path="/voice" element={<Voice />} />
+                <Route path="/admin" element={<Admin />} />
+                <Route path="/interaction" element={<Interaction />} />
+                <Route
+                  path="/library"
+                  element={<Library userRole={userRole} />}
+                />
+                <Route path="/hostel" element={<Hostel />} />
+                <Route path="/club" element={<Club />} />
+              </Route>
+              {/* These routes are outside the ProtectedRoute */}
+              <Route path="/auth" element={<AuthPage />} />
+              <Route path="/reset-password" element={<ResetPasswordPage />} />
+            </Routes>
+          </div>
         </div>
+
+        {/* This is the Tab component (right sidebar) */}
+        {!hideSidebar && isHomePage && (
+          <div className="hidden lg:block fixed top-0 right-0 w-80 h-screen py-4 pr-4 z-40">
+            {/* Pass the 'handleAddPost' function to Tab */}
+            <Tab onPostCreated={handleAddPost} />
+          </div>
+        )}
       </div>
     </div>
   );

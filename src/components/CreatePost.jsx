@@ -1,0 +1,198 @@
+import React, { useState, useRef, useEffect } from 'react';
+import { User, Image, Smile, X, Send } from 'lucide-react';
+import { dummyCurrentUser } from '../assets/data.js';
+
+const CreatePost = ({ onPostCreated }) => {
+  const [postContent, setPostContent] = useState('');
+  const [imageFiles, setImageFiles] = useState([]);
+  const [imagePreviews, setImagePreviews] = useState([]);
+  const [isPosting, setIsPosting] = useState(false);
+  
+  const imageInputRef = useRef(null);
+  const textareaRef = useRef(null); 
+  
+  const MAX_CHARS = 280;
+  const charsLeft = MAX_CHARS - postContent.length;
+
+  const handleTextChange = (e) => {
+    setPostContent(e.target.value);
+    // Auto-resize logic
+    e.target.style.height = 'auto'; 
+    e.target.style.height = `${e.target.scrollHeight}px`;
+  };
+
+  const handleImageSelect = (e) => {
+    const newFiles = Array.from(e.target.files);
+    if (newFiles.length === 0) return;
+
+    // Create new previews just for the new files
+    const newImageFiles = [...imageFiles];
+    const newImagePreviews = [...imagePreviews];
+
+    newFiles.forEach(file => {
+      newImageFiles.push(file);
+      newImagePreviews.push(URL.createObjectURL(file));
+    });
+
+    // Set the new combined arrays
+    setImageFiles(newImageFiles);
+    setImagePreviews(newImagePreviews);
+    
+    // Clear the file input's value to allow selecting the same file again
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  };
+
+  const clearAllImages = () => {
+    // ✅ 1. FIX: Removed the line that revoked (destroyed) the URLs
+    setImageFiles([]);
+    setImagePreviews([]);
+    if (imageInputRef.current) {
+      imageInputRef.current.value = "";
+    }
+  };
+
+  const removeImage = (indexToRemove) => {
+    // ✅ 2. FIX: Removed the line that revoked (destroyed) the URL
+    setImageFiles(prev => prev.filter((_, i) => i !== indexToRemove));
+    setImagePreviews(prev => prev.filter((_, i) => i !== indexToRemove));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault(); 
+    if (!postContent.trim() && imageFiles.length === 0) {
+      return;
+    }
+
+    setIsPosting(true);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    const newPostData = {
+      _id: `post_${Date.now()}`,
+      user: dummyCurrentUser, 
+      createdAt: new Date().toISOString(),
+      content: postContent,
+      image_urls: imagePreviews, // These URLs are no longer destroyed
+      likes: [],
+      comments: []
+    };
+    
+    if (onPostCreated) {
+      onPostCreated(newPostData);
+    }
+    
+    // This reset logic is now safe and works
+    setIsPosting(false);
+    setPostContent('');
+    clearAllImages(); 
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+    }
+  };
+  
+  // ✅ 3. FIX: Removed the useEffect cleanup that was destroying URLs
+  // (No useEffect here anymore)
+
+  const isPostButtonDisabled = (isPosting || (!postContent.trim() && imageFiles.length === 0));
+
+  return (
+    <form onSubmit={handleSubmit} className="p-4 bg-white rounded-lg w-full max-w-md mx-auto">
+      <h2 className="text-xl font-bold mb-4 text-gray-800 text-center">
+        Create Post
+      </h2>
+      
+      <div className="flex items-start space-x-3">
+        <img
+          src={dummyCurrentUser.profilePicture}
+          alt="Your profile"
+          className="w-10 h-10 rounded-full object-cover flex-shrink-0"
+        />
+
+        <div className="flex-grow">
+          <textarea
+            ref={textareaRef} 
+            className="w-full p-2 text-base border-gray-300 rounded-md resize-none focus:ring-2 focus:ring-purple-400 focus:outline-none overflow-y-hidden"
+            rows="2" 
+            placeholder="What's on your mind?"
+            value={postContent}
+            onChange={handleTextChange} 
+            maxLength={MAX_CHARS}
+          />
+
+          {imagePreviews.length > 0 && (
+            <div className="mt-3 grid grid-cols-3 gap-2">
+              {imagePreviews.map((previewUrl, index) => (
+                <div key={index} className="relative aspect-square">
+                  <img 
+                    src={previewUrl} 
+                    alt={`Selected preview ${index + 1}`} 
+                    className="rounded-lg w-full h-full object-cover" 
+                  />
+                  <button
+                    type="button" 
+                    onClick={() => removeImage(index)} 
+                    className="absolute top-1 right-1 bg-black bg-opacity-60 text-white rounded-full p-0.5 hover:bg-opacity-80 transition-all"
+                    aria-label={`Remove image ${index + 1}`}
+                  >
+                    <X size={14} />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <hr className="my-3 border-gray-200" />
+
+          <div className="flex justify-between items-center">
+            <div className="flex space-x-1 text-gray-500">
+              <button
+                type="button"
+                onClick={() => imageInputRef.current.click()}
+                className="p-2 rounded-full hover:bg-purple-100 hover:text-purple-600 transition-colors"
+                aria-label="Add image"
+              >
+                <Image size={20} />
+              </button>
+              <input
+                type="file"
+                accept="image/*"
+                ref={imageInputRef}
+                onChange={handleImageSelect}
+                className="hidden"
+                multiple 
+              />
+              <button
+                type="button"
+                className="p-2 rounded-full hover:bg-purple-100 hover:text-purple-600 transition-colors"
+                aria-label="Add emoji"
+              >
+                <Smile size={20} />
+              </button>
+            </div>
+
+            <div className="flex items-center space-x-3">
+              <span 
+                className={`text-sm ${charsLeft < 20 ? 'text-red-500' : 'text-gray-500'}`}
+              >
+                {charsLeft}
+              </span>
+              <button
+                type="submit"
+                disabled={isPostButtonDisabled}
+                className={`flex items-center bg-gradient-to-r from-purple-600 to-teal-600 text-white font-bold py-2 px-5 rounded-full transition-all
+                            disabled:opacity-50 disabled:cursor-not-allowed
+                            hover:opacity-90 shadow-md`}
+              >
+                {isPosting ? 'Posting...' : 'Post'}
+                {!isPosting && <Send size={16} className="ml-1.5" />}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </form>
+  );
+};
+
+export default CreatePost;

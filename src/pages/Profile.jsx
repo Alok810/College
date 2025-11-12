@@ -1,4 +1,3 @@
-// src/pages/Profile.jsx
 import React, { useState, useEffect } from 'react';
 import {
     MapPin, Loader2, Star, MessageSquare, Users, Flag, Phone, Mail, Globe,
@@ -15,7 +14,7 @@ import { useParams, Link } from "react-router-dom";
 import PostCard from '../components/PostCard';
 // Import the new friend data to help simulate the status
 import { 
-    dummyPosts, 
+    dummyPosts, // We still need dummyPosts as an initial fallback
     dummyCurrentUser, 
     dummyGuestProfileData,
     dummyFriendsData, 
@@ -44,12 +43,12 @@ const Loading = () => (
     </div>
 );
 
-// --- EditModalForm (No changes) ---
+// --- EditModalForm (Cleaned) ---
 
 const EditModalForm = ({ formData, handleChange }) => {
     const relationshipOptions = ['Single', 'In a relationship', 'Married', 'Engaged', 'In a civil union', 'Separated', 'Divorced', 'Widowed', 'In a complicated situation', 'Not specified'];
     return (
-        <div className='space-y-4 max-h-[70vh] overflow-y-auto pr-2'>
+        <div className='space-y-4 max-h-[55vh] overflow-y-auto pr-2'>
             {/* ... Form fields ... */}
             <div>
                 <label htmlFor="pronouns" className="block text-sm font-medium text-gray-700">Pronouns (e.g., He/Him)</label>
@@ -178,7 +177,7 @@ const EditModalForm = ({ formData, handleChange }) => {
 }
 
 
-// --- EditProfileModal (No changes) ---
+// --- EditProfileModal (Cleaned) ---
 
 const EditProfileModal = ({ user, setShowEdit, setUser }) => {
     const [formData, setFormData] = useState({
@@ -260,7 +259,7 @@ const EditProfileModal = ({ user, setShowEdit, setUser }) => {
     );
 };
 
-// --- MediaGallery (🛑 MODIFIED 🛑) ---
+// --- MediaGallery (Cleaned) ---
 
 const MediaGallery = ({ posts }) => {
     const allMedia = posts.flatMap(post => {
@@ -289,7 +288,6 @@ const MediaGallery = ({ posts }) => {
     }
 
     return (
-        // 🛑 ADDED w-full HERE FOR CONSISTENCY
         <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4 bg-white rounded-xl shadow-lg w-full'>
             {allMedia.map((media, index) => (
                 <div
@@ -326,7 +324,7 @@ const MediaGallery = ({ posts }) => {
 };
 
 
-// --- ProfileHeader (No changes) ---
+// --- ProfileHeader (Cleaned) ---
 
 const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab }) => {
     const navItems = [
@@ -376,7 +374,7 @@ const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab 
 };
 
 
-// --- FriendButton (No changes) ---
+// --- FriendButton (Cleaned) ---
 const FriendButton = ({ status, onAdd, onCancel, onAccept, onUnfriend }) => {
     switch (status) {
         case 'friends':
@@ -420,7 +418,7 @@ const FriendButton = ({ status, onAdd, onCancel, onAccept, onUnfriend }) => {
 };
 
 
-// --- ProfileSidebar (No changes) ---
+// --- ProfileSidebar (Cleaned) ---
 
 const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) => { 
     const isCurrentUser = !ProfileId || ProfileId === dummyCurrentUser._id;
@@ -521,8 +519,7 @@ const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) =
 };
 
 
-// 🛑 MODIFIED: Friend List Tab Component 🛑
-// This component now has the white card background WITH w-full.
+// --- FriendListTab (Cleaned) ---
 const FriendListTab = ({ friends }) => {
     if (!friends || friends.length === 0) {
         return (
@@ -532,7 +529,6 @@ const FriendListTab = ({ friends }) => {
         );
     }
 
-    // 🛑 ADDED w-full HERE
     return (
         <div className='bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full'> 
             <h3 className="text-xl font-bold text-gray-800 mb-4">Friends ({friends.length})</h3>
@@ -568,25 +564,16 @@ const FriendListTab = ({ friends }) => {
         </div>
     );
 };
-// 🛑 END OF MODIFICATION 🛑
 
 
-// --- ProfileMainContent (No changes) ---
-
+// --- ProfileMainContent (Cleaned) ---
 const ProfileMainContent = ({ user, posts, activeTab, friends }) => { // Prop is already passed
     return (
         <div className='space-y-4'>
-            {/* This div setup is a bit unusual. The `items-center` on the flex container
-              is what's causing your tabs (Media, Friends, Results) to center themselves
-              when they DON'T have `w-full`. The `w-full` class forces them to
-              take up the full width, overriding the `items-center`.
-              This is why adding `w-full` works.
-            */}
             <div className='flex flex-col items-center gap-2.5 w-full'>
                 
                 {activeTab === 'posts' && (
                     <>
-                        {/* PostCards are likely `w-full` themselves, so they fill the space */}
                         {posts.map((post) => <PostCard key={post._id} post={post} />)}
                         {posts.length === 0 && (
                             <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
@@ -614,8 +601,7 @@ const ProfileMainContent = ({ user, posts, activeTab, friends }) => { // Prop is
     );
 };
 
-// --- findUserById (No changes) ---
-
+// --- findUserById (Cleaned and updated) ---
 const findUserById = (id) => {
     // 1. Check if the requested ID is the current user
     if (id === dummyCurrentUser._id) {
@@ -626,10 +612,35 @@ const findUserById = (id) => {
     // Create a map of unique users first for efficiency
     const allUsers = new Map();
     dummyPosts.forEach(post => {
-        if (!allUsers.has(post.user._id)) {
+        if (post.user && !allUsers.has(post.user._id)) { // Check if post.user exists
             allUsers.set(post.user._id, post.user);
         }
     });
+    // Also check friend data
+    dummyFriendsData.forEach(friend => {
+        if(!allUsers.has(friend._id)) {
+             allUsers.set(friend._id, {
+                _id: friend._id,
+                full_name: friend.full_name,
+                profilePicture: friend.profile_picture,
+                // Add other fields if available, or merge with guest data
+            });
+        }
+    });
+    dummyFriendRequestsData.forEach(req => {
+         if(!allUsers.has(req._id)) {
+             allUsers.set(req._id, {
+                _id: req._id,
+                full_name: req.full_name,
+                profilePicture: req.profile_picture,
+            });
+        }
+    });
+    // Add guest user
+    if (!allUsers.has(dummyGuestProfileData._id)) {
+         allUsers.set(dummyGuestProfileData._id, dummyGuestProfileData);
+    }
+
 
     // Attempt to find the user
     const foundUser = allUsers.get(id);
@@ -649,9 +660,10 @@ const findUserById = (id) => {
 
 
 // ---------------------------------------------
-// --- Main Profile Component (No changes) ---
+// --- Main Profile Component (MODIFIED as before) ---
 // ---------------------------------------------
-const Profile = ({ isSidebarOpen }) => {
+// 1. Accept 'posts' prop from App.jsx, rename it to 'allPosts'
+const Profile = ({ isSidebarOpen, posts: allPosts }) => {
     const { ProfileId } = useParams();
 
     const isCurrentUser = !ProfileId || ProfileId === dummyCurrentUser._id;
@@ -659,7 +671,7 @@ const Profile = ({ isSidebarOpen }) => {
     const initialUserData = findUserById(userId) || dummyCurrentUser; 
 
     const [user, setUser] = useState(initialUserData);
-    const [posts, setPosts] = useState([]);
+    const [posts, setPosts] = useState([]); // This state will hold the FILTERED posts
     const [showEdit, setShowEdit] = useState(false);
     const [activeTab, setActiveTab] = useState('posts');
     
@@ -726,12 +738,23 @@ const Profile = ({ isSidebarOpen }) => {
         }
         // ---------------------------------------------------
 
+        // --- 🛑 MODIFIED POSTS LOGIC ---
         // Fetch posts for the currently loaded user
         const targetId = newUser ? newUser._id : (ProfileId || dummyCurrentUser._id);
-        const profilePosts = dummyPosts.filter(post => post.user_id === targetId);
-        setPosts(profilePosts);
+        
+        // 2. Add a safety check in case the prop isn't ready
+        if (allPosts) {
+            // 3. Filter 'allPosts' prop and use 'post.user._id'
+            // This now correctly filters the posts from App.jsx
+            const profilePosts = allPosts.filter(post => post.user?._id === targetId);
+            setPosts(profilePosts);
+        }
+        // --- 🛑 END OF MODIFICATION ---
+
         setActiveTab('posts'); // Reset tab on new profile load
-    }, [ProfileId]);
+
+    // 4. Add 'allPosts' to the dependency array
+    }, [ProfileId, allPosts]); 
 
     // Manages the outer (body) scrollbar
     useEffect(() => {
