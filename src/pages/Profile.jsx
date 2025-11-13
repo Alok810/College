@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     MapPin, Loader2, Star, MessageSquare, Users, Flag, Phone, Mail, Globe,
     CalendarDays, User as UserIcon, Briefcase, Award, GraduationCap, Code,
-    Heart, Image as ImageIcon, Users as FriendsIcon, BarChart3, Edit, Save,
+    Heart, Image as ImageIcon, Users as FriendsIcon, BarChart3, Edit,
     Bold,
     UserPlus, // Icon for Add Friend
     UserCheck, // Icon for Friends
@@ -12,15 +12,13 @@ import {
 import moment from 'moment';
 import { useParams, Link } from "react-router-dom";
 import PostCard from '../components/PostCard';
-// Import the new friend data to help simulate the status
 import { 
-    dummyPosts, // We still need dummyPosts as an initial fallback
-    dummyCurrentUser, 
-    dummyGuestProfileData,
-    dummyFriendsData, 
-    dummyFriendRequestsData 
+    dummyPosts, // We still need dummyPosts
+    dummyCurrentUser, // We still need this
 } from '../assets/data.js';
-
+import EditProfile from '../components/EditProfile';
+import { useFriends } from '../context/FriendContext'; // <-- Uses the hook
+import { findUserById } from '../utils/findUser'; // <-- Uses the shared function
 
 const NAV_WIDTH_REM = 16;
 const CONTAINER_PADDING_REM = 2;
@@ -43,225 +41,10 @@ const Loading = () => (
     </div>
 );
 
-// --- EditModalForm (Cleaned) ---
-
-const EditModalForm = ({ formData, handleChange }) => {
-    const relationshipOptions = ['Single', 'In a relationship', 'Married', 'Engaged', 'In a civil union', 'Separated', 'Divorced', 'Widowed', 'In a complicated situation', 'Not specified'];
-    return (
-        <div className='space-y-4 max-h-[55vh] overflow-y-auto pr-2'>
-            {/* ... Form fields ... */}
-            <div>
-                <label htmlFor="pronouns" className="block text-sm font-medium text-gray-700">Pronouns (e.g., He/Him)</label>
-                <input
-                    type="text"
-                    id="pronouns"
-                    name="pronouns"
-                    value={formData.pronouns || ''}
-                    onChange={handleChange}
-                    placeholder="Add your pronouns"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="work" className="block text-sm font-medium text-gray-700">Works at</label>
-                <input
-                    type="text"
-                    id="work"
-                    name="work"
-                    value={formData.work || ''}
-                    onChange={handleChange}
-                    placeholder="Add your workplace/role (e.g., Student)"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="university" className="block text-sm font-medium text-gray-700">University</label>
-                <input
-                    type="text"
-                    id="university"
-                    name="university"
-                    value={formData.university || ''}
-                    onChange={handleChange}
-                    placeholder="National Institute of Advanced Manufacturing Technology Ranchi"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="highSchool" className="block text-sm font-medium text-gray-700">High School</label>
-                <input
-                    type="text"
-                    id="highSchool"
-                    name="highSchool"
-                    value={formData.highSchool || ''}
-                    onChange={handleChange}
-                    placeholder="Sarswati Shishu Vidya Mandir"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="currentCity" className="block text-sm font-medium text-gray-700">Current Town/City (Lives in)</label>
-                <input
-                    type="text"
-                    id="currentCity"
-                    name="currentCity"
-                    value={formData.currentCity || ''}
-                    onChange={handleChange}
-                    placeholder="Sugauli"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="hometown" className="block text-sm font-medium text-gray-700">Home Town (From)</label>
-                <input
-                    type="text"
-                    id="hometown"
-                    name="hometown"
-                    value={formData.hometown || ''}
-                    onChange={handleChange}
-                    placeholder="Sugauli"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="relationship" className="block text-sm font-medium text-gray-700">Relationship</label>
-                <select
-                    id="relationship"
-                    name="relationship"
-                    value={formData.relationship || 'Not specified'}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border bg-white"
-                >
-                    {relationshipOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                    ))}
-                </select>
-            </div>
-
-            <div>
-                <label htmlFor="joined" className="block text-sm font-medium text-gray-700">Joined Platform</label>
-                <input
-                    type="text"
-                    id="joined"
-                    name="joined"
-                    value={formData.joined || ''}
-                    readOnly
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border bg-gray-50 text-gray-500"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="socialLink" className="block text-sm font-medium text-gray-700">Social Link (Instagram ID)</label>
-                <div className='flex items-center mt-1'>
-                    <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm h-full">
-                        @
-                    </span>
-                    <input
-                        type="text"
-                        id="socialLink"
-                        name="socialLink"
-                        value={formData.socialLink || ''}
-                        onChange={handleChange}
-                        placeholder="alokgond.in"
-                        className="flex-1 block w-full rounded-none rounded-r-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                    />
-                </div>
-            </div>
-        </div>
-    );
-}
-
-
-// --- EditProfileModal (Cleaned) ---
-
-const EditProfileModal = ({ user, setShowEdit, setUser }) => {
-    const [formData, setFormData] = useState({
-        pronouns: user.pronouns || '',
-        work: user.work || '',
-        university: user.university || '',
-        highSchool: user.highSchool || '',
-        currentCity: user.currentCity || '',
-        hometown: user.hometown || '',
-        relationship: user.relationship || 'Not specified',
-        joined: user.joined || 'N/A',
-        socialLink: user.socialLink || '',
-        followers: user.followers || 0,
-        _id: user._id,
-        full_name: user.full_name,
-        profilePicture: user.profilePicture,
-        cover_photo: user.cover_photo,
-    });
-
-    const [isSaving, setIsSaving] = useState(false);
-
-    const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormData(prevData => ({
-            ...prevData,
-            [name]: value
-        }));
-    };
-
-    const handleSubmit = (e) => {
-        e.preventDefault();
-        setIsSaving(true);
-
-        setTimeout(() => {
-            setUser(formData);
-            setIsSaving(false);
-            setShowEdit(false);
-        }, 800);
-    };
-
-    return (
-        <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
-            <div className='bg-white w-full max-w-lg p-6 rounded-xl shadow-2xl transform transition-all duration-300 scale-100'>
-                <h2 className='text-2xl font-bold text-gray-800 border-b pb-2 mb-4 flex justify-between items-center'>
-                    Edit Profile Details
-                    <button onClick={() => setShowEdit(false)} className='text-gray-400 hover:text-gray-600 transition'>
-                        <span className="text-xl font-light">×</span>
-                    </button>
-                </h2>
-
-                <form onSubmit={handleSubmit}>
-                    <EditModalForm formData={formData} handleChange={handleChange} />
-
-                    <div className='mt-6 flex justify-end space-x-3'>
-                        <button
-                            type="button"
-                            onClick={() => setShowEdit(false)}
-                            className='py-2 px-4 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition duration-150'
-                            disabled={isSaving}
-                        >
-                            Cancel
-                        </button>
-                        <button
-                            type="submit"
-                            className='py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-150 flex items-center justify-center gap-2'
-                            disabled={isSaving}
-                        >
-                            {isSaving ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <Save className='w-5 h-5' />
-                            )}
-                            {isSaving ? 'Saving...' : 'Save Changes'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-};
 
 // --- MediaGallery (Cleaned) ---
-
 const MediaGallery = ({ posts }) => {
+    // ... (This component is unchanged)
     const allMedia = posts.flatMap(post => {
         let mediaItems = [];
         if (Array.isArray(post.image_urls) && post.image_urls.length > 0) {
@@ -325,8 +108,8 @@ const MediaGallery = ({ posts }) => {
 
 
 // --- ProfileHeader (Cleaned) ---
-
 const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab }) => {
+    // ... (This component is unchanged)
     const navItems = [
         { name: 'Post', icon: Star, tab: 'posts' },
         { name: 'Media', icon: ImageIcon, tab: 'media' },
@@ -376,6 +159,7 @@ const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab 
 
 // --- FriendButton (Cleaned) ---
 const FriendButton = ({ status, onAdd, onCancel, onAccept, onUnfriend }) => {
+    // ... (This component is unchanged)
     switch (status) {
         case 'friends':
             return (
@@ -419,7 +203,6 @@ const FriendButton = ({ status, onAdd, onCancel, onAccept, onUnfriend }) => {
 
 
 // --- ProfileSidebar (Cleaned) ---
-
 const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) => { 
     const isCurrentUser = !ProfileId || ProfileId === dummyCurrentUser._id;
 
@@ -449,7 +232,7 @@ const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) =
 
     return (
         <div className={`w-full lg:w-1/5 bg-white rounded-xl shadow-lg lg:mb-0 mb-6 relative
-                         lg:fixed lg:top-22 lg:left-[calc(${NAV_WIDTH_REM}rem+${CONTAINER_PADDING_REM}rem)] lg:max-h-[calc(100vh-6rem)] overflow-y-scroll`}
+                            lg:fixed lg:top-22 lg:left-[calc(${NAV_WIDTH_REM}rem+${CONTAINER_PADDING_REM}rem)] lg:max-h-[calc(100vh-6rem)] overflow-y-scroll`}
             style={scrollbarHideStyle}>
 
             <div className='relative h-28 bg-gray-200 overflow-hidden rounded-t-xl'>
@@ -458,7 +241,10 @@ const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) =
             </div>
 
             <div className='w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-14 z-10'>
-                <img src={user.profilePicture} alt={`${user.full_name}'s profile`} className='w-full h-full object-cover' />
+                {/* 🛑 THIS IS THE ONLY LINE THAT CHANGED
+                  It now uses 'profile_picture' (lowercase) to match all other components
+                */}
+                <img src={user.profile_picture} alt={`${user.full_name}'s profile`} className='w-full h-full object-cover' />
             </div>
 
             <div className='p-4 pt-16'>
@@ -521,6 +307,7 @@ const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) =
 
 // --- FriendListTab (Cleaned) ---
 const FriendListTab = ({ friends }) => {
+    // ... (This component is unchanged)
     if (!friends || friends.length === 0) {
         return (
             <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
@@ -567,7 +354,8 @@ const FriendListTab = ({ friends }) => {
 
 
 // --- ProfileMainContent (Cleaned) ---
-const ProfileMainContent = ({ user, posts, activeTab, friends }) => { // Prop is already passed
+const ProfileMainContent = ({ user, posts, activeTab, friends }) => {
+    // ... (This component is unchanged)
     return (
         <div className='space-y-4'>
             <div className='flex flex-col items-center gap-2.5 w-full'>
@@ -601,70 +389,25 @@ const ProfileMainContent = ({ user, posts, activeTab, friends }) => { // Prop is
     );
 };
 
-// --- findUserById (Cleaned and updated) ---
-const findUserById = (id) => {
-    // 1. Check if the requested ID is the current user
-    if (id === dummyCurrentUser._id) {
-        return dummyCurrentUser;
-    }
-
-    // 2. Search for the user in dummyPosts (assuming post.user is the user object)
-    // Create a map of unique users first for efficiency
-    const allUsers = new Map();
-    dummyPosts.forEach(post => {
-        if (post.user && !allUsers.has(post.user._id)) { // Check if post.user exists
-            allUsers.set(post.user._id, post.user);
-        }
-    });
-    // Also check friend data
-    dummyFriendsData.forEach(friend => {
-        if(!allUsers.has(friend._id)) {
-             allUsers.set(friend._id, {
-                _id: friend._id,
-                full_name: friend.full_name,
-                profilePicture: friend.profile_picture,
-                // Add other fields if available, or merge with guest data
-            });
-        }
-    });
-    dummyFriendRequestsData.forEach(req => {
-         if(!allUsers.has(req._id)) {
-             allUsers.set(req._id, {
-                _id: req._id,
-                full_name: req.full_name,
-                profilePicture: req.profile_picture,
-            });
-        }
-    });
-    // Add guest user
-    if (!allUsers.has(dummyGuestProfileData._id)) {
-         allUsers.set(dummyGuestProfileData._id, dummyGuestProfileData);
-    }
-
-
-    // Attempt to find the user
-    const foundUser = allUsers.get(id);
-
-    if (foundUser) {
-        // Merge found user data with potential missing fields from dummyGuestProfileData
-        return {
-            ...dummyGuestProfileData, // Use as a base for default fields
-            ...foundUser,
-            _id: id // Ensure ID is correct
-        };
-    }
-
-    // 3. If not found, return null or a minimal placeholder
-    return null;
-};
-
 
 // ---------------------------------------------
-// --- Main Profile Component (MODIFIED as before) ---
+// --- Main Profile Component ---
 // ---------------------------------------------
-// 1. Accept 'posts' prop from App.jsx, rename it to 'allPosts'
 const Profile = ({ isSidebarOpen, posts: allPosts }) => {
+    // ... (This component is unchanged)
+    
     const { ProfileId } = useParams();
+
+    // Get all friend data/handlers from the hook
+    const {
+        friends,
+        requests,
+        suggestions,
+        handleAcceptRequest,
+        handleAddFriend,
+        handleCancelRequest,
+        handleUnfriend
+    } = useFriends();
 
     const isCurrentUser = !ProfileId || ProfileId === dummyCurrentUser._id;
     const userId = ProfileId || dummyCurrentUser._id;
@@ -693,26 +436,27 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
             console.error(`User with ID ${ProfileId} not found.`);
         }
 
-        // --- Simulate fetching friendship status (No changes here) ---
+        // --- UPDATED: Simulate fetching friendship status ---
         if (ProfileId && ProfileId !== dummyCurrentUser._id) {
-            if (dummyFriendsData.find(friend => friend._id === ProfileId)) {
+            // Check the master lists from the hook
+            if (friends && friends.find(friend => friend._id === ProfileId)) {
                 setFriendshipStatus('friends');
             } 
-            else if (dummyFriendRequestsData.find(req => req._id === ProfileId)) {
+            else if (requests && requests.find(req => req._id === ProfileId)) {
                 setFriendshipStatus('request_received');
             }
-            else if (ProfileId === 'user_guest') {
-                 setFriendshipStatus('request_sent');
+            else if (suggestions && suggestions.find(sug => sug._id === ProfileId && sug.requestSent)) {
+                setFriendshipStatus('request_sent');
             }
             else {
                 setFriendshipStatus('not_friends');
             }
         }
         
-        // --- Simulate fetching this user's friend list (No changes here) ---
+        // --- UPDATED: Simulate fetching this user's friend list ---
         if (!ProfileId || ProfileId === dummyCurrentUser._id) {
-            // If it's our profile, show our friends
-            setFriendList(dummyFriendsData);
+            // If it's our profile, show our friends from the hook
+            setFriendList(friends);
         } else {
             // For this demo, we'll show a hardcoded list for other users
             switch (ProfileId) {
@@ -738,23 +482,18 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
         }
         // ---------------------------------------------------
 
-        // --- 🛑 MODIFIED POSTS LOGIC ---
-        // Fetch posts for the currently loaded user
+        // --- MODIFIED POSTS LOGIC ---
         const targetId = newUser ? newUser._id : (ProfileId || dummyCurrentUser._id);
         
-        // 2. Add a safety check in case the prop isn't ready
         if (allPosts) {
-            // 3. Filter 'allPosts' prop and use 'post.user._id'
-            // This now correctly filters the posts from App.jsx
             const profilePosts = allPosts.filter(post => post.user?._id === targetId);
             setPosts(profilePosts);
         }
-        // --- 🛑 END OF MODIFICATION ---
+        // --- END OF MODIFICATION ---
 
         setActiveTab('posts'); // Reset tab on new profile load
 
-    // 4. Add 'allPosts' to the dependency array
-    }, [ProfileId, allPosts]); 
+    }, [ProfileId, allPosts, friends, requests, suggestions]); // Add hook state to dependency array
 
     // Manages the outer (body) scrollbar
     useEffect(() => {
@@ -769,34 +508,21 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
         };
     }, []);
     
-    // Handler function to simulate friend actions
+    // Handler function to call App.jsx handlers
     const handleFriendAction = (action) => {
-        // In a real app, you'd send an API request and update state on success
+        // We call the prop handlers from the hook
         switch (action) {
             case 'add':
-                setFriendshipStatus('request_sent');
+                handleAddFriend(ProfileId);
                 break;
             case 'cancel':
-                setFriendshipStatus('not_friends');
+                handleCancelRequest(ProfileId);
                 break;
             case 'unfriend':
-                setFriendshipStatus('not_friends');
-                // Also update list if we unfriend them from their profile
-                setFriendList(friendList.filter(f => f._id !== dummyCurrentUser._id)); 
+                handleUnfriend(ProfileId);
                 break;
             case 'accept':
-                setFriendshipStatus('friends');
-                // Also update list if we accept from their profile
-                // We need to find the user's details to add to the list
-                const acceptedUser = findUserById(ProfileId);
-                if (acceptedUser) {
-                    setFriendList(prev => [...prev, {
-                        _id: acceptedUser._id,
-                        full_name: acceptedUser.full_name,
-                        profile_picture: acceptedUser.profilePicture,
-                        mutual_friends: 3 // Simulated
-                    }]);
-                }
+                handleAcceptRequest(ProfileId);
                 break;
             default:
                 break;
@@ -875,7 +601,7 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
             </div>
 
             {showEdit && isCurrentUser && (
-                <EditProfileModal
+                <EditProfile
                     user={user}
                     setShowEdit={setShowEdit}
                     setUser={setUser}

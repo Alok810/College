@@ -18,14 +18,16 @@ import Interaction from "./pages/Interaction";
 import Library from "./pages/Library";
 import Hostel from "./pages/Hostel";
 import Club from "./pages/Club";
-import Tab from "./components/Tab"; 
+import Tab from "./components/Tab";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
+import { FriendProvider } from "./context/FriendContext";
+import { ChatProvider } from "./context/ChatContext"; // <-- 1. IMPORT THE CHAT PROVIDER
 import ProtectedRoute from "./components/ProtectedRoute";
 import { checkBackendConnection } from "./api";
 
-// Import the initial posts
-import { dummyPosts } from "./assets/data.js"; 
+// --- IMPORT ONLY POSTS DATA ---
+import { dummyPosts } from "./assets/data.js";
 
 const AppContent = () => {
   const location = useLocation();
@@ -38,20 +40,21 @@ const AppContent = () => {
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState("0px");
 
-  // The state for posts and the handler function
+  // === POSTS STATE ===
   const [posts, setPosts] = useState(dummyPosts);
 
   const handleAddPost = (newPostData) => {
-    // This function adds the new post to the top of the list
     setPosts(prevPosts => [newPostData, ...prevPosts]);
   };
 
+  // === 2. ALL FRIEND STATE AND HANDLERS ARE REMOVED ===
+  // ... (this section is now empty) ...
+
+
   // --- START: MODIFIED LOGIC FOR CUSTOM HOME PAGE ALIGNMENT ---
-  const isHomePage = location.pathname === "/"; 
-
-  const HEADER_SHIFT_LEFT = -75; 
-  const CONTENT_SHIFT_RIGHT = 75; 
-
+  const isHomePage = location.pathname === "/";
+  const HEADER_SHIFT_LEFT = -75;
+  const CONTENT_SHIFT_RIGHT = 75;
   const headerOffset = isHomePage ? HEADER_SHIFT_LEFT : 0;
   const contentOffset = isHomePage ? CONTENT_SHIFT_RIGHT : 0;
   // --- END: MODIFIED LOGIC ---
@@ -144,7 +147,7 @@ const AppContent = () => {
             className={`p-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
             style={{
               paddingTop: contentPaddingTop,
-              height: "100vh", 
+              height: "100vh",
               WebkitMaskImage: `linear-gradient(
                 to bottom, 
                 transparent ${maskCutoffLine}, 
@@ -164,18 +167,31 @@ const AppContent = () => {
                   path="/"
                   element={<Home posts={posts} contentOffset={contentOffset} />}
                 />
+
+                {/* --- 3. CLEANED UP ROUTES --- */}
+                {/* No more props! Friend will get data from context. */}
                 <Route path="/friends" element={<Friend />} />
-                
-                {/* ✅ UPDATED: Pass 'posts' state to both Profile routes */}
+
+                {/* Profile still needs 'isSidebarOpen' and 'posts', but no friend props. */}
                 <Route
                   path="/profile"
-                  element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />}
+                  element={
+                    <Profile
+                      isSidebarOpen={isSidebarOpen}
+                      posts={posts}
+                    />
+                  }
                 />
                 <Route
                   path="/profile/:ProfileId"
-                  element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />}
+                  element={
+                    <Profile
+                      isSidebarOpen={isSidebarOpen}
+                      posts={posts}
+                    />
+                  }
                 />
-                
+
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/department" element={<Department />} />
@@ -212,7 +228,13 @@ const AppContent = () => {
 export default function App() {
   return (
     <AuthProvider>
-      <AppContent />
+      {/* --- 4. WRAP AppContent WITH THE FriendProvider --- */}
+      <FriendProvider>
+        {/* 2. WRAP WITH THE CHAT PROVIDER */}
+        <ChatProvider>
+          <AppContent />
+        </ChatProvider>
+      </FriendProvider>
     </AuthProvider>
   );
 }

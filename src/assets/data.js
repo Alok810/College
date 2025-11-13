@@ -1,4 +1,4 @@
-// src/assets/data.js (Final Update with Profile Details)
+// src/assets/data.js
 
 // ------------------- Current User Data -------------------
 export const dummyCurrentUser = {
@@ -218,7 +218,7 @@ export const dummyPosts = [
     },
 ];
 
-// ------------------- Notification Data (NEWLY ADDED) -------------------
+// ------------------- Notification Data -------------------
 export const dummyNotificationData = [
   {
     _id: "notif_1",
@@ -250,16 +250,15 @@ export const dummyNotificationData = [
   },
 ];
 
-// ------------------- Friend Data (NEW) -------------------
-// These are users who have sent a request TO the current user (user_1)
-export const dummyFriendRequestsData = [
-  {
-    _id: "user_4", // Alex Ray
-    full_name: "Alex Ray",
-    profile_picture: "https://i.pravatar.cc/150?u=user_4",
-    mutual_friends: 3,
-  },
-];
+// ------------------- Friend Data -------------------
+
+// --- THIS DUPLICATE SECTION HAS BEEN REMOVED ---
+// export const dummyFriendRequestsData = [
+//   {
+//     _id: "user_4", // Alex Ray
+//     ...
+//   },
+// ];
 
 // These are users who are already friends with the current user (user_1)
 export const dummyFriendsData = [
@@ -277,12 +276,110 @@ export const dummyFriendsData = [
   },
 ];
 
-// ------------------- Searchable Users (FIXED) -------------------
-// This was 'dummyUsers', now renamed to match your import
+// ------------------- Searchable Users -------------------
 export const dummySearchableUsers = [
   dummyCurrentUser, // user_1
   dummyPosts[0].user, // user_2 (Jane Doe)
   dummyPosts[1].user, // user_3 (John Smith)
   dummyPosts[2].user, // user_4 (Alex Ray)
   dummyGuestProfileData, // user_guest
+];
+
+// ------------------- Suggestion Data -------------------
+export const dummySuggestionsData = [
+  {
+    _id: "user_10",
+    full_name: "Aisha Yadav",
+    profile_picture: "https://i.pravatar.cc/150?u=user_10",
+    mutual_friends: 1,
+  },
+  {
+    _id: "user_11",
+    full_name: "Nisha Teye",
+    profile_picture: "https://i.pravatar.cc/150?u=user_11",
+    mutual_friends: 0,
+  },
+  {
+    _id: "user_12",
+    full_name: "Manju Gogoi",
+    profile_picture: "https://i.pravatar.cc/150?u=user_12",
+    mutual_friends: 0,
+  },
+  {
+    _id: "user_13",
+    full_name: "Shut Up",
+    profile_picture: "https://i.pravatar.cc/150?u=user_13",
+    mutual_friends: 0,
+  },
+  {
+    _id: "user_14",
+    full_name: "Jyoti Chourasiya",
+    profile_picture: "https://i.pravatar.cc/150?u=user_14",
+    mutual_friends: 1,
+  },
+  {
+    _id: "user_15",
+    full_name: "Priyanka Sharma",
+    profile_picture: "https://i.pravatar.cc/150?u=user_15",
+    mutual_friends: 1,
+  },
+  {
+    _id: "user_16",
+    full_name: "Dn Sneha",
+    profile_picture: "https://i.pravatar.cc/150?u=user_16",
+    mutual_friends: 0,
+  },
+  {
+    _id: "user_17",
+    full_name: "Ku Tadar",
+    profile_picture: "https://i.pravatar.cc/150?u=user_17",
+    mutual_friends: 0,
+  },
+];
+
+// ------------------- Friend Request Data (The one we will use) -------------------
+// This is the single source of truth for friend requests
+export const dummyFriendRequestsData = [
+  {
+    _id: "user_4",
+    full_name: "Alex Ray",
+    profile_picture: "https://i.pravatar.cc/150?u=user_4",
+    mutual_friends: 2,
+    createdAt: "2025-11-13T09:30:00Z"
+  },
+  {
+    _id: "user_5",
+    full_name: "Sarah Conner",
+    profile_picture: "https://i.pravatar.cc/150?u=user_5",
+    mutual_friends: 8,
+    createdAt: "2025-11-12T18:15:00Z"
+  },
+  {
+    _id: "user_6",
+    full_name: "Mikey Chen",
+    profile_picture: "https://i.pravatar.cc/150?u=user_6",
+    mutual_friends: 1,
+    createdAt: "2025-11-12T15:00:00Z"
+  },
+  {
+    _id: "user_7",
+    full_name: "Priya Singh",
+    profile_picture: "https://i.pravatar.cc/150?u=user_7",
+    mutual_friends: 12,
+    createdAt: "2025-11-11T10:00:00Z"
+  },
+  {
+    _id: "user_8",
+    full_name: "Chris Bumstead",
+    profile_picture: "https://i.pravatar.cc/150?u=user_8",
+    mutual_friends: 5,
+    createdAt: "2025-11-10T10:00:00Z"
+  },
+  {
+    _id: "user_9",
+    full_name: "Ratan Kumar",
+    profile_picture: "https://i.pravatar.cc/150?u=user_9",
+    mutual_friends: 108,
+    createdAt: "2025-11-09T12:00:00Z"
+  }
 ];

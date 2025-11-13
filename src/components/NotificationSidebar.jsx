@@ -1,8 +1,8 @@
 // src/components/NotificationSidebar.jsx
-import React, { useState } from 'react';
+import React, { useState } from 'react'; // <-- No more useState
 import { Link } from 'react-router-dom';
 import { Bell, ChevronUp, CheckCheck } from 'lucide-react';
-import { dummyNotificationData } from '../assets/data';
+import { useFriends } from '../context/FriendContext'; // <-- 1. Import the hook
 
 // We can re-use the same time formatter
 const formatTimeAgo = (date) => {
@@ -21,22 +21,25 @@ const formatTimeAgo = (date) => {
 };
 
 const NotificationSidebar = () => {
-  const [notifications, setNotifications] = useState(dummyNotificationData);
+  // 2. Get data and handlers from context
+  const { notifications, handleMarkAllAsRead } = useFriends();
+  
+  // 3. Remove local 'isExpanded' state, use simple toggle
   const [isExpanded, setIsExpanded] = useState(false);
 
-  // Simplified toggle: just open and close
   const toggleSidebar = () => {
     setIsExpanded(!isExpanded);
   };
 
   const markAllAsRead = (e) => {
     e.stopPropagation(); // Prevent sidebar from toggling
-    setNotifications(prev => prev.map(n => ({ ...n, seen: true })));
+    handleMarkAllAsRead(); // <-- Use the context handler
   };
 
+  // 4. Calculate unread count from context
   const unreadCount = notifications.filter(n => !n.seen).length;
 
-  // Styling constants (same as MessageSidebar)
+  // Styling constants
   const EXPANDED_HEIGHT_CLASS = 'h-[400px]';
   const BASE_ROUNDING_CLASS = 'rounded-xl';
 
@@ -67,7 +70,7 @@ const NotificationSidebar = () => {
               <button
                 className="p-2 bg-gray-100 rounded-full hover:bg-indigo-100 text-gray-700 hover:text-indigo-600 transition-colors"
                 aria-label="Mark all as read"
-                onClick={markAllAsRead}
+                onClick={markAllAsRead} // <-- Now calls context handler
               >
                 <CheckCheck size={18} />
               </button>
@@ -100,7 +103,7 @@ const NotificationSidebar = () => {
         )}
       </div>
 
-      {/* Notification List (Only rendered when expanded) */}
+      {/* 5. Notification List (Now reads from context 'notifications') */}
       {isExpanded && (
         <div className="flex-grow pt-1 overflow-y-auto no-scrollbar px-3 pb-3">
           {notifications.map((n) => (
