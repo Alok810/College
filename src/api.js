@@ -10,7 +10,7 @@ import axios from "axios";
 
 // If in production, use the deployed backend URL. If local, use your PC's IP.
 const BACKEND_URL = import.meta.env.MODE === "production" 
-  ? "https://your-backend-name.onrender.com" // We will update this later!
+  ? "https://rigya-backend.onrender.com" // We will update this later!
   : "http://192.168.43.43:4000"; // Your local IP for testing
 
 // ✅ Changed to lowercase 'api' and added 'export const'

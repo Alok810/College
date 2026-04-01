@@ -7,7 +7,7 @@ const ChatContext = createContext();
 // const ENDPOINT = "http://localhost:4000"; 
 
 const ENDPOINT = import.meta.env.MODE === "production" 
-  ? "https://your-backend-name.onrender.com" 
+  ? "https://rigya-backend.onrender.com"
   : "http://localhost:4000";
 let socket;
 
