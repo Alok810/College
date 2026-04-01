@@ -6,10 +6,15 @@ import { fetchChats, accessChat, fetchMessages, sendMessage as apiSendMessage, m
 const ChatContext = createContext();
 // const ENDPOINT = "http://localhost:4000"; 
 
+// const ENDPOINT = import.meta.env.MODE === "production" 
+//   ? "https://rigya-backend.onrender.com"
+//   : "http://localhost:4000";
+// let socket;
+
 const ENDPOINT = import.meta.env.MODE === "production" 
-  ? "https://rigya-backend.onrender.com"
+  ? "https://rigya-backend.onrender.com" 
   : "http://localhost:4000";
-let socket;
+  let socket;
 
 export const ChatProvider = ({ children }) => {
   const { authData } = useAuth();

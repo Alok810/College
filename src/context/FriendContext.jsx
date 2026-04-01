@@ -13,6 +13,11 @@ import {
 
 const FriendContext = createContext();
 
+// ✅ Setup the dynamic ENDPOINT for WebSockets
+const ENDPOINT = import.meta.env.MODE === "production" 
+  ? "https://rigya-backend.onrender.com" 
+  : "http://localhost:4000";
+
 export const FriendProvider = ({ children }) => {
   const { authData } = useAuth(); 
 
@@ -27,7 +32,7 @@ export const FriendProvider = ({ children }) => {
       if (!authData) return; 
 
       try {
-        // Fetch both endpoints at the same time to make it fast
+        // FIXED: Added the missing comma in Promise.all
         const [socialData, notifData] = await Promise.all([
           getMySocialData(),
           fetchNotifications()
@@ -74,8 +79,8 @@ export const FriendProvider = ({ children }) => {
   useEffect(() => {
     if (!authData) return;
 
-    // Connect to your WebSocket server
-    const socket = io("http://localhost:4000");
+    // FIXED: Use the dynamic ENDPOINT instead of hardcoded localhost
+    const socket = io(ENDPOINT);
     socket.emit("join", authData._id);
 
     // Listen for the "like" notification from the backend
