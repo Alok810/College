@@ -3,22 +3,16 @@ import {
     MapPin, Loader2, Star, MessageSquare, Users, Flag, Phone, Mail, Globe,
     CalendarDays, User as UserIcon, Briefcase, Award, GraduationCap, Code,
     Heart, Image as ImageIcon, Users as FriendsIcon, BarChart3, Edit,
-    Bold,
-    UserPlus, // Icon for Add Friend
-    UserCheck, // Icon for Friends
-    Clock, // Icon for Request Sent
-    UserX, // Icon for Unfriend/Cancel
+    UserPlus, UserCheck, Clock, UserX,
 } from 'lucide-react';
-import moment from 'moment';
 import { useParams, Link } from "react-router-dom";
 import PostCard from '../components/PostCard';
-import { 
-    dummyPosts, // We still need dummyPosts
-    dummyCurrentUser, // We still need this
-} from '../assets/data.js';
 import EditProfile from '../components/EditProfile';
-import { useFriends } from '../context/FriendContext'; // <-- Uses the hook
-import { findUserById } from '../utils/findUser'; // <-- Uses the shared function
+import { useFriends } from '../context/FriendContext'; 
+
+// ✅ 1. Import Auth Context and our new API call
+import { useAuth } from '../context/AuthContext';
+import { getUserById } from '../api';
 
 const NAV_WIDTH_REM = 16;
 const CONTAINER_PADDING_REM = 2;
@@ -26,7 +20,6 @@ const ORIGINAL_HEADER_HEIGHT_PX = 64;
 const NEW_HEADER_HEIGHT_PX = 56;
 const PROFILE_HEADER_WIDTH_REM = 45.5;
 
-// Function to calculate the left offset for the fixed header
 const calculateLeftOffset = (isSidebarOpen, offset) => {
     const sidebarWidth = isSidebarOpen ? 200 : 40;
     const windowWidth = window.innerWidth;
@@ -34,29 +27,20 @@ const calculateLeftOffset = (isSidebarOpen, offset) => {
     return `${sidebarWidth + mainContentWidth / 2 + offset}px`;
 };
 
-
 const Loading = () => (
     <div className="flex justify-center items-center min-h-screen">
         <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
     </div>
 );
 
-
-// --- MediaGallery (Cleaned) ---
+// --- MediaGallery ---
 const MediaGallery = ({ posts }) => {
-    // ... (This component is unchanged)
     const allMedia = posts.flatMap(post => {
         let mediaItems = [];
         if (Array.isArray(post.image_urls) && post.image_urls.length > 0) {
             mediaItems = mediaItems.concat(post.image_urls.map(url => ({
                 url: url,
                 type: url.match(/\.(mp4|webm|ogg|mov)$/i) ? 'video' : 'image'
-            })));
-        }
-        if (Array.isArray(post.media)) {
-            mediaItems = mediaItems.concat(post.media.map(item => ({
-                url: item.url,
-                type: item.type || (item.url?.match(/\.(mp4|webm|ogg|mov)$/i) ? 'video' : 'image')
             })));
         }
         return mediaItems.map(item => ({ ...item, postId: post._id })).filter(item => item.url);
@@ -77,39 +61,19 @@ const MediaGallery = ({ posts }) => {
                     key={`${media.postId}-${index}`}
                     className='aspect-square overflow-hidden rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200 shadow-md group relative'
                 >
-                    {media.type === 'video' ? (
-                        <>
-                            <video
-                                src={media.url}
-                                controls={false}
-                                autoPlay={false}
-                                muted={true}
-                                loop
-                                className='w-full h-full object-cover'
-                                onClick={() => console.log('Open video lightbox/player')}
-                            />
-                            <span className="absolute inset-0 flex items-center justify-center bg-black/20 text-white opacity-0 group-hover:opacity-100 transition">
-                                <Code className="w-8 h-8" />
-                            </span>
-                        </>
-                    ) : (
-                        <img
-                            src={media.url}
-                            alt={`Gallery image ${index + 1}`}
-                            className='w-full h-full object-cover'
-                            onClick={() => console.log('Open image lightbox')}
-                        />
-                    )}
+                    <img
+                        src={media.url}
+                        alt={`Gallery image ${index + 1}`}
+                        className='w-full h-full object-cover'
+                    />
                 </div>
             ))}
         </div>
     );
 };
 
-
-// --- ProfileHeader (Cleaned) ---
-const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab }) => {
-    // ... (This component is unchanged)
+// --- ProfileHeader ---
+const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab, isCurrentUser }) => {
     const navItems = [
         { name: 'Post', icon: Star, tab: 'posts' },
         { name: 'Media', icon: ImageIcon, tab: 'media' },
@@ -143,7 +107,7 @@ const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab 
                     ))}
                 </div>
 
-                {user._id === dummyCurrentUser._id && (
+                {isCurrentUser && (
                     <button
                         className={`px-3 py-1.5 text-sm font-medium rounded-lg transition duration-150 flex items-center gap-1 ${gradientClass}`}
                         onClick={() => setShowEdit(true)}
@@ -156,63 +120,44 @@ const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab 
     );
 };
 
-
-// --- FriendButton (Cleaned) ---
+// --- FriendButton ---
 const FriendButton = ({ status, onAdd, onCancel, onAccept, onUnfriend }) => {
-    // ... (This component is unchanged)
     switch (status) {
         case 'friends':
             return (
-                <button
-                    onClick={onUnfriend}
-                    className="flex items-center gap-1.5 px-3 py-1 text-sm bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition"
-                >
+                <button onClick={onUnfriend} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition">
                     <UserCheck className='w-4 h-4' /> Friends
                 </button>
             );
         case 'request_sent':
             return (
-                <button
-                    onClick={onCancel}
-                    className="flex items-center gap-1.5 px-3 py-1 text-sm bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition"
-                >
+                <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition">
                     <Clock className='w-4 h-4' /> Request Sent
                 </button>
             );
         case 'request_received':
             return (
-                <button
-                    onClick={onAccept} // You can also link to /friends page: <Link to="/friends">
-                    className="flex items-center gap-1.5 px-3 py-1 text-sm bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition"
-                >
+                <button onClick={onAccept} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">
                     <UserPlus className='w-4 h-4' /> Respond
                 </button>
             );
         case 'not_friends':
         default:
             return (
-                <button
-                    onClick={onAdd}
-                    className="flex items-center gap-1.5 px-3 py-1 text-sm bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition"
-                >
+                <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">
                     <UserPlus className='w-4 h-4' /> Add Friend
                 </button>
             );
     }
 };
 
-
-// --- ProfileSidebar (Cleaned) ---
-const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) => { 
-    const isCurrentUser = !ProfileId || ProfileId === dummyCurrentUser._id;
-
-    const scrollbarHideStyle = {
-        msOverflowStyle: 'none',
-        scrollbarWidth: 'none',
-    };
+// --- ProfileSidebar ---
+// --- ProfileSidebar ---
+const ProfileSidebar = ({ user, isCurrentUser, friendshipStatus, onFriendAction }) => {
+    const scrollbarHideStyle = { msOverflowStyle: 'none', scrollbarWidth: 'none' };
 
     const InfoRow = ({ Icon, text, link, linkText }) => {
-        if (!text || text.includes('undefined') || text.endsWith('at ') || text.endsWith('on ')) return null;
+        if (!text || text.includes('undefined')) return null;
         return (
             <div className='flex items-center text-sm text-gray-700'>
                 <Icon className='w-4 h-4 mr-3 text-gray-500 flex-shrink-0' />
@@ -227,41 +172,37 @@ const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) =
         );
     };
 
-    const socialLinkDisplay = user.socialLink ? `http://${user.socialLink}` : null;
-    const socialLinkText = user.socialLink ? `${user.socialLink} · ${user.followers || 0} followers` : null;
-
     return (
         <div className={`w-full lg:w-1/5 bg-white rounded-xl shadow-lg lg:mb-0 mb-6 relative
-                            lg:fixed lg:top-22 lg:left-[calc(${NAV_WIDTH_REM}rem+${CONTAINER_PADDING_REM}rem)] lg:max-h-[calc(100vh-6rem)] overflow-y-scroll`}
+                          lg:fixed lg:top-22 lg:left-[calc(${NAV_WIDTH_REM}rem+${CONTAINER_PADDING_REM}rem)] lg:max-h-[calc(100vh-6rem)] overflow-y-scroll`}
             style={scrollbarHideStyle}>
 
             <div className='relative h-28 bg-gray-200 overflow-hidden rounded-t-xl'>
-                <img src={user.cover_photo} alt={`${user.full_name}'s cover`} className='w-full h-full object-cover' />
+                <img src={user.coverPhoto || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"} alt={`Cover`} className='w-full h-full object-cover' />
                 <div className='absolute inset-0 bg-black/20'></div>
             </div>
 
             <div className='w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-14 z-10'>
-                {/* 🛑 THIS IS THE ONLY LINE THAT CHANGED
-                  It now uses 'profile_picture' (lowercase) to match all other components
-                */}
-                <img src={user.profile_picture} alt={`${user.full_name}'s profile`} className='w-full h-full object-cover' />
+                <img src={user.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5&size=150"} alt={`Profile`} className='w-full h-full object-cover' />
             </div>
 
             <div className='p-4 pt-16'>
                 <div className='text-center pb-4 mb-4 border-b border-gray-100'>
-                    <h2 className='text-xl font-bold text-gray-800 mb-1'>{user.full_name}</h2>
+                    <h2 className='text-xl font-bold text-gray-800 mb-1'>{user.full_name || user.name}</h2>
+                    
+                    {/* ✅ Updated to use the dynamic user.bio */}
                     <p className='text-gray-600 text-sm my-0 italic px-2'>
-                        "A brief bio or headline goes here, capturing the user's essence and expertise."
+                        {user.bio || "Hello! I am using Rigya."}
                     </p>
 
                     <div className='mt-0 flex justify-center gap-3'>
                         {!isCurrentUser ? (
                             <div className='flex gap-2 mt-3'>
-                                <FriendButton 
+                                <FriendButton
                                     status={friendshipStatus}
                                     onAdd={() => onFriendAction('add')}
                                     onCancel={() => onFriendAction('cancel')}
-                                    onAccept={() => onFriendAction('accept')} 
+                                    onAccept={() => onFriendAction('accept')}
                                     onUnfriend={() => onFriendAction('unfriend')}
                                 />
                                 <Link
@@ -272,31 +213,29 @@ const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) =
                                 </Link>
                             </div>
                         ) : (
-                            <div className="h-8"></div> 
+                            <div className="h-8"></div>
                         )}
                     </div>
 
-                    <div className='mt-0 space-y-3 text-left'>
-                        {/* ... InfoRow components ... */}
+                    {/* ✅ All missing fields added here */}
+                    <div className='mt-0 space-y-3 text-left pt-4'>
                         <InfoRow Icon={UserIcon} text={user.pronouns ? `Pronouns: ${user.pronouns}` : null} />
                         <InfoRow Icon={Briefcase} text={user.work ? `Works at ${user.work}` : null} />
                         <InfoRow Icon={GraduationCap} text={user.university ? `Studied at ${user.university}` : null} />
                         <InfoRow Icon={GraduationCap} text={user.highSchool ? `Went to ${user.highSchool}` : null} />
                         <InfoRow Icon={MapPin} text={user.currentCity ? `Lives in ${user.currentCity}` : null} />
-                        <InfoRow Icon={Flag} text={user.hometown ? `From ${user.hometown}` : null} />
-                        <InfoRow Icon={Heart} text={user.relationship} />
-                        <InfoRow Icon={CalendarDays} text={user.joined ? `Joined on ${user.joined}` : null} />
-
-                        <div className='flex items-center text-sm text-gray-700'>
-                            <Globe className='w-4 h-4 mr-3 text-indigo-500 flex-shrink-0' />
-                            {user.socialLink ? (
-                                <a href={socialLinkDisplay} target="_blank" rel="noopener noreferrer" className='hover:text-indigo-600 truncate font-medium'>
-                                    {socialLinkText}
-                                </a>
-                            ) : (
-                                <span>No public social links</span>
-                            )}
-                        </div>
+                        <InfoRow Icon={MapPin} text={user.hometown ? `From ${user.hometown}` : null} />
+                        <InfoRow Icon={Heart} text={user.relationship && user.relationship !== 'Not specified' ? user.relationship : null} />
+                        
+                        {/* Social Link is clickable! */}
+                        {user.socialLink && (
+                             <InfoRow 
+                                Icon={Globe} 
+                                text={user.socialLink} 
+                                link={`https://instagram.com/${user.socialLink}`} 
+                                linkText={`@${user.socialLink}`} 
+                             />
+                        )}
                     </div>
                 </div>
             </div>
@@ -304,10 +243,8 @@ const ProfileSidebar = ({ user, ProfileId, friendshipStatus, onFriendAction }) =
     );
 };
 
-
-// --- FriendListTab (Cleaned) ---
+// --- FriendListTab ---
 const FriendListTab = ({ friends }) => {
-    // ... (This component is unchanged)
     if (!friends || friends.length === 0) {
         return (
             <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
@@ -315,36 +252,20 @@ const FriendListTab = ({ friends }) => {
             </div>
         );
     }
-
     return (
-        <div className='bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full'> 
+        <div className='bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full'>
             <h3 className="text-xl font-bold text-gray-800 mb-4">Friends ({friends.length})</h3>
-            
-            <div className='space-y-4'> 
+            <div className='space-y-4'>
                 {friends.map(friend => (
-                    <div key={friend._id} className='flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100'> 
+                    <div key={friend._id} className='flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100'>
                         <Link to={`/profile/${friend._id}`}>
-                            <img 
-                                src={friend.profile_picture} 
-                                alt={friend.full_name} 
-                                className='w-14 h-14 rounded-full object-cover transition-transform hover:scale-105 shadow-sm'
-                            />
+                            <img src={friend.profilePicture || "https://via.placeholder.com/150"} alt={friend.full_name} className='w-14 h-14 rounded-full object-cover shadow-sm' />
                         </Link>
                         <div className='flex-grow overflow-hidden'>
                             <Link to={`/profile/${friend._id}`}>
                                 <h5 className='font-bold text-gray-800 truncate hover:text-indigo-600'>{friend.full_name}</h5>
                             </Link>
-                            <p className='text-sm text-gray-500'>
-                                {friend.mutual_friends ? `${friend.mutual_friends} mutual friends` : 'Friend'}
-                            </p>
                         </div>
-                        <Link 
-                            to={`/?open_chat=${friend._id}`}
-                            className='p-2 bg-indigo-100 text-indigo-600 rounded-full hover:bg-indigo-200 transition-colors'
-                            aria-label="Message"
-                        >
-                            <MessageSquare size={18} />
-                        </Link>
                     </div>
                 ))}
             </div>
@@ -352,36 +273,26 @@ const FriendListTab = ({ friends }) => {
     );
 };
 
-
-// --- ProfileMainContent (Cleaned) ---
+// --- ProfileMainContent ---
 const ProfileMainContent = ({ user, posts, activeTab, friends }) => {
-    // ... (This component is unchanged)
     return (
         <div className='space-y-4'>
             <div className='flex flex-col items-center gap-2.5 w-full'>
-                
                 {activeTab === 'posts' && (
                     <>
                         {posts.map((post) => <PostCard key={post._id} post={post} />)}
                         {posts.length === 0 && (
                             <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
-                                <p>No posts yet for {user.full_name}.</p>
+                                <p>No posts yet for {user.full_name || user.name}.</p>
                             </div>
                         )}
                     </>
                 )}
-
-                {activeTab === 'media' && (
-                    <MediaGallery posts={posts} />
-                )}
-
-                {activeTab === 'friends' && (
-                    <FriendListTab friends={friends} />
-                )}
-                
+                {activeTab === 'media' && <MediaGallery posts={posts} />}
+                {activeTab === 'friends' && <FriendListTab friends={friends} />}
                 {activeTab === 'results' && (
                     <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
-                        <p>Content for the **Results** tab would be displayed here.</p>
+                        <p>Content for the Results tab would be displayed here.</p>
                     </div>
                 )}
             </div>
@@ -389,184 +300,84 @@ const ProfileMainContent = ({ user, posts, activeTab, friends }) => {
     );
 };
 
-
 // ---------------------------------------------
 // --- Main Profile Component ---
 // ---------------------------------------------
 const Profile = ({ isSidebarOpen, posts: allPosts }) => {
-    // ... (This component is unchanged)
-    
     const { ProfileId } = useParams();
+    const { authData } = useAuth(); // ✅ Get real logged in user
+    
+    // If there is no ProfileId in the URL, or it matches our ID, it's OUR profile
+    const isCurrentUser = !ProfileId || ProfileId === authData?._id;
 
-    // Get all friend data/handlers from the hook
-    const {
-        friends,
-        requests,
-        suggestions,
-        handleAcceptRequest,
-        handleAddFriend,
-        handleCancelRequest,
-        handleUnfriend
-    } = useFriends();
+    const { friends, requests, suggestions, handleAcceptRequest, handleAddFriend, handleCancelRequest, handleUnfriend } = useFriends();
 
-    const isCurrentUser = !ProfileId || ProfileId === dummyCurrentUser._id;
-    const userId = ProfileId || dummyCurrentUser._id;
-    const initialUserData = findUserById(userId) || dummyCurrentUser; 
-
-    const [user, setUser] = useState(initialUserData);
-    const [posts, setPosts] = useState([]); // This state will hold the FILTERED posts
+    const [user, setUser] = useState(null);
+    const [posts, setPosts] = useState([]); 
     const [showEdit, setShowEdit] = useState(false);
     const [activeTab, setActiveTab] = useState('posts');
-    
-    // State for managing friend status
-    const [friendshipStatus, setFriendshipStatus] = useState('not_friends'); 
-    
-    // State: To hold the list of friends for the 'friends' tab
+    const [friendshipStatus, setFriendshipStatus] = useState('not_friends');
     const [friendList, setFriendList] = useState([]);
 
-    // NEW EFFECT: Reset user state AND friendship status when ProfileId changes
+    // ✅ 2. Fetch the actual user from the database
     useEffect(() => {
-        const newUser = findUserById(ProfileId || dummyCurrentUser._id);
-        if (newUser) {
-            setUser(newUser);
-        } else if (!ProfileId) {
-            setUser(dummyCurrentUser);
-        } else {
-            setUser(null);
-            console.error(`User with ID ${ProfileId} not found.`);
-        }
+        const fetchUser = async () => {
+            if (isCurrentUser) {
+                setUser(authData); // Just use our own auth data!
+            } else {
+                try {
+                    const fetchedUser = await getUserById(ProfileId);
+                    setUser(fetchedUser);
+                } catch (error) {
+                    console.error("Failed to fetch user:", error);
+                }
+            }
+        };
+        fetchUser();
+    }, [ProfileId, isCurrentUser, authData]);
 
-        // --- UPDATED: Simulate fetching friendship status ---
-        if (ProfileId && ProfileId !== dummyCurrentUser._id) {
-            // Check the master lists from the hook
+    // ✅ 3. Automatically filter the real posts from App.jsx to match this user!
+    useEffect(() => {
+        if (allPosts && user) {
+            const profilePosts = allPosts.filter(post => post.user?._id === user._id);
+            setPosts(profilePosts);
+        }
+    }, [allPosts, user]);
+
+    useEffect(() => {
+        if (ProfileId && ProfileId !== authData?._id) {
             if (friends && friends.find(friend => friend._id === ProfileId)) {
                 setFriendshipStatus('friends');
-            } 
-            else if (requests && requests.find(req => req._id === ProfileId)) {
+            } else if (requests && requests.find(req => req._id === ProfileId)) {
                 setFriendshipStatus('request_received');
-            }
-            else if (suggestions && suggestions.find(sug => sug._id === ProfileId && sug.requestSent)) {
+            } else if (suggestions && suggestions.find(sug => sug._id === ProfileId && sug.requestSent)) {
                 setFriendshipStatus('request_sent');
-            }
-            else {
+            } else {
                 setFriendshipStatus('not_friends');
             }
         }
         
-        // --- UPDATED: Simulate fetching this user's friend list ---
-        if (!ProfileId || ProfileId === dummyCurrentUser._id) {
-            // If it's our profile, show our friends from the hook
+        if (isCurrentUser) {
             setFriendList(friends);
         } else {
-            // For this demo, we'll show a hardcoded list for other users
-            switch (ProfileId) {
-                case 'user_2': // Jane Doe
-                    setFriendList([
-                        { _id: "user_1", full_name: "Alok Kumar", profile_picture: "https://i.pravatar.cc/150?u=user_1", mutual_friends: 0 },
-                        { _id: "user_3", full_name: "John Smith", profile_picture: "https://i.pravatar.cc/150?u=user_3", mutual_friends: 5 }
-                    ]);
-                    break;
-                case 'user_3': // John Smith
-                     setFriendList([
-                        { _id: "user_1", full_name: "Alok Kumar", profile_picture: "https://i.pravatar.cc/150?u=user_1", mutual_friends: 0 },
-                        { _id: "user_2", full_name: "Jane Doe", profile_picture: "https://i.pravatar.cc/150?u=user_2", mutual_friends: 5 }
-                    ]);
-                    break;
-                case 'user_4': // Alex Ray
-                    // Show an empty list because we haven't accepted their request yet
-                    setFriendList([]); 
-                    break;
-                default:
-                    setFriendList([]); // Empty for guests, etc.
-            }
+            setFriendList([]); // Empty for now unless you fetch their friends!
         }
-        // ---------------------------------------------------
 
-        // --- MODIFIED POSTS LOGIC ---
-        const targetId = newUser ? newUser._id : (ProfileId || dummyCurrentUser._id);
-        
-        if (allPosts) {
-            const profilePosts = allPosts.filter(post => post.user?._id === targetId);
-            setPosts(profilePosts);
-        }
-        // --- END OF MODIFICATION ---
+        setActiveTab('posts');
+    }, [ProfileId, friends, requests, suggestions, isCurrentUser]);
 
-        setActiveTab('posts'); // Reset tab on new profile load
-
-    }, [ProfileId, allPosts, friends, requests, suggestions]); // Add hook state to dependency array
-
-    // Manages the outer (body) scrollbar
-    useEffect(() => {
-        const isLargeScreen = window.innerWidth >= 1024; 
-        if (isLargeScreen) {
-            document.body.style.overflow = 'hidden';
-        }
-        return () => {
-            if (isLargeScreen) {
-                document.body.style.overflow = '';
-            }
-        };
-    }, []);
-    
-    // Handler function to call App.jsx handlers
-    const handleFriendAction = (action) => {
-        // We call the prop handlers from the hook
-        switch (action) {
-            case 'add':
-                handleAddFriend(ProfileId);
-                break;
-            case 'cancel':
-                handleCancelRequest(ProfileId);
-                break;
-            case 'unfriend':
-                handleUnfriend(ProfileId);
-                break;
-            case 'accept':
-                handleAcceptRequest(ProfileId);
-                break;
-            default:
-                break;
-        }
-    };
-
-    // --- (No changes below this line to the Profile component logic) ---
-
-    const getConditionalOffset = (isOpen) => {
-        if (isOpen) {
-            return -200;
-        }
-        return -210;
-    };
-
-    const [leftOffset, setLeftOffset] = useState(() =>
-        calculateLeftOffset(isSidebarOpen, getConditionalOffset(isSidebarOpen))
-    );
+    // --- Sidebar offset logic ---
+    const getConditionalOffset = (isOpen) => isOpen ? -200 : -210;
+    const [leftOffset, setLeftOffset] = useState(() => calculateLeftOffset(isSidebarOpen, getConditionalOffset(isSidebarOpen)));
 
     useEffect(() => {
-        const handleResize = () => {
-            setLeftOffset(calculateLeftOffset(isSidebarOpen, getConditionalOffset(isSidebarOpen)));
-        };
-
+        const handleResize = () => setLeftOffset(calculateLeftOffset(isSidebarOpen, getConditionalOffset(isSidebarOpen)));
         handleResize();
         window.addEventListener("resize", handleResize);
-
-        return () => {
-            window.removeEventListener("resize", handleResize);
-        };
+        return () => window.removeEventListener("resize", handleResize);
     }, [isSidebarOpen, ProfileId]);
 
-    const scrollbarHideStyle = {
-        msOverflowStyle: 'none',
-        scrollbarWidth: 'none',
-    };
-
-    const scrollableContentStyle = {
-        paddingBottom: '2.5rem',
-        ...scrollbarHideStyle,
-    };
-
-
-    if (!user) return <Loading />; 
+    if (!user) return <Loading />;
 
     return (
         <div className={`pt-2 lg:ml-[${NAV_WIDTH_REM}rem]`}>
@@ -576,36 +387,37 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
                 setShowEdit={setShowEdit}
                 activeTab={activeTab}
                 setActiveTab={setActiveTab}
+                isCurrentUser={isCurrentUser}
             />
 
             <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative lg:flex lg:h-[calc(100vh-4rem)] lg:overflow-hidden'>
                 
                 <ProfileSidebar 
                     user={user} 
-                    ProfileId={ProfileId} 
+                    isCurrentUser={isCurrentUser}
                     friendshipStatus={friendshipStatus}
-                    onFriendAction={handleFriendAction}
+                    onFriendAction={(action) => {
+                        if (action === 'add') handleAddFriend(ProfileId);
+                        if (action === 'cancel') handleCancelRequest(ProfileId);
+                        if (action === 'unfriend') handleUnfriend(ProfileId);
+                        if (action === 'accept') handleAcceptRequest(ProfileId);
+                    }}
                 />
 
                 <div className='lg:w-2/3 relative flex flex-col h-full' style={{ marginLeft: '29%' }}>
-                    <div className={`flex-grow overflow-y-scroll mt-14 lg:mt-[${NEW_HEADER_HEIGHT_PX}px] z-16`} style={scrollableContentStyle}>
-                        
+                    <div className={`flex-grow overflow-y-scroll mt-14 lg:mt-[${NEW_HEADER_HEIGHT_PX}px] z-16`} style={{ msOverflowStyle: 'none', scrollbarWidth: 'none', paddingBottom: '2.5rem' }}>
                         <ProfileMainContent
                             user={user}
                             posts={posts}
                             activeTab={activeTab}
-                            friends={friendList} // Pass the friendList state
+                            friends={friendList}
                         />
                     </div>
                 </div>
             </div>
 
             {showEdit && isCurrentUser && (
-                <EditProfile
-                    user={user}
-                    setShowEdit={setShowEdit}
-                    setUser={setUser}
-                />
+                <EditProfile user={user} setShowEdit={setShowEdit} setUser={setUser} />
             )}
         </div>
     );

@@ -1,7 +1,21 @@
+// import axios from "axios";
+
+// const api = axios.create({
+//   // ✅ FIXED: Points directly to your Express backend port
+//   baseURL: "http://localhost:4000/api/v1",
+//   withCredentials: true,
+// });
+
 import axios from "axios";
 
-const api = axios.create({
-  baseURL: "/api/v1",
+// If in production, use the deployed backend URL. If local, use your PC's IP.
+const BACKEND_URL = import.meta.env.MODE === "production" 
+  ? "https://your-backend-name.onrender.com" // We will update this later!
+  : "http://192.168.43.43:4000"; // Your local IP for testing
+
+// ✅ Changed to lowercase 'api' and added 'export const'
+export const api = axios.create({
+  baseURL: `${BACKEND_URL}/api/v1`,
   withCredentials: true,
 });
 
@@ -28,7 +42,8 @@ export const checkBackendConnection = async () => {
   }
 };
 
-// --- AUTHENTICATION ENDPOINTS ---
+// ------------------- AUTHENTICATION ENDPOINTS -------------------
+
 export const registerUser = async (payload) => {
   try {
     const isFormData = payload instanceof FormData;
@@ -136,7 +151,7 @@ export const getInstituteByRegNumber = async (instituteRegistrationNumber) => {
   }
 };
 
-// --- LIBRARY MANAGEMENT ENDPOINTS ---
+// ------------------- LIBRARY MANAGEMENT ENDPOINTS -------------------
 
 export const getAllBooks = async () => {
   try {
@@ -214,7 +229,6 @@ export const borrowBook = async (id) => {
   }
 };
 
-// NEW: API function for admin to return a book
 export const returnBookByAdmin = async (id) => {
   try {
     const response = await api.put(`/borrows/admin/return/${id}`);
@@ -282,6 +296,251 @@ export const borrowBookByLibrarian = async (userId, bookId, dueDate) => {
     const errorMessage =
       error.response?.data?.message || "Failed to assign book.";
     throw new Error(errorMessage);
+  }
+};
+
+// ------------------- SOCIAL MEDIA ENDPOINTS -------------------
+
+export const createSocialPost = async (formData) => {
+  try {
+    const response = await api.post("/social/create", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to create post.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const getSocialFeed = async () => {
+  try {
+    const response = await api.get("/social/feed");
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch feed.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const togglePostLike = async (postId) => {
+  try {
+    const response = await api.put(`/social/${postId}/like`);
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to like post.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const addPostComment = async (postId, content) => {
+  try {
+    const response = await api.post(`/social/${postId}/comment`, { content });
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to add comment.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const getUserById = async (userId) => {
+  try {
+    const response = await api.get(`/user/${userId}`);
+    return response.data.user;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to fetch user.");
+  }
+};
+
+export const deleteSocialPost = async (postId) => {
+  try {
+    const response = await api.delete(`/social/${postId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to delete post.");
+  }
+};
+
+export const updateSocialPost = async (postId, content) => {
+  try {
+    const response = await api.put(`/social/${postId}`, { content });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to update post.");
+  }
+};
+
+export const updateUserProfile = async (formData) => {
+  try {
+    // We are passing formData directly, and telling axios it contains files!
+    const response = await api.put("/user/profile/update", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to update profile.");
+  }
+};
+
+// ------------------- FRIEND SYSTEM ENDPOINTS -------------------
+
+// Get all real friend data on load
+export const getMySocialData = async () => {
+  try {
+    const response = await api.get(`/friends/my-data`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to fetch social data.");
+  }
+};
+export const toggleFriendRequest = async (userId) => {
+  try {
+    const response = await api.post(`/friends/request/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to toggle friend request.");
+  }
+};
+
+export const acceptFriendRequest = async (userId) => {
+  try {
+    const response = await api.post(`/friends/accept/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to accept friend request.");
+  }
+};
+
+export const rejectFriendRequest = async (userId) => {
+  try {
+    const response = await api.post(`/friends/reject/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to reject friend request.");
+  }
+};
+
+export const removeFriend = async (userId) => {
+  try {
+    const response = await api.delete(`/friends/remove/${userId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to remove friend.");
+  }
+};
+
+
+// ------------------- LIVE CHAT ENDPOINTS -------------------
+
+export const accessChat = async (userId) => {
+  try {
+    const response = await api.post(`/chat`, { userId });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to access chat.");
+  }
+};
+
+export const fetchChats = async () => {
+  try {
+    const response = await api.get(`/chat`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to fetch chats.");
+  }
+};
+
+// ✅ BACK TO NORMAL IN api.js
+export const sendMessage = async (formData) => {
+  try {
+    const response = await api.post(`/chat/message`, formData);
+    return response.data;
+  } catch (error) {
+    console.error("API Error:", error.response?.data || error.message);
+    throw new Error(error.response?.data?.message || "Failed to send message");
+  }
+};
+
+export const fetchMessages = async (chatId) => {
+  try {
+    const response = await api.get(`/chat/message/${chatId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to fetch messages.");
+  }
+};
+
+export const markMessagesAsRead = async (chatId) => {
+  try {
+    const response = await api.put(`/chat/message/read`, { chatId });
+    return response.data;
+  } catch (error) {
+    console.error("Failed to mark messages as read");
+  }
+};
+
+// ------------------- SEARCH ENDPOINTS -------------------
+
+export const searchInstituteUsers = async (searchTerm) => {
+  try {
+    const response = await api.get(`/user/search?search=${searchTerm}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to search users.");
+  }
+};
+
+// ------------------- NOTIFICATION ENDPOINTS -------------------
+
+export const fetchNotifications = async () => {
+  try {
+    const response = await api.get(`/notification`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to fetch notifications:", error);
+    return { notifications: [] };
+  }
+};
+
+export const markNotificationsAsRead = async () => {
+  try {
+    const response = await api.put(`/notification/read`);
+    return response.data;
+  } catch (error) {
+    console.error("Failed to mark notifications as read:", error);
+  }
+};
+// ✅ Corrected URL to match your backend's /social route
+export const deleteSocialComment = async (postId, commentId) => {
+  try {
+    const response = await api.delete(`/social/${postId}/comment/${commentId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to delete comment");
+  }
+};
+
+// Delete a specific notification
+export const deleteNotification = async (notificationId) => {
+  try {
+    const response = await api.delete(`/notification/${notificationId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to delete notification");
+  }
+};
+
+// Delete a chat message
+export const deleteChatMessage = async (messageId) => {
+  try {
+    const response = await api.delete(`/chat/message/${messageId}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to delete message");
   }
 };
 

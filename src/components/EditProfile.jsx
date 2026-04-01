@@ -1,143 +1,11 @@
-import React, { useState } from 'react';
-import { Loader2, Save } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Loader2, Save, Camera } from 'lucide-react';
+import { updateUserProfile } from '../api';
 
-// This is the form, which only needs to be used by the modal.
-// We can keep it in this file and not export it.
-const EditModalForm = ({ formData, handleChange }) => {
-    const relationshipOptions = ['Single', 'In a relationship', 'Married', 'Engaged', 'In a civil union', 'Separated', 'Divorced', 'Widowed', 'In a complicated situation', 'Not specified'];
-    
-    return (
-        <div className='space-y-4 max-h-[55vh] overflow-y-auto pr-2'>
-            {/* ... Form fields ... */}
-            <div>
-                <label htmlFor="pronouns" className="block text-sm font-medium text-gray-700">Pronouns (e.g., He/Him)</label>
-                <input
-                    type="text"
-                    id="pronouns"
-                    name="pronouns"
-                    value={formData.pronouns || ''}
-                    onChange={handleChange}
-                    placeholder="Add your pronouns"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="work" className="block text-sm font-medium text-gray-700">Works at</label>
-                <input
-                    type="text"
-                    id="work"
-                    name="work"
-                    value={formData.work || ''}
-                    onChange={handleChange}
-                    placeholder="Add your workplace/role (e.g., Student)"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="university" className="block text-sm font-medium text-gray-700">University</label>
-                <input
-                    type="text"
-                    id="university"
-                    name="university"
-                    value={formData.university || ''}
-                    onChange={handleChange}
-                    placeholder="National Institute of Advanced Manufacturing Technology Ranchi"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="highSchool" className="block text-sm font-medium text-gray-700">High School</label>
-                <input
-                    type="text"
-                    id="highSchool"
-                    name="highSchool"
-                    value={formData.highSchool || ''}
-                    onChange={handleChange}
-                    placeholder="Sarswati Shishu Vidya Mandir"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="currentCity" className="block text-sm font-medium text-gray-700">Current Town/City (Lives in)</label>
-                <input
-                    type="text"
-                    id="currentCity"
-                    name="currentCity"
-                    value={formData.currentCity || ''}
-                    onChange={handleChange}
-                    placeholder="Sugauli"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="hometown" className="block text-sm font-medium text-gray-700">Home Town (From)</label>
-                <input
-                    type="text"
-                    id="hometown"
-                    name="hometown"
-                    value={formData.hometown || ''}
-                    onChange={handleChange}
-                    placeholder="Sugauli"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="relationship" className="block text-sm font-medium text-gray-700">Relationship</label>
-                <select
-                    id="relationship"
-                    name="relationship"
-                    value={formData.relationship || 'Not specified'}
-                    onChange={handleChange}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border bg-white"
-                >
-                    {relationshipOptions.map(option => (
-                        <option key={option} value={option}>{option}</option>
-                    ))}
-                </select>
-            </div>
-
-            <div>
-                <label htmlFor="joined" className="block text-sm font-medium text-gray-700">Joined Platform</label>
-                <input
-                    type="text"
-                    id="joined"
-                    name="joined"
-                    value={formData.joined || ''}
-                    readOnly
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm sm:text-sm p-2 border bg-gray-50 text-gray-500"
-                />
-            </div>
-
-            <div>
-                <label htmlFor="socialLink" className="block text-sm font-medium text-gray-700">Social Link (Instagram ID)</label>
-                <div className='flex items-center mt-1'>
-                    <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm h-full">
-                        @
-                    </span>
-                    <input
-                        type="text"
-                        id="socialLink"
-                        name="socialLink"
-                        value={formData.socialLink || ''}
-                        onChange={handleChange}
-                        placeholder="alokgond.in"
-                        className="flex-1 block w-full rounded-none rounded-r-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border"
-                    />
-                </div>
-            </div>
-        </div>
-    );
-}
-
-// This is the main modal component, which we will export
 const EditProfile = ({ user, setShowEdit, setUser }) => {
+    // --- Text Data State ---
     const [formData, setFormData] = useState({
+        bio: user.bio || '',
         pronouns: user.pronouns || '',
         work: user.work || '',
         university: user.university || '',
@@ -145,72 +13,172 @@ const EditProfile = ({ user, setShowEdit, setUser }) => {
         currentCity: user.currentCity || '',
         hometown: user.hometown || '',
         relationship: user.relationship || 'Not specified',
-        joined: user.joined || 'N/A',
         socialLink: user.socialLink || '',
-        followers: user.followers || 0,
-        _id: user._id,
-        full_name: user.full_name,
-        profilePicture: user.profilePicture,
-        cover_photo: user.cover_photo,
     });
 
-    const [isSaving, setIsSaving] = useState(false);
+    // --- Image File & Preview State ---
+    const [profileFile, setProfileFile] = useState(null);
+    const [coverFile, setCoverFile] = useState(null);
+    const [profilePreview, setProfilePreview] = useState(user.profilePicture || `https://ui-avatars.com/api/?name=${user.name}&background=EBF4FF&color=4F46E5&size=150`);
+    const [coverPreview, setCoverPreview] = useState(user.coverPhoto || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74");
 
+    const [isSaving, setIsSaving] = useState(false);
+    const profileInputRef = useRef(null);
+    const coverInputRef = useRef(null);
+
+    // Handle Text Changes
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormData(prevData => ({
-            ...prevData,
-            [name]: value
-        }));
+        setFormData(prevData => ({ ...prevData, [name]: value }));
     };
 
-    const handleSubmit = (e) => {
+    // Handle Image Selection & Preview
+    const handleImageChange = (e, type) => {
+        const file = e.target.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = () => {
+                if (type === 'profile') {
+                    setProfilePreview(reader.result);
+                    setProfileFile(file);
+                } else {
+                    setCoverPreview(reader.result);
+                    setCoverFile(file);
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    // Submit Everything
+    const handleSubmit = async (e) => {
         e.preventDefault();
         setIsSaving(true);
 
-        setTimeout(() => {
-            setUser(formData);
+        // We MUST use FormData because we are sending actual files now!
+        const submitData = new FormData();
+        Object.keys(formData).forEach(key => submitData.append(key, formData[key]));
+        
+        if (profileFile) submitData.append("profilePicture", profileFile);
+        if (coverFile) submitData.append("coverPhoto", coverFile);
+
+        try {
+            const response = await updateUserProfile(submitData);
+            setUser(response.user); 
+            setShowEdit(false); 
+        } catch (error) {
+            console.error("Failed to update profile:", error);
+            alert("Failed to save changes. Please try again.");
+        } finally {
             setIsSaving(false);
-            setShowEdit(false);
-        }, 800);
+        }
     };
+
+    const relationshipOptions = ['Single', 'In a relationship', 'Married', 'Engaged', 'In a civil union', 'Separated', 'Divorced', 'Widowed', 'In a complicated situation', 'Not specified'];
 
     return (
         <div className='fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4'>
-            <div className='bg-white w-full max-w-lg p-6 rounded-xl shadow-2xl transform transition-all duration-300 scale-100'>
-                <h2 className='text-2xl font-bold text-gray-800 border-b pb-2 mb-4 flex justify-between items-center'>
-                    Edit Profile Details
-                    <button onClick={() => setShowEdit(false)} className='text-gray-400 hover:text-gray-600 transition'>
-                        <span className="text-xl font-light">×</span>
-                    </button>
-                </h2>
+            <div className='bg-white w-full max-w-lg rounded-xl shadow-2xl transform transition-all duration-300 overflow-hidden flex flex-col max-h-[90vh]'>
+                
+                {/* Header */}
+                <div className='p-4 border-b flex justify-between items-center bg-white z-10'>
+                    <h2 className='text-xl font-bold text-gray-800'>Edit Profile</h2>
+                    <button onClick={() => setShowEdit(false)} className='text-gray-400 hover:text-gray-600 transition text-2xl leading-none'>×</button>
+                </div>
 
-                <form onSubmit={handleSubmit}>
-                    <EditModalForm formData={formData} handleChange={handleChange} />
-
-                    <div className='mt-6 flex justify-end space-x-3'>
-                        <button
+                {/* Scrollable Form Content */}
+                <div className='overflow-y-auto custom-scrollbar flex-1 pb-6'>
+                    
+                    {/* --- Image Uploaders --- */}
+                    <div className='relative h-36 bg-gray-200'>
+                        {/* Cover Photo */}
+                        <img src={coverPreview} alt="Cover Preview" className='w-full h-full object-cover' />
+                        <div className='absolute inset-0 bg-black/20'></div>
+                        <button 
                             type="button"
-                            onClick={() => setShowEdit(false)}
-                            className='py-2 px-4 bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition duration-150'
-                            disabled={isSaving}
+                            onClick={() => coverInputRef.current.click()}
+                            className='absolute top-4 right-4 bg-white/80 p-2 rounded-full shadow hover:bg-white transition'
                         >
-                            Cancel
+                            <Camera className='w-5 h-5 text-gray-700' />
                         </button>
-                        <button
-                            type="submit"
-                            className='py-2 px-4 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-150 flex items-center justify-center gap-2'
-                            disabled={isSaving}
-                        >
-                            {isSaving ? (
-                                <Loader2 className="w-5 h-5 animate-spin" />
-                            ) : (
-                                <Save className='w-5 h-5' />
-                            )}
-                            {isSaving ? 'Saving...' : 'Save Changes'}
-                        </button>
+                        <input type="file" ref={coverInputRef} onChange={(e) => handleImageChange(e, 'cover')} className="hidden" accept="image/*" />
+
+                        {/* Profile Photo */}
+                        <div className='absolute -bottom-12 left-6'>
+                            <div className='relative'>
+                                <img src={profilePreview} alt="Profile Preview" className='w-24 h-24 rounded-full border-4 border-white object-cover shadow-lg bg-white' />
+                                <button 
+                                    type="button"
+                                    onClick={() => profileInputRef.current.click()}
+                                    className='absolute bottom-0 right-0 bg-gray-200 p-1.5 rounded-full shadow hover:bg-gray-300 transition border-2 border-white'
+                                >
+                                    <Camera className='w-4 h-4 text-gray-700' />
+                                </button>
+                                <input type="file" ref={profileInputRef} onChange={(e) => handleImageChange(e, 'profile')} className="hidden" accept="image/*" />
+                            </div>
+                        </div>
                     </div>
-                </form>
+
+                    {/* --- Text Fields --- */}
+                    <form id="editProfileForm" onSubmit={handleSubmit} className='px-6 pt-16 space-y-4'>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Bio</label>
+                            <textarea name="bio" rows="3" value={formData.bio} onChange={handleChange} placeholder="Tell us about yourself..." className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border resize-none" />
+                        </div>
+                        <div className='grid grid-cols-2 gap-4'>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Pronouns</label>
+                                <input type="text" name="pronouns" value={formData.pronouns} onChange={handleChange} placeholder="e.g., He/Him" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Relationship</label>
+                                <select name="relationship" value={formData.relationship} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border bg-white">
+                                    {relationshipOptions.map(option => <option key={option} value={option}>{option}</option>)}
+                                </select>
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Works at</label>
+                            <input type="text" name="work" value={formData.work} onChange={handleChange} placeholder="e.g., Student" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">University</label>
+                            <input type="text" name="university" value={formData.university} onChange={handleChange} placeholder="Institute Name" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" />
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">High School</label>
+                            <input type="text" name="highSchool" value={formData.highSchool} onChange={handleChange} placeholder="High School Name" className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" />
+                        </div>
+                        <div className='grid grid-cols-2 gap-4'>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Current City</label>
+                                <input type="text" name="currentCity" value={formData.currentCity} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" />
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700">Hometown</label>
+                                <input type="text" name="hometown" value={formData.hometown} onChange={handleChange} className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" />
+                            </div>
+                        </div>
+                        <div>
+                            <label className="block text-sm font-medium text-gray-700">Instagram ID</label>
+                            <div className='flex items-center mt-1'>
+                                <span className="inline-flex items-center rounded-l-md border border-r-0 border-gray-300 bg-gray-50 px-3 text-gray-500 sm:text-sm h-full">@</span>
+                                <input type="text" name="socialLink" value={formData.socialLink} onChange={handleChange} placeholder="username" className="flex-1 block w-full rounded-none rounded-r-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm p-2 border" />
+                            </div>
+                        </div>
+                    </form>
+                </div>
+
+                {/* Footer Buttons */}
+                <div className='p-4 border-t bg-gray-50 flex justify-end space-x-3 z-10'>
+                    <button type="button" onClick={() => setShowEdit(false)} disabled={isSaving} className='py-2 px-4 bg-white border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition duration-150'>
+                        Cancel
+                    </button>
+                    <button type="submit" form="editProfileForm" disabled={isSaving} className='py-2 px-6 bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition duration-150 flex items-center gap-2'>
+                        {isSaving ? <Loader2 className="w-5 h-5 animate-spin" /> : <Save className='w-5 h-5' />}
+                        {isSaving ? 'Saving...' : 'Save Profile'}
+                    </button>
+                </div>
             </div>
         </div>
     );

@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 
+// ✅ 1. Import your AuthContext to get the logged-in user's data
+import { useAuth } from "../context/AuthContext";
+
 import homeIcon from "../assets/house.png";
 import leftArrow from "../assets/left.png";
 import profileIcon from "../assets/profile.png";
@@ -19,6 +22,9 @@ import hostelIcon from "../assets/hostel.png";
 import clubIcon from "../assets/Club.png";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
+  // ✅ 2. Grab authData from the context
+  const { authData } = useAuth();
+  
   const [darkMode, setDarkMode] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef(null);
@@ -216,14 +222,18 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             !isOpen ? "justify-center" : ""
           }`}
         >
+          {/* ✅ 3. Dynamic Profile Picture */}
           <img
-            src="https://via.placeholder.com/40"
+            src={authData?.profilePicture || `https://ui-avatars.com/api/?name=${authData?.name || 'User'}&background=EBF4FF&color=4F46E5`}
             alt="Profile"
-            className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full"
+            className="w-10 h-10 min-w-[40px] min-h-[40px] rounded-full object-cover"
           />
           {isOpen && (
-            <div className="flex flex-col">
-              <p className="font-semibold">John Doe</p>
+            <div className="flex flex-col overflow-hidden">
+              {/* ✅ 4. Dynamic User Name */}
+              <p className="font-semibold truncate">
+                {authData?.name || authData?.full_name || "Unknown User"}
+              </p>
             </div>
           )}
         </div>

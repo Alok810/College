@@ -1,120 +1,178 @@
-// src/context/FriendContext.jsx
-import React, { createContext, useState, useContext } from 'react';
-import {
-  dummyFriendsData,
-  dummyFriendRequestsData,
-  dummySuggestionsData,
-  dummyNotificationData // <-- 1. Import notification data
-} from '../assets/data.js';
+import React, { createContext, useState, useContext, useEffect } from 'react';
+import { io } from "socket.io-client"; // ✅ 1. Import socket.io
+import { useAuth } from './AuthContext'; 
+import { 
+  toggleFriendRequest, 
+  acceptFriendRequest, 
+  rejectFriendRequest, 
+  removeFriend,
+  getMySocialData,
+  fetchNotifications, // ✅ 2. Import your new API calls
+  markNotificationsAsRead 
+} from '../api';
 
-// 1. Create the context
 const FriendContext = createContext();
 
-// 2. Create the Provider
 export const FriendProvider = ({ children }) => {
-  // === FRIEND STATE ===
-  const [requests, setRequests] = useState(dummyFriendRequestsData);
-  const [friends, setFriends] = useState(dummyFriendsData);
-  const [suggestions, setSuggestions] = useState(() =>
-    dummySuggestionsData.map(user => ({
-      ...user,
-      requestSent: false
-    }))
-  );
+  const { authData } = useAuth(); 
 
-  // === 2. NOTIFICATION STATE (New) ===
-  // We build the initial notification list from BOTH data sources
-  const [notifications, setNotifications] = useState(() => {
-    // a) Transform friend requests into notifications
-    const requestNotifications = dummyFriendRequestsData.map(req => ({
-      _id: `req_${req._id}`,
-      user: {
-        _id: req._id,
-        full_name: req.full_name,
-        profilePicture: req.profile_picture,
-      },
-      text: 'sent you a friend request.',
-      createdAt: req.createdAt || '2025-11-13T10:00:00Z',
-      seen: false,
-      type: 'friend_request' // Custom type
-    }));
+  const [requests, setRequests] = useState([]);
+  const [friends, setFriends] = useState([]);
+  const [suggestions, setSuggestions] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
-    // b) Get all other notifications (likes, comments, etc.)
-    const otherNotifications = dummyNotificationData.filter(
-      n => n.type !== 'friend_request'
-    );
+  // ✅ 3. FETCH BOTH SOCIAL DATA AND DB NOTIFICATIONS
+  useEffect(() => {
+    const loadSocialData = async () => {
+      if (!authData) return; 
 
-    // c) Combine, sort, and return
-    return [...requestNotifications, ...otherNotifications]
-      .sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
-  });
+      try {
+        // Fetch both endpoints at the same time to make it fast
+        const [socialData, notifData] = await Promise.all([
+          getMySocialData(),
+          fetchNotifications()
+        ]);
+        
+        setFriends(socialData.friends);
+        setRequests(socialData.friendRequests);
+        
+        const mappedSuggestions = socialData.suggestions.map(user => ({
+          ...user,
+          requestSent: socialData.sentRequests.some(sent => sent._id === user._id)
+        }));
+        setSuggestions(mappedSuggestions);
+
+        // Turn real friend requests into notifications
+        const requestNotifications = socialData.friendRequests.map(req => ({
+          _id: `req_${req._id}`,
+          user: {
+            _id: req._id,
+            name: req.name || req.full_name,
+            profilePicture: req.profilePicture,
+          },
+          text: 'sent you a friend request.',
+          createdAt: new Date().toISOString(),
+          seen: false,
+          type: 'friend_request'
+        }));
+        
+        // Extract the real DB notifications (Likes)
+        const dbNotifications = notifData?.notifications || [];
+
+        // ✅ COMBINE both friend requests AND real notifications!
+        setNotifications([...requestNotifications, ...dbNotifications]);
+
+      } catch (error) {
+        console.error("Failed to load real friend data:", error.message);
+      }
+    };
+
+    loadSocialData();
+  }, [authData]); 
+
+  // ✅ 4. LISTEN FOR LIVE WEB SOCKET EVENTS
+  useEffect(() => {
+    if (!authData) return;
+
+    // Connect to your WebSocket server
+    const socket = io("http://localhost:4000");
+    socket.emit("join", authData._id);
+
+    // Listen for the "like" notification from the backend
+    socket.on("new notification", (newNotification) => {
+      console.log("🔔 New Notification Received!", newNotification);
+      // Put the newest notification at the very top of the list
+      setNotifications((prev) => [newNotification, ...prev]);
+    });
+
+    return () => socket.disconnect();
+  }, [authData]);
 
   
-  // === FRIEND HANDLERS ===
-  const handleAcceptRequest = (userId) => {
-    const userToAccept = requests.find(req => req._id === userId);
-    if (!userToAccept) return;
-    
-    // Update friend lists
-    setRequests(prev => prev.filter(req => req._id !== userId));
-    setFriends(prev => [userToAccept, ...prev]);
-
-    // 3. ALSO update notifications: Remove the request
-    setNotifications(prev => prev.filter(n => n.user._id !== userId && n.type !== 'friend_request'));
+  // === REAL BACKEND API HANDLERS ===
+  const handleAcceptRequest = async (userId) => {
+    try {
+      await acceptFriendRequest(userId);
+      const userToAccept = requests.find(req => req._id === userId);
+      if (userToAccept) {
+        setRequests(prev => prev.filter(req => req._id !== userId));
+        setFriends(prev => [userToAccept, ...prev]);
+        setNotifications(prev => prev.filter(n => n.user._id !== userId && n.type !== 'friend_request'));
+      }
+    } catch (error) {
+      console.error("Failed to accept request:", error.message);
+    }
   };
 
-  const handleDeclineRequest = (userId) => {
-    // Update friend list
-    setRequests(prev => prev.filter(req => req._id !== userId));
-    
-    // 3. ALSO update notifications: Remove the request
-    setNotifications(prev => prev.filter(n => n.user._id !== userId && n.type !== 'friend_request'));
+  const handleDeclineRequest = async (userId) => {
+    try {
+      await rejectFriendRequest(userId);
+      setRequests(prev => prev.filter(req => req._id !== userId));
+      setNotifications(prev => prev.filter(n => n.user._id !== userId && n.type !== 'friend_request'));
+    } catch (error) {
+      console.error("Failed to reject request:", error.message);
+    }
   };
 
-  const handleAddFriend = (userId) => {
-    setSuggestions(prev =>
-      prev.map(user =>
-        user._id === userId ? { ...user, requestSent: true } : user
-      )
-    );
+  const handleAddFriend = async (userId) => {
+    try {
+      await toggleFriendRequest(userId);
+      setSuggestions(prev =>
+        prev.map(user => user._id === userId ? { ...user, requestSent: true } : user)
+      );
+    } catch (error) {
+      console.error("Failed to send request:", error.message);
+    }
   };
 
-  const handleCancelRequest = (userId) => {
-    setSuggestions(prev =>
-      prev.map(user =>
-        user._id === userId ? { ...user, requestSent: false } : user
-      )
-    );
+  const handleCancelRequest = async (userId) => {
+    try {
+      await toggleFriendRequest(userId); 
+      setSuggestions(prev =>
+        prev.map(user => user._id === userId ? { ...user, requestSent: false } : user)
+      );
+    } catch (error) {
+      console.error("Failed to cancel request:", error.message);
+    }
   };
 
   const handleRemoveSuggestion = (userId) => {
     setSuggestions(prev => prev.filter(sug => sug._id !== userId));
   };
 
-  const handleUnfriend = (userId) => {
-    setFriends(prev => prev.filter(friend => friend._id !== userId));
+  const handleUnfriend = async (userId) => {
+    try {
+      await removeFriend(userId);
+      setFriends(prev => prev.filter(friend => friend._id !== userId));
+    } catch (error) {
+      console.error("Failed to unfriend:", error.message);
+    }
   };
 
-  // === 4. NOTIFICATION HANDLERS (New) ===
-  const handleMarkAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(n => ({ ...n, seen: true }))
-    );
+  // ✅ 5. UPDATE DATABASE WHEN MARKING AS READ
+  const handleMarkAllAsRead = async () => {
+    try {
+      // Tell the backend to update the database
+      await markNotificationsAsRead();
+      // Update the UI instantly
+      setNotifications(prev => prev.map(n => ({ ...n, seen: true })));
+    } catch (error) {
+      console.error("Failed to mark notifications as read", error);
+    }
   };
 
-  // 5. Pass all state and handlers to children
   const value = {
     requests,
     friends,
     suggestions,
-    notifications, // <-- Pass notifications
+    notifications,
     handleAcceptRequest,
     handleDeclineRequest,
     handleAddFriend,
     handleCancelRequest,
     handleRemoveSuggestion,
     handleUnfriend,
-    handleMarkAllAsRead // <-- Pass new handler
+    handleMarkAllAsRead
   };
 
   return (
@@ -124,7 +182,6 @@ export const FriendProvider = ({ children }) => {
   );
 };
 
-// 4. Create a custom hook to easily use the context
 export const useFriends = () => {
   return useContext(FriendContext);
 };
