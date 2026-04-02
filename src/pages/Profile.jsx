@@ -1,39 +1,25 @@
 import React, { useState, useEffect } from 'react';
 import {
-    MapPin, Loader2, Star, MessageSquare, Users, Flag, Phone, Mail, Globe,
-    CalendarDays, User as UserIcon, Briefcase, Award, GraduationCap, Code,
-    Heart, Image as ImageIcon, Users as FriendsIcon, BarChart3, Edit,
-    UserPlus, UserCheck, Clock, UserX,
+    MapPin, Loader2, Star, MessageSquare, Globe,
+    User as UserIcon, Briefcase, GraduationCap, Heart, Image as ImageIcon, 
+    Users as FriendsIcon, BarChart3, Edit, UserPlus, UserCheck, Clock
 } from 'lucide-react';
 import { useParams, Link } from "react-router-dom";
 import PostCard from '../components/PostCard';
 import EditProfile from '../components/EditProfile';
 import { useFriends } from '../context/FriendContext'; 
-
-// ✅ 1. Import Auth Context and our new API call
 import { useAuth } from '../context/AuthContext';
 import { getUserById } from '../api';
 
-const NAV_WIDTH_REM = 16;
-const CONTAINER_PADDING_REM = 2;
-const ORIGINAL_HEADER_HEIGHT_PX = 64;
-const NEW_HEADER_HEIGHT_PX = 56;
-const PROFILE_HEADER_WIDTH_REM = 45.5;
-
-const calculateLeftOffset = (isSidebarOpen, offset) => {
-    const sidebarWidth = isSidebarOpen ? 200 : 40;
-    const windowWidth = window.innerWidth;
-    const mainContentWidth = windowWidth - sidebarWidth;
-    return `${sidebarWidth + mainContentWidth / 2 + offset}px`;
-};
-
 const Loading = () => (
     <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="w-8 h-8 text-indigo-600 animate-spin" />
+        <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
     </div>
 );
 
-// --- MediaGallery ---
+// ==========================================
+// 🧩 SHARED COMPONENTS
+// ==========================================
 const MediaGallery = ({ posts }) => {
     const allMedia = posts.flatMap(post => {
         let mediaItems = [];
@@ -48,223 +34,42 @@ const MediaGallery = ({ posts }) => {
 
     if (allMedia.length === 0) {
         return (
-            <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
+            <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-md border border-gray-100'>
                 <p>No photos or videos found for this user.</p>
             </div>
         );
     }
-
     return (
-        <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4 bg-white rounded-xl shadow-lg w-full'>
+        <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 p-4 bg-white rounded-xl shadow-md border border-gray-100 w-full'>
             {allMedia.map((media, index) => (
-                <div
-                    key={`${media.postId}-${index}`}
-                    className='aspect-square overflow-hidden rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200 shadow-md group relative'
-                >
-                    <img
-                        src={media.url}
-                        alt={`Gallery image ${index + 1}`}
-                        className='w-full h-full object-cover'
-                    />
+                <div key={`${media.postId}-${index}`} className='aspect-square overflow-hidden rounded-lg cursor-pointer hover:opacity-90 transition-opacity duration-200 shadow-sm relative'>
+                    <img src={media.url} alt={`Gallery image ${index + 1}`} className='w-full h-full object-cover' />
                 </div>
             ))}
         </div>
     );
 };
 
-// --- ProfileHeader ---
-const ProfileHeader = ({ user, leftOffset, setShowEdit, activeTab, setActiveTab, isCurrentUser }) => {
-    const navItems = [
-        { name: 'Post', icon: Star, tab: 'posts' },
-        { name: 'Media', icon: ImageIcon, tab: 'media' },
-        { name: 'Friend', icon: FriendsIcon, tab: 'friends' },
-        { name: 'Result', icon: BarChart3, tab: 'results' },
-    ];
-
-    const gradientClass = 'bg-gradient-to-r from-purple-600 to-teal-600 text-white shadow-md hover:opacity-90';
-
-    return (
-        <div className={`fixed top-22 z-30 bg-white shadow-md p-1 lg:rounded-xl hidden lg:block transition-all duration-300`}
-            style={{
-                height: `${NEW_HEADER_HEIGHT_PX}px`,
-                left: leftOffset,
-                width: `${PROFILE_HEADER_WIDTH_REM}rem`
-            }}>
-
-            <div className='flex justify-between items-center h-full px-2'>
-                <div className='flex space-x-1'>
-                    {navItems.map((item) => (
-                        <button
-                            key={item.name}
-                            onClick={() => setActiveTab(item.tab)}
-                            className={`px-3 py-1.5 text-sm font-medium rounded-lg flex items-center gap-1 transition-colors ${activeTab === item.tab
-                                ? gradientClass
-                                : 'text-gray-600 hover:bg-gray-100'
-                                }`}
-                        >
-                            <item.icon className='w-4 h-4' /> {item.name}
-                        </button>
-                    ))}
-                </div>
-
-                {isCurrentUser && (
-                    <button
-                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition duration-150 flex items-center gap-1 ${gradientClass}`}
-                        onClick={() => setShowEdit(true)}
-                    >
-                        <Edit className='w-4 h-4' /> Edit Profile
-                    </button>
-                )}
-            </div>
-        </div>
-    );
-};
-
-// --- FriendButton ---
 const FriendButton = ({ status, onAdd, onCancel, onAccept, onUnfriend }) => {
     switch (status) {
-        case 'friends':
-            return (
-                <button onClick={onUnfriend} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition">
-                    <UserCheck className='w-4 h-4' /> Friends
-                </button>
-            );
-        case 'request_sent':
-            return (
-                <button onClick={onCancel} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-gray-200 text-gray-800 font-semibold rounded-lg hover:bg-gray-300 transition">
-                    <Clock className='w-4 h-4' /> Request Sent
-                </button>
-            );
-        case 'request_received':
-            return (
-                <button onClick={onAccept} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-green-600 text-white font-semibold rounded-lg hover:bg-green-700 transition">
-                    <UserPlus className='w-4 h-4' /> Respond
-                </button>
-            );
-        case 'not_friends':
-        default:
-            return (
-                <button onClick={onAdd} className="flex items-center gap-1.5 px-3 py-1 text-sm bg-indigo-600 text-white font-semibold rounded-lg hover:bg-indigo-700 transition">
-                    <UserPlus className='w-4 h-4' /> Add Friend
-                </button>
-            );
+        case 'friends': return <button onClick={onUnfriend} className="flex-1 flex justify-center items-center gap-1.5 py-2 sm:py-2.5 text-sm font-semibold bg-blue-100 text-blue-700 rounded-xl hover:bg-blue-200 transition shadow-sm"><UserCheck className='w-4 h-4' /> Friends</button>;
+        case 'request_sent': return <button onClick={onCancel} className="flex-1 flex justify-center items-center gap-1.5 py-2 sm:py-2.5 text-sm font-semibold bg-gray-200 text-gray-800 rounded-xl hover:bg-gray-300 transition shadow-sm"><Clock className='w-4 h-4' /> Requested</button>;
+        case 'request_received': return <button onClick={onAccept} className="flex-1 flex justify-center items-center gap-1.5 py-2 sm:py-2.5 text-sm font-semibold bg-green-600 text-white rounded-xl hover:bg-green-700 transition shadow-sm"><UserPlus className='w-4 h-4' /> Accept</button>;
+        case 'not_friends': default: return <button onClick={onAdd} className="flex-1 flex justify-center items-center gap-1.5 py-2 sm:py-2.5 text-sm font-semibold bg-gradient-to-r from-purple-600 to-teal-500 text-white rounded-xl hover:opacity-90 transition shadow-sm"><UserPlus className='w-4 h-4' /> Add Friend</button>;
     }
 };
 
-// --- ProfileSidebar ---
-// --- ProfileSidebar ---
-const ProfileSidebar = ({ user, isCurrentUser, friendshipStatus, onFriendAction }) => {
-    const scrollbarHideStyle = { msOverflowStyle: 'none', scrollbarWidth: 'none' };
-
-    const InfoRow = ({ Icon, text, link, linkText }) => {
-        if (!text || text.includes('undefined')) return null;
-        return (
-            <div className='flex items-center text-sm text-gray-700'>
-                <Icon className='w-4 h-4 mr-3 text-gray-500 flex-shrink-0' />
-                {link ? (
-                    <a href={link} target="_blank" rel="noopener noreferrer" className='hover:text-indigo-600 truncate font-medium'>
-                        {linkText || text}
-                    </a>
-                ) : (
-                    <span>{text}</span>
-                )}
-            </div>
-        );
-    };
-
-    return (
-        <div className={`w-full lg:w-1/5 bg-white rounded-xl shadow-lg lg:mb-0 mb-6 relative
-                          lg:fixed lg:top-22 lg:left-[calc(${NAV_WIDTH_REM}rem+${CONTAINER_PADDING_REM}rem)] lg:max-h-[calc(100vh-6rem)] overflow-y-scroll`}
-            style={scrollbarHideStyle}>
-
-            <div className='relative h-28 bg-gray-200 overflow-hidden rounded-t-xl'>
-                <img src={user.coverPhoto || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"} alt={`Cover`} className='w-full h-full object-cover' />
-                <div className='absolute inset-0 bg-black/20'></div>
-            </div>
-
-            <div className='w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-14 z-10'>
-                <img src={user.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5&size=150"} alt={`Profile`} className='w-full h-full object-cover' />
-            </div>
-
-            <div className='p-4 pt-16'>
-                <div className='text-center pb-4 mb-4 border-b border-gray-100'>
-                    <h2 className='text-xl font-bold text-gray-800 mb-1'>{user.full_name || user.name}</h2>
-                    
-                    {/* ✅ Updated to use the dynamic user.bio */}
-                    <p className='text-gray-600 text-sm my-0 italic px-2'>
-                        {user.bio || "Hello! I am using Rigya."}
-                    </p>
-
-                    <div className='mt-0 flex justify-center gap-3'>
-                        {!isCurrentUser ? (
-                            <div className='flex gap-2 mt-3'>
-                                <FriendButton
-                                    status={friendshipStatus}
-                                    onAdd={() => onFriendAction('add')}
-                                    onCancel={() => onFriendAction('cancel')}
-                                    onAccept={() => onFriendAction('accept')}
-                                    onUnfriend={() => onFriendAction('unfriend')}
-                                />
-                                <Link
-                                    to={`/?open_chat=${user._id}`}
-                                    className="flex items-center gap-1 px-3 py-1 text-sm bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition"
-                                >
-                                    <MessageSquare className='w-4 h-4' /> Message
-                                </Link>
-                            </div>
-                        ) : (
-                            <div className="h-8"></div>
-                        )}
-                    </div>
-
-                    {/* ✅ All missing fields added here */}
-                    <div className='mt-0 space-y-3 text-left pt-4'>
-                        <InfoRow Icon={UserIcon} text={user.pronouns ? `Pronouns: ${user.pronouns}` : null} />
-                        <InfoRow Icon={Briefcase} text={user.work ? `Works at ${user.work}` : null} />
-                        <InfoRow Icon={GraduationCap} text={user.university ? `Studied at ${user.university}` : null} />
-                        <InfoRow Icon={GraduationCap} text={user.highSchool ? `Went to ${user.highSchool}` : null} />
-                        <InfoRow Icon={MapPin} text={user.currentCity ? `Lives in ${user.currentCity}` : null} />
-                        <InfoRow Icon={MapPin} text={user.hometown ? `From ${user.hometown}` : null} />
-                        <InfoRow Icon={Heart} text={user.relationship && user.relationship !== 'Not specified' ? user.relationship : null} />
-                        
-                        {/* Social Link is clickable! */}
-                        {user.socialLink && (
-                             <InfoRow 
-                                Icon={Globe} 
-                                text={user.socialLink} 
-                                link={`https://instagram.com/${user.socialLink}`} 
-                                linkText={`@${user.socialLink}`} 
-                             />
-                        )}
-                    </div>
-                </div>
-            </div>
-        </div>
-    );
-};
-
-// --- FriendListTab ---
 const FriendListTab = ({ friends }) => {
-    if (!friends || friends.length === 0) {
-        return (
-            <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
-                <p>No friends to display.</p>
-            </div>
-        );
-    }
+    if (!friends || friends.length === 0) return <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-md border border-gray-100'><p>No friends to display.</p></div>;
     return (
-        <div className='bg-white rounded-xl shadow-lg p-4 sm:p-6 w-full'>
+        <div className='bg-white rounded-xl shadow-md border border-gray-100 p-4 w-full'>
             <h3 className="text-xl font-bold text-gray-800 mb-4">Friends ({friends.length})</h3>
-            <div className='space-y-4'>
+            <div className='grid grid-cols-1 md:grid-cols-2 gap-3'>
                 {friends.map(friend => (
                     <div key={friend._id} className='flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100'>
-                        <Link to={`/profile/${friend._id}`}>
-                            <img src={friend.profilePicture || "https://via.placeholder.com/150"} alt={friend.full_name} className='w-14 h-14 rounded-full object-cover shadow-sm' />
-                        </Link>
+                        <Link to={`/profile/${friend._id}`}><img src={friend.profilePicture || "https://via.placeholder.com/150"} className='w-14 h-14 rounded-full object-cover shadow-sm bg-white' /></Link>
                         <div className='flex-grow overflow-hidden'>
-                            <Link to={`/profile/${friend._id}`}>
-                                <h5 className='font-bold text-gray-800 truncate hover:text-indigo-600'>{friend.full_name}</h5>
-                            </Link>
+                            <Link to={`/profile/${friend._id}`}><h5 className='font-bold text-gray-800 truncate hover:text-purple-600'>{friend.full_name}</h5></Link>
                         </div>
                     </div>
                 ))}
@@ -273,41 +78,218 @@ const FriendListTab = ({ friends }) => {
     );
 };
 
-// --- ProfileMainContent ---
 const ProfileMainContent = ({ user, posts, activeTab, friends }) => {
     return (
         <div className='space-y-4'>
-            <div className='flex flex-col items-center gap-2.5 w-full'>
+            <div className='flex flex-col items-center gap-4 w-full'>
                 {activeTab === 'posts' && (
                     <>
                         {posts.map((post) => <PostCard key={post._id} post={post} />)}
-                        {posts.length === 0 && (
-                            <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
-                                <p>No posts yet for {user.full_name || user.name}.</p>
-                            </div>
-                        )}
+                        {posts.length === 0 && <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-md border border-gray-100'><p>No posts yet for {user.full_name || user.name}.</p></div>}
                     </>
                 )}
                 {activeTab === 'media' && <MediaGallery posts={posts} />}
                 {activeTab === 'friends' && <FriendListTab friends={friends} />}
-                {activeTab === 'results' && (
-                    <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-lg'>
-                        <p>Content for the Results tab would be displayed here.</p>
-                    </div>
+                {activeTab === 'results' && <div className='p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-md border border-gray-100'><p>Content for the Results tab would be displayed here.</p></div>}
+            </div>
+        </div>
+    );
+};
+
+// ==========================================
+// 💻 DESKTOP COMPONENTS
+// ==========================================
+const DesktopProfileHeader = ({ activeTab, setActiveTab, isCurrentUser, setShowEdit }) => {
+    const navItems = [
+        { name: 'Post', icon: Star, tab: 'posts' },
+        { name: 'Media', icon: ImageIcon, tab: 'media' },
+        { name: 'Friend', icon: FriendsIcon, tab: 'friends' },
+        { name: 'Result', icon: BarChart3, tab: 'results' },
+    ];
+    return (
+        <div className="sticky top-[0.5rem] z-40 bg-white/95 backdrop-blur-md shadow-md p-1.5 rounded-xl hidden lg:block w-full border border-gray-50 flex-shrink-0">
+            <div className='flex justify-between items-center h-full px-2'>
+                <div className='flex space-x-1'>
+                    {navItems.map((item) => (
+                        <button key={item.name} onClick={() => setActiveTab(item.tab)} className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? 'bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm' : 'text-gray-500 hover:bg-gray-100'}`}>
+                            <item.icon className='w-4 h-4' /> {item.name}
+                        </button>
+                    ))}
+                </div>
+                {isCurrentUser && (
+                    <button className={`px-4 py-2 text-sm font-bold rounded-lg transition duration-150 flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm hover:opacity-90`} onClick={() => setShowEdit(true)}>
+                        <Edit className='w-4 h-4' /> Edit Profile
+                    </button>
                 )}
             </div>
         </div>
     );
 };
 
-// ---------------------------------------------
-// --- Main Profile Component ---
-// ---------------------------------------------
+const DesktopProfileSidebar = ({ user, isCurrentUser, friendshipStatus, onFriendAction }) => {
+    const scrollbarHideStyle = { msOverflowStyle: 'none', scrollbarWidth: 'none' };
+    const InfoRow = ({ Icon, text, link, linkText }) => {
+        if (!text || text.includes('undefined')) return null;
+        return (
+            <div className='flex items-center text-sm text-gray-700'>
+                <Icon className='w-4 h-4 mr-3 text-gray-500 flex-shrink-0' />
+                {link ? <a href={link} target="_blank" rel="noopener noreferrer" className='hover:text-purple-600 truncate font-medium text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-teal-500'>{linkText || text}</a> : <span className="font-medium text-gray-600">{text}</span>}
+            </div>
+        );
+    };
+
+    return (
+        <div className="w-full bg-white rounded-xl shadow-lg h-fit max-h-full overflow-y-scroll relative border border-gray-50 pb-4 custom-scrollbar" style={scrollbarHideStyle}>
+            <div className='relative h-28 bg-gray-200 overflow-hidden rounded-t-xl'>
+                <img src={user.coverPhoto || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"} alt={`Cover`} className='w-full h-full object-cover' />
+                <div className='absolute inset-0 bg-gradient-to-t from-black/20 to-transparent'></div>
+            </div>
+            <div className='w-28 h-28 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-14 z-10 bg-white'>
+                <img src={user.profilePicture || `https://ui-avatars.com/api/?name=${user.name || 'User'}&background=EBF4FF&color=4F46E5&size=150`} alt={`Profile`} className='w-full h-full object-cover' />
+            </div>
+            <div className='p-4 pt-16'>
+                <div className='text-center pb-4 mb-4 border-b border-gray-100'>
+                    <h2 className='text-xl font-bold text-gray-800 mb-1'>{user.full_name || user.name}</h2>
+                    <p className='text-gray-500 text-sm my-0 px-2 leading-snug'>{user.bio || "Hello! I am using Rigya."}</p>
+                    <div className='mt-0 flex justify-center gap-3'>
+                        {!isCurrentUser ? (
+                            <div className='flex gap-2 mt-4 px-2 w-full'>
+                                <FriendButton status={friendshipStatus} onAdd={() => onFriendAction('add')} onCancel={() => onFriendAction('cancel')} onAccept={() => onFriendAction('accept')} onUnfriend={() => onFriendAction('unfriend')} />
+                                <Link to={`/?open_chat=${user._id}`} className="flex-1 flex justify-center items-center gap-1.5 py-2 text-sm font-semibold bg-gray-100 text-gray-800 rounded-xl hover:bg-gray-200 transition shadow-sm">
+                                    <MessageSquare className='w-4 h-4' /> Message
+                                </Link>
+                            </div>
+                        ) : <div className="h-4"></div>}
+                    </div>
+                    <div className='mt-2 space-y-3 text-left pt-4 px-2'>
+                        <InfoRow Icon={UserIcon} text={user.pronouns ? `Pronouns: ${user.pronouns}` : null} />
+                        <InfoRow Icon={Briefcase} text={user.work ? `Works at ${user.work}` : null} />
+                        <InfoRow Icon={GraduationCap} text={user.university ? `Studied at ${user.university}` : null} />
+                        <InfoRow Icon={GraduationCap} text={user.highSchool ? `Went to ${user.highSchool}` : null} />
+                        <InfoRow Icon={MapPin} text={user.currentCity ? `Lives in ${user.currentCity}` : null} />
+                        <InfoRow Icon={MapPin} text={user.hometown ? `From ${user.hometown}` : null} />
+                        <InfoRow Icon={Heart} text={user.relationship && user.relationship !== 'Not specified' ? user.relationship : null} />
+                        {user.socialLink && <InfoRow Icon={Globe} text={user.socialLink} link={`https://instagram.com/${user.socialLink}`} linkText={`@${user.socialLink}`} />}
+                    </div>
+                </div>
+            </div>
+        </div>
+    );
+};
+
+// ==========================================
+// 📱 MOBILE COMPONENTS
+// ==========================================
+const MobileTabBar = ({ activeTab, setActiveTab, isCurrentUser, setShowEdit }) => {
+    const navItems = [
+      { name: 'Posts', icon: Star, tab: 'posts' },
+      { name: 'Media', icon: ImageIcon, tab: 'media' },
+      { name: 'Friends', icon: FriendsIcon, tab: 'friends' },
+    ];
+    return (
+      // ✅ Set to bottom-[4rem] to sit perfectly flush with the bottom nav
+      <div className="lg:hidden fixed bottom-[4rem] left-0 right-0 z-40 w-full pointer-events-none">
+        
+        {/* ✅ rounded-t-3xl curve maintained */}
+        <div className="bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] rounded-t-3xl px-6 py-2.5 flex justify-between items-center pointer-events-auto">
+          
+          {/* ✅ FIXED: Removed 'overflow-x-auto' which was clipping the scaled buttons! Increased spacing slightly. */}
+          <div className='flex space-x-6 flex-1 justify-center items-center'>
+            {navItems.map((item) => (
+              <button 
+                key={item.name} 
+                onClick={() => setActiveTab(item.tab)} 
+                // ✅ FIXED: Added explicit w-11 h-11 to guarantee a perfect mathematical circle
+                className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
+                    activeTab === item.tab 
+                    ? 'bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-md transform scale-110' 
+                    : 'text-gray-500 hover:bg-gray-100'
+                }`}
+              >
+                <item.icon className={`w-5 h-5 ${activeTab === item.tab ? 'fill-current' : ''}`} /> 
+              </button>
+            ))}
+          </div>
+          
+          {isCurrentUser && (
+            <>
+              {/* Divider Line */}
+              <div className="w-px h-8 bg-gray-200 mx-4 flex-shrink-0"></div>
+              
+              {/* ✅ FIXED: Also gave the edit button explicit dimensions to match perfectly */}
+              <button onClick={() => setShowEdit(true)} className="w-11 h-11 flex items-center justify-center bg-gray-50 text-gray-700 hover:bg-gray-200 rounded-full transition-colors shadow-sm flex-shrink-0 border border-gray-100">
+                <Edit className="w-5 h-5" />
+              </button>
+            </>
+          )}
+
+        </div>
+      </div>
+    );
+};
+
+
+const MobileProfileSidebar = ({ user, isCurrentUser, friendshipStatus, onFriendAction }) => {
+    const InfoRow = ({ Icon, text, link, linkText }) => {
+      if (!text || text.includes('undefined')) return null;
+      return (
+        <div className='flex items-center text-sm text-gray-700'>
+          <Icon className='w-4 h-4 mr-3 text-gray-400 flex-shrink-0' />
+          {link ? <a href={link} target="_blank" rel="noopener noreferrer" className='hover:text-purple-600 truncate font-semibold text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-teal-500'>{linkText || text}</a> : <span className="font-medium text-gray-600">{text}</span>}
+        </div>
+      );
+    };
+  
+    return (
+      // ✅ CHANGED: Added mx-3 mt-4 for margin, rounded-2xl to curve all 4 corners, and shadow-md to make it float!
+      <div className="bg-white relative pb-6 shadow-md border border-gray-100 rounded-2xl mx-3 mt-4">
+        
+        {/* ✅ CHANGED: Added rounded-t-2xl so the cover photo curves perfectly inside the card */}
+        <div className='relative h-40 bg-gray-200 overflow-hidden rounded-t-2xl'>
+          <img src={user.coverPhoto || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"} alt={`Cover`} className='w-full h-full object-cover' />
+          <div className='absolute inset-0 bg-gradient-to-t from-black/40 to-transparent'></div>
+        </div>
+        
+        <div className='w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-20 z-10 bg-white'>
+          <img src={user.profilePicture || `https://ui-avatars.com/api/?name=${user.name || 'User'}&background=EBF4FF&color=4F46E5&size=150`} alt={`Profile`} className='w-full h-full object-cover' />
+        </div>
+        
+        <div className='p-4 pt-16'>
+          <div className='text-center pb-4 mb-2'>
+            <h2 className='text-2xl font-extrabold text-gray-900 mb-1'>{user.full_name || user.name}</h2>
+            <p className='text-gray-500 text-sm my-0 px-4 leading-relaxed'>{user.bio || "Hello! I am using Rigya."}</p>
+            
+            {!isCurrentUser && (
+              <div className='flex gap-3 mt-6 px-4 w-full'>
+                <FriendButton status={friendshipStatus} onAdd={() => onFriendAction('add')} onCancel={() => onFriendAction('cancel')} onAccept={() => onFriendAction('accept')} onUnfriend={() => onFriendAction('unfriend')} />
+                <Link to={`/?open_chat=${user._id}`} className="flex-1 flex justify-center items-center gap-1.5 py-2.5 text-sm font-bold bg-gray-100 text-gray-800 rounded-xl hover:bg-gray-200 transition-all shadow-sm">
+                  <MessageSquare className='w-4 h-4' /> Message
+                </Link>
+              </div>
+            )}
+          </div>
+          
+          <div className='space-y-3.5 text-left pt-4 px-5 bg-gray-50/50 mx-2 rounded-2xl border border-gray-100 py-4'>
+            <InfoRow Icon={UserIcon} text={user.pronouns ? `Pronouns: ${user.pronouns}` : null} />
+            <InfoRow Icon={Briefcase} text={user.work ? `Works at ${user.work}` : null} />
+            <InfoRow Icon={GraduationCap} text={user.university ? `Studied at ${user.university}` : null} />
+            <InfoRow Icon={GraduationCap} text={user.highSchool ? `Went to ${user.highSchool}` : null} />
+            <InfoRow Icon={MapPin} text={user.currentCity ? `Lives in ${user.currentCity}` : null} />
+            <InfoRow Icon={MapPin} text={user.hometown ? `From ${user.hometown}` : null} />
+            <InfoRow Icon={Heart} text={user.relationship && user.relationship !== 'Not specified' ? user.relationship : null} />
+            {user.socialLink && <InfoRow Icon={Globe} text={user.socialLink} link={`https://instagram.com/${user.socialLink}`} linkText={`@${user.socialLink}`} />}
+          </div>
+        </div>
+      </div>
+    );
+};
+
+// ==========================================
+// 🚀 MAIN COMPONENT EXPORT
+// ==========================================
 const Profile = ({ isSidebarOpen, posts: allPosts }) => {
     const { ProfileId } = useParams();
-    const { authData } = useAuth(); // ✅ Get real logged in user
-    
-    // If there is no ProfileId in the URL, or it matches our ID, it's OUR profile
+    const { authData } = useAuth(); 
     const isCurrentUser = !ProfileId || ProfileId === authData?._id;
 
     const { friends, requests, suggestions, handleAcceptRequest, handleAddFriend, handleCancelRequest, handleUnfriend } = useFriends();
@@ -319,12 +301,18 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
     const [friendshipStatus, setFriendshipStatus] = useState('not_friends');
     const [friendList, setFriendList] = useState([]);
 
-    // ✅ 2. Fetch the actual user from the database
+    const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+    useEffect(() => {
+        const handleResize = () => setIsMobile(window.innerWidth < 1024);
+        window.addEventListener("resize", handleResize);
+        return () => window.removeEventListener("resize", handleResize);
+    }, []);
+
     useEffect(() => {
         const fetchUser = async () => {
-            if (isCurrentUser) {
-                setUser(authData); // Just use our own auth data!
-            } else {
+            if (isCurrentUser) setUser(authData);
+            else {
                 try {
                     const fetchedUser = await getUserById(ProfileId);
                     setUser(fetchedUser);
@@ -336,7 +324,6 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
         fetchUser();
     }, [ProfileId, isCurrentUser, authData]);
 
-    // ✅ 3. Automatically filter the real posts from App.jsx to match this user!
     useEffect(() => {
         if (allPosts && user) {
             const profilePosts = allPosts.filter(post => post.user?._id === user._id);
@@ -346,56 +333,23 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
 
     useEffect(() => {
         if (ProfileId && ProfileId !== authData?._id) {
-            if (friends && friends.find(friend => friend._id === ProfileId)) {
-                setFriendshipStatus('friends');
-            } else if (requests && requests.find(req => req._id === ProfileId)) {
-                setFriendshipStatus('request_received');
-            } else if (suggestions && suggestions.find(sug => sug._id === ProfileId && sug.requestSent)) {
-                setFriendshipStatus('request_sent');
-            } else {
-                setFriendshipStatus('not_friends');
-            }
+            if (friends && friends.find(friend => friend._id === ProfileId)) setFriendshipStatus('friends');
+            else if (requests && requests.find(req => req._id === ProfileId)) setFriendshipStatus('request_received');
+            else if (suggestions && suggestions.find(sug => sug._id === ProfileId && sug.requestSent)) setFriendshipStatus('request_sent');
+            else setFriendshipStatus('not_friends');
         }
-        
-        if (isCurrentUser) {
-            setFriendList(friends);
-        } else {
-            setFriendList([]); // Empty for now unless you fetch their friends!
-        }
-
+        if (isCurrentUser) setFriendList(friends);
+        else setFriendList([]); 
         setActiveTab('posts');
     }, [ProfileId, friends, requests, suggestions, isCurrentUser]);
 
-    // --- Sidebar offset logic ---
-    const getConditionalOffset = (isOpen) => isOpen ? -200 : -210;
-    const [leftOffset, setLeftOffset] = useState(() => calculateLeftOffset(isSidebarOpen, getConditionalOffset(isSidebarOpen)));
-
-    useEffect(() => {
-        const handleResize = () => setLeftOffset(calculateLeftOffset(isSidebarOpen, getConditionalOffset(isSidebarOpen)));
-        handleResize();
-        window.addEventListener("resize", handleResize);
-        return () => window.removeEventListener("resize", handleResize);
-    }, [isSidebarOpen, ProfileId]);
-
     if (!user) return <Loading />;
 
-    return (
-        <div className={`pt-2 lg:ml-[${NAV_WIDTH_REM}rem]`}>
-            <ProfileHeader
-                user={user}
-                leftOffset={leftOffset}
-                setShowEdit={setShowEdit}
-                activeTab={activeTab}
-                setActiveTab={setActiveTab}
-                isCurrentUser={isCurrentUser}
-            />
-
-            <div className='max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 relative lg:flex lg:h-[calc(100vh-4rem)] lg:overflow-hidden'>
-                
-                <ProfileSidebar 
-                    user={user} 
-                    isCurrentUser={isCurrentUser}
-                    friendshipStatus={friendshipStatus}
+    // 📱 MOBILE RENDER
+    if (isMobile) {
+        return (
+            <div className="w-full flex flex-col px-0 py-0 bg-gray-50/30 min-h-screen relative">
+                <MobileProfileSidebar user={user} isCurrentUser={isCurrentUser} friendshipStatus={friendshipStatus}
                     onFriendAction={(action) => {
                         if (action === 'add') handleAddFriend(ProfileId);
                         if (action === 'cancel') handleCancelRequest(ProfileId);
@@ -403,17 +357,43 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
                         if (action === 'accept') handleAcceptRequest(ProfileId);
                     }}
                 />
+                
+                <div className="w-full flex-grow pt-4 px-3 pb-32 overflow-visible">
+                    <ProfileMainContent user={user} posts={posts} activeTab={activeTab} friends={friendList} />
+                </div>
 
-                <div className='lg:w-2/3 relative flex flex-col h-full' style={{ marginLeft: '29%' }}>
-                    <div className={`flex-grow overflow-y-scroll mt-14 lg:mt-[${NEW_HEADER_HEIGHT_PX}px] z-16`} style={{ msOverflowStyle: 'none', scrollbarWidth: 'none', paddingBottom: '2.5rem' }}>
-                        <ProfileMainContent
-                            user={user}
-                            posts={posts}
-                            activeTab={activeTab}
-                            friends={friendList}
-                        />
+                <MobileTabBar activeTab={activeTab} setActiveTab={setActiveTab} isCurrentUser={isCurrentUser} setShowEdit={setShowEdit} />
+                
+                {showEdit && isCurrentUser && <EditProfile user={user} setShowEdit={setShowEdit} setUser={setUser} />}
+            </div>
+        );
+    }
+
+    // 💻 DESKTOP RENDER
+    return (
+        <div className={`pt-1.5 lg:ml-[16rem]`}>
+            <div className='w-full max-w-[1050px] mx-auto px-4 relative flex items-start justify-center gap-4 lg:h-[calc(100vh-5rem)] lg:-translate-x-24 xl:-translate-x-32 2xl:-translate-x-40 transition-transform'>
+                
+                {/* 1. Fixed Sidebar Container */}
+                <div className="hidden lg:block w-[320px] flex-shrink-0 sticky top-[0.5rem] -mt-6 h-fit max-h-[calc(100vh-8rem)]">
+                    <DesktopProfileSidebar user={user} isCurrentUser={isCurrentUser} friendshipStatus={friendshipStatus}
+                        onFriendAction={(action) => {
+                            if (action === 'add') handleAddFriend(ProfileId);
+                            if (action === 'cancel') handleCancelRequest(ProfileId);
+                            if (action === 'unfriend') handleUnfriend(ProfileId);
+                            if (action === 'accept') handleAcceptRequest(ProfileId);
+                        }}
+                    />
+                </div>
+
+                {/* 2. Feed & Header Container */}
+                <div className='flex-1 min-w-0 flex flex-col h-full'>
+                    <DesktopProfileHeader activeTab={activeTab} setActiveTab={setActiveTab} isCurrentUser={isCurrentUser} setShowEdit={setShowEdit} />
+                    <div className="flex-grow overflow-y-scroll mt-4 pb-10" style={{ msOverflowStyle: 'none', scrollbarWidth: 'none' }}>
+                        <ProfileMainContent user={user} posts={posts} activeTab={activeTab} friends={friendList} />
                     </div>
                 </div>
+
             </div>
 
             {showEdit && isCurrentUser && (

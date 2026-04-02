@@ -90,7 +90,8 @@ const MessageSidebar = ({ onClose }) => {
   // ==========================================
   if (!isMobile) {
     return (
-      <div className={`fixed top-[5.5rem] right-0 mr-4 bg-white shadow-2xl flex flex-col z-50 rounded-xl transition-all duration-300 ease-in-out ${(isExpanded || activeChat) ? 'w-80 h-[400px]' : 'w-[320px] h-16'}`}>
+      // ✅ ADDED 'overflow-hidden' HERE TO FIX THE CORNERS
+      <div className={`fixed top-[5.5rem] right-0 mr-4 bg-white shadow-2xl flex flex-col z-50 rounded-xl overflow-hidden transition-all duration-300 ease-in-out ${(isExpanded || activeChat) ? 'w-80 h-[400px]' : 'w-[320px] h-16'}`}>
         {activeChat ? (
           <ChatBox onBack={handleBackToMessages} />
         ) : (
@@ -126,7 +127,6 @@ const MessageSidebar = ({ onClose }) => {
                     return (
                       <div
                         key={chat._id}
-                        // ✅ REMOVED border-l-[5px] and ADDED smooth gradient hover effect
                         className='flex items-center gap-3 p-2.5 mb-2 rounded-xl cursor-pointer transition-all duration-300 bg-gradient-to-r from-indigo-50/80 to-teal-50/80 hover:from-indigo-100 hover:to-teal-100 shadow-sm'
                         onClick={() => handleMessageClick(otherUser._id)}
                       >

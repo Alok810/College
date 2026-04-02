@@ -132,7 +132,7 @@ const AppContent = () => {
 
   const contentMarginLeft = hideSidebar || isMobile ? "0" : (isSidebarOpen ? "16rem" : "5rem");
   
-  const contentPaddingTop = `calc(${headerHeight} + 1.5rem)`;
+  const contentPaddingTop = `calc(${headerHeight} + 2rem)`;
   const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
   const maskCutoffLine = `calc(${contentPaddingTop} - 0.40rem)`;
 
@@ -146,8 +146,9 @@ const AppContent = () => {
   }
 
   return (
+    // ✅ 1. Changed min-h-screen to h-screen and added overflow-hidden to lock the outer body!
     <div
-      className="relative min-h-screen w-full overflow-x-hidden"
+      className="relative h-screen w-full overflow-hidden"
       style={{
         background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         backgroundAttachment: "fixed",
@@ -155,14 +156,16 @@ const AppContent = () => {
         backgroundSize: "cover",
       }}
     >
-      <div className="flex min-h-screen transition-all duration-300">
+      {/* ✅ 2. Changed min-h-screen to h-screen to strictly fit the monitor */}
+      <div className="flex h-screen transition-all duration-300">
         {!hideSidebar && (
           <div className="fixed left-0 top-0 h-screen transition-all duration-300 z-20">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
           </div>
         )}
 
-        <div className="flex-1 transition-all duration-300" style={{ marginLeft: contentMarginLeft }}>
+        {/* ✅ 3. Added h-screen to the main content area so it doesn't stretch down */}
+        <div className="flex-1 h-screen transition-all duration-300" style={{ marginLeft: contentMarginLeft }}>
           {!hideSidebar && (
             <InstituteHeader
               ref={headerRef}
@@ -173,12 +176,13 @@ const AppContent = () => {
             />
           )}
 
+          {/* ✅ 4. Changed py-6 to pb-6 (to prevent conflicting top padding) and changed height to "100%" instead of "100vh" */}
           <div
-            className={`px-0 py-6 md:p-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+            className={`px-0 pb-6 md:px-6 md:pb-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
             onScroll={handleScroll}
             style={{
               paddingTop: contentPaddingTop,
-              height: "100vh",
+              height: "100%", 
               WebkitMaskImage: `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
               maskImage: `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
             }}
