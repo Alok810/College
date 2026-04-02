@@ -27,20 +27,35 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import { checkBackendConnection, getSocialFeed } from "./api";
 
+import BottomNav from "./components/BottomNav";
+import SearchSidebar from "./components/SearchSidebar";
+import CreatePost from "./components/CreatePost";
+import MessageSidebar from "./components/Message";
+import NotificationSidebar from "./components/NotificationSidebar";
+
 const AppContent = () => {
   const location = useLocation();
   const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password";
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
+  // ✅ MOBILE DETECTION & MODAL CONTROLLER
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  const [activeMobileModal, setActiveMobileModal] = useState(null);
+
   const { authData, instituteData, loading } = useAuth();
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState("0px");
 
-  // Infinite Scroll States
   const [posts, setPosts] = useState([]);
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
+    return () => window.removeEventListener("resize", handleResize);
+  }, []);
 
   useEffect(() => {
     const fetchFeed = async () => {
@@ -115,7 +130,8 @@ const AppContent = () => {
   const isLibrarianRole = isLibrarianUserType || (isLibrarianDesignation && (authData?.userType === "Official" || authData?.userType === "Other"));
   const userRole = isLibrarianRole ? "librarian" : "user";
 
-  const contentMarginLeft = !hideSidebar ? (isSidebarOpen ? "16rem" : "5rem") : "0";
+  const contentMarginLeft = hideSidebar || isMobile ? "0" : (isSidebarOpen ? "16rem" : "5rem");
+  
   const contentPaddingTop = `calc(${headerHeight} + 1.5rem)`;
   const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
   const maskCutoffLine = `calc(${contentPaddingTop} - 0.40rem)`;
@@ -158,7 +174,7 @@ const AppContent = () => {
           )}
 
           <div
-            className={`p-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+            className={`px-0 py-6 md:p-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
             onScroll={handleScroll}
             style={{
               paddingTop: contentPaddingTop,
@@ -202,11 +218,42 @@ const AppContent = () => {
           </div>
         </div>
 
+        {/* Desktop Tab Sidebar */}
         {!hideSidebar && isHomePage && (
           <div className="hidden lg:block fixed top-0 right-0 w-80 h-screen py-4 pr-4 z-40">
             <Tab onPostCreated={handleAddPost} />
           </div>
         )}
+
+        {/* ✅ MOBILE BOTTOM NAVIGATION & MODALS */}
+        {!hideSidebar && (
+          <>
+            <BottomNav activeModal={activeMobileModal} setActiveModal={setActiveMobileModal} />
+            
+            {isMobile && activeMobileModal === 'search' && (
+              <SearchSidebar isExpanded={true} onClose={() => setActiveMobileModal(null)} />
+            )}
+            
+            {isMobile && activeMobileModal === 'post' && (
+              <CreatePost 
+                onClose={() => setActiveMobileModal(null)} 
+                onPostCreated={(post) => { 
+                  handleAddPost(post); 
+                  setActiveMobileModal(null); 
+                }} 
+              />
+            )}
+            
+            {isMobile && activeMobileModal === 'messages' && (
+              <MessageSidebar isExpanded={true} onClose={() => setActiveMobileModal(null)} />
+            )}
+            
+            {isMobile && activeMobileModal === 'notifications' && (
+              <NotificationSidebar isExpanded={true} onClose={() => setActiveMobileModal(null)} />
+            )}
+          </>
+        )}
+
       </div>
     </div>
   );
