@@ -551,9 +551,9 @@ export const getMyResults = async () => {
   }
 };
 
-export const getAllResultsForAdmin = async () => {
+export const getAllResultsForAdmin = async (page = 1, limit = 50) => {
   try {
-    const res = await api.get('/results/all'); 
+    const res = await api.get(`/results/all?page=${page}&limit=${limit}`); 
     return res.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -598,9 +598,9 @@ export const getUserResults = async (userId) => {
 
 // Add this to the bottom of your src/api.js
 
-export const getClassResultsForStudents = async () => {
+export const getClassResultsForStudents = async (page = 1, limit = 50) => {
   try {
-    const res = await api.get('/results/class-results'); 
+    const res = await api.get(`/results/class-results?page=${page}&limit=${limit}`); 
     return res.data;
   } catch (error) {
     throw error.response?.data || error;
@@ -659,9 +659,9 @@ export const getAdminStats = async () => {
   }
 };
 
-export const getAdminUsers = async () => {
+export const getAdminUsers = async (page = 1, limit = 50) => {
   try {
-    const res = await api.get('/admin/users'); 
+    const res = await api.get(`/admin/users?page=${page}&limit=${limit}`); 
     return res.data;
   } catch (error) {
     throw error.response?.data || error;

@@ -29,7 +29,7 @@ const calculateDynamicGrade = (fin, int, blueprint) => {
 // ==========================================
 // 🎓 STUDENT VIEW: CLASS RANKINGS
 // ==========================================
-const StudentClassView = memo(({ results, users }) => {
+const StudentClassView = memo(({ results, users, currentPage, totalPages, setCurrentPage }) => {
   const { authData } = useAuth();
   const [sortOrder, setSortOrder] = useState('cgpaDesc');
   const [expandedStudentId, setExpandedStudentId] = useState(null);
@@ -92,8 +92,8 @@ const StudentClassView = memo(({ results, users }) => {
         </div>
       </div>
 
-      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-4">
-        <div className="flex flex-col gap-4">
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 pb-4 flex flex-col">
+        <div className="flex flex-col gap-4 flex-grow">
           {sortedCGPAs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-slate-100">
               <Users className="w-12 h-12 text-slate-300 mb-3" />
@@ -108,7 +108,7 @@ const StudentClassView = memo(({ results, users }) => {
                 <div key={student._id} className={`bg-white rounded-xl border hover:border-indigo-300 hover:shadow-md transition-all cursor-default overflow-hidden ${isMe ? 'border-indigo-400 shadow-sm bg-indigo-50/20' : 'border-slate-200'}`}>
                   <div className="p-4 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 md:gap-0">
                     <div className="flex items-center gap-4 w-full md:w-1/3 text-left">
-                      <span className={`text-lg font-black w-8 text-center ${index < 3 && sortOrder === 'cgpaDesc' ? 'text-emerald-500' : 'text-slate-400'}`}>#{index + 1}</span>
+                      <span className={`text-lg font-black w-8 text-center ${index < 3 && sortOrder === 'cgpaDesc' ? 'text-emerald-500' : 'text-slate-400'}`}>#{index + 1 + (currentPage - 1) * 50}</span>
                       <div className="flex flex-col truncate">
                         <h4 className="font-extrabold text-slate-900 text-lg sm:text-xl truncate flex items-center gap-2">
                           {student.name || 'Unknown Student'}
@@ -148,6 +148,29 @@ const StudentClassView = memo(({ results, users }) => {
             })
           )}
         </div>
+
+        {/* ✅ Pagination for Class Rankings */}
+        {totalPages > 1 && (
+          <div className="flex justify-center items-center gap-4 py-6 flex-shrink-0">
+            <button 
+              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+              disabled={currentPage === 1}
+              className="px-4 py-2 bg-white text-slate-600 font-bold text-xs rounded-lg border border-slate-200 disabled:opacity-50 hover:bg-slate-50 transition-all shadow-sm"
+            >
+              Previous
+            </button>
+            <span className="font-bold text-xs text-slate-500">
+              Page {currentPage} of {totalPages}
+            </span>
+            <button 
+              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+              disabled={currentPage === totalPages}
+              className="px-4 py-2 bg-white text-indigo-600 border border-slate-200 font-bold text-xs rounded-lg disabled:opacity-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm"
+            >
+              Next Page
+            </button>
+          </div>
+        )}
       </div>
     </div>
   );
@@ -156,7 +179,7 @@ const StudentClassView = memo(({ results, users }) => {
 // ==========================================
 // 🛠️ ADMIN DASHBOARD
 // ==========================================
-const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetchAdminData, displayMessage }) => {
+const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetchAdminData, displayMessage, currentPage, totalPages, setCurrentPage }) => {
   const [activeAdminTab, setActiveAdminTab] = useState('upload');
   const semesters = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
   const batches = ['2021-2025', '2022-2026', '2023-2027', '2024-2028', '2025-2029', '2026-2030'];
@@ -170,12 +193,11 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
   const [editIndex, setEditIndex] = useState(null);
   const [newSubDef, setNewSubDef] = useState({ subjectCode: '', subjectName: '', type: 'Theory', credits: '', extFull: 70, intFull: 30, totalMax: 100, passExt: 21, passTotal: 35 });
 
-  // ✅ New States for Save Button Feedback
   const [isBlueprintSaving, setIsBlueprintSaving] = useState(false);
   const [hasJustSavedBlueprint, setHasJustSavedBlueprint] = useState(false);
 
   // Tab 2: Upload/Draft State
-  const [entryMethod, setEntryMethod] = useState('manual'); // ✅ NEW: 'manual' or 'csv'
+  const [entryMethod, setEntryMethod] = useState('manual'); 
   const [uploadBatch, setUploadBatch] = useState('');
   const [uploadBranch, setUploadBranch] = useState('');
   const [uploadSemester, setUploadSemester] = useState('');
@@ -205,7 +227,6 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
   const filteredStudents = users.filter(user => user.userType === 'Student' && (!uploadBatch || user.batch === uploadBatch) && (!uploadBranch || user.branch === uploadBranch));
   
   const filteredResults = useMemo(() => {
-    // 1. Filter the results first
     let filtered = results.filter(r => {
       if (!r.isPublished) return false; 
 
@@ -222,21 +243,13 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
       return true;
     });
 
-    // 2. Sort and Group them neatly
     filtered.sort((a, b) => {
       const studentA = users.find(u => u._id === (a.student._id || a.student)) || {};
       const studentB = users.find(u => u._id === (b.student._id || b.student)) || {};
 
-      // Group by Batch (Newest first)
       if (studentA.batch !== studentB.batch) return (studentB.batch || '').localeCompare(studentA.batch || '');
-      
-      // Group by Branch (Alphabetical: CE, CSE, ECE, ME)
       if (studentA.branch !== studentB.branch) return (studentA.branch || '').localeCompare(studentB.branch || '');
-      
-      // Group by Semester
       if (a.semester !== b.semester) return (a.semester || '').localeCompare(b.semester || '');
-      
-      // Finally, sort by Registration Number so they are in perfect roll-call order!
       return (studentA.registrationNo || '').localeCompare(studentB.registrationNo || '');
     });
 
@@ -285,7 +298,6 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
     }
   }, [targetSemester, targetBatch, targetBranch, activeAdminTab]);
 
-  // ✅ Reset "Saved" status if user starts modifying the blueprint again
   useEffect(() => {
     setHasJustSavedBlueprint(false);
   }, [targetBatch, targetBranch, targetSemester, blueprintSubjects]);
@@ -674,7 +686,6 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
             {!activeBlueprint ? (
               <div className="max-w-3xl mx-auto bg-slate-50 p-6 rounded-xl border border-slate-200 text-center mt-6">
                 
-                {/* ✅ NEW: Toggle Switch for Entry Method */}
                 <div className="flex justify-center mb-6">
                     <div className="bg-slate-200 p-1 rounded-lg inline-flex shadow-inner">
                         <button 
@@ -706,7 +717,6 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
                     <select className="w-full p-3 bg-white border border-emerald-300 rounded-lg outline-none font-bold" value={uploadSemester} onChange={e => setUploadSemester(e.target.value)}><option value="">Choose Semester...</option>{semesters.map(s => <option key={s} value={s}>{s}</option>)}</select>
                   </div>
                   
-                  {/* ✅ NEW: Only show the Student Dropdown if they are in Manual Mode */}
                   {entryMethod === 'manual' && (
                       <div className="animate-in fade-in zoom-in-95 duration-200">
                         <label className="text-[10px] font-bold text-indigo-600 uppercase block mb-1">4. Select Student</label>
@@ -906,8 +916,8 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
               </div>
             </div>
 
-            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1">
-              <div className="flex flex-col gap-3 pb-4">
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col">
+              <div className="flex flex-col gap-3 pb-4 flex-grow">
                 {filteredResults.length === 0 ? <p className="text-center text-slate-500 py-10 font-medium">No records found matching filters.</p> : filteredResults.map(result => {
                   const studentObj = users.find(u => u._id === (result.student._id || result.student));
                   return (
@@ -942,6 +952,30 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
                   )
                 })}
               </div>
+
+              {/* ✅ Pagination for Admin Manage Tab */}
+              {totalPages > 1 && (
+                <div className="flex justify-center items-center gap-4 py-4 bg-white border-t border-slate-200 flex-shrink-0 mt-auto sticky bottom-0">
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    disabled={currentPage === 1}
+                    className="px-4 py-2 bg-slate-100 text-slate-600 font-bold text-xs rounded-lg disabled:opacity-50 hover:bg-slate-200 transition-all shadow-sm"
+                  >
+                    Previous
+                  </button>
+                  <span className="font-bold text-xs text-slate-500">
+                    Page {currentPage} of {totalPages}
+                  </span>
+                  <button 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    disabled={currentPage === totalPages}
+                    className="px-4 py-2 bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold text-xs rounded-lg disabled:opacity-50 hover:bg-indigo-100 transition-all shadow-sm"
+                  >
+                    Next Page
+                  </button>
+                </div>
+              )}
+
             </div>
           </div>
         )}
@@ -951,11 +985,18 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
   );
 });
 
+// ==========================================
+// 🚀 MAIN COMPONENT
+// ==========================================
 const Result = () => {
   const { authData, loading } = useAuth();
   const [results, setResults] = useState([]);
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState('');
+  
+  // ✅ 1. ADD PAGINATION STATE
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
 
   const isOfficial = authData?.userType === "Institute" || authData?.role === "admin";
 
@@ -964,22 +1005,30 @@ const Result = () => {
     setTimeout(() => setMessage(''), 3000);
   }, []);
 
-  const fetchData = useCallback(async () => {
+  // ✅ 2. PASS THE PAGE NUMBER AND EXTRACT .results
+  const fetchData = useCallback(async (page = 1) => {
     try {
       if (isOfficial) {
-        const allResults = await getAllResultsForAdmin();
-        setResults(allResults);
-        const allUsersList = await getAdminUsers();
-        setUsers(allUsersList);
+        // Fetch Admin Data 
+        const resultsResponse = await getAllResultsForAdmin(page); 
+        
+        // Extract .results safely
+        setResults(resultsResponse.results || resultsResponse);
+        if (resultsResponse.pagination) setTotalPages(resultsResponse.pagination.totalPages);
+
+        const usersResponse = await getAdminUsers(page);
+        setUsers(usersResponse.users || usersResponse);
+        
       } else {
         try {
-          const data = await getClassResultsForStudents();
-          setResults(data.results);
-          setUsers(data.users);
+          const data = await getClassResultsForStudents(page);
+          setResults(data.results || data);
+          setUsers(data.users || []);
+          if (data.pagination) setTotalPages(data.pagination.totalPages);
         } catch (e) {
           console.error("Failed to fetch class results:", e);
           const myResults = await getMyResults();
-          setResults(myResults);
+          setResults(myResults.results || myResults);
           setUsers([{ _id: authData?._id, ...authData }]);
         }
       }
@@ -988,7 +1037,10 @@ const Result = () => {
     }
   }, [isOfficial, authData]);
 
-  useEffect(() => { if (!loading) fetchData(); }, [loading, fetchData]);
+  // ✅ 3. RE-FETCH WHEN PAGE CHANGES
+  useEffect(() => { 
+    if (!loading) fetchData(currentPage); 
+  }, [loading, fetchData, currentPage]);
 
   const handleUpload = async (resultData, isUpdate, resultId) => {
     try {
@@ -999,7 +1051,7 @@ const Result = () => {
         await publishResult(resultData);
         displayMessage("Draft saved successfully!");
       }
-      fetchData();
+      fetchData(currentPage); 
     } catch (error) {
       displayMessage("Failed to save draft.");
     }
@@ -1010,7 +1062,7 @@ const Result = () => {
       try {
         await deleteResult(id);
         displayMessage("Record deleted.");
-        fetchData();
+        fetchData(currentPage);
       } catch (error) {
         displayMessage("Failed to delete.");
       }
@@ -1022,9 +1074,26 @@ const Result = () => {
       {message && <div className="fixed top-20 sm:top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-lg bg-slate-900 text-white font-bold text-sm animate-in slide-in-from-top-4 fade-in">{message}</div>}
       <div className="flex flex-col w-[94%] sm:w-full max-w-4xl mx-auto h-full min-h-0 gap-2 sm:gap-3">
         {isOfficial ? (
-          <AdminDashboard results={results} users={users} handleUpload={handleUpload} handleDelete={handleDelete} fetchAdminData={fetchData} displayMessage={displayMessage} />
+          // ✅ 4. PASS PAGINATION PROPS TO ADMIN DASHBOARD
+          <AdminDashboard 
+            results={results} 
+            users={users} 
+            handleUpload={handleUpload} 
+            handleDelete={handleDelete} 
+            fetchAdminData={() => fetchData(currentPage)} 
+            displayMessage={displayMessage} 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setCurrentPage={setCurrentPage}
+          />
         ) : (
-          <StudentClassView results={results} users={users} />
+          <StudentClassView 
+            results={results} 
+            users={users} 
+            currentPage={currentPage}
+            totalPages={totalPages}
+            setCurrentPage={setCurrentPage}
+          />
         )}
       </div>
     </div>
