@@ -1,78 +1,82 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
 import {
-  getAllBooks,
-  addBook,
-  deleteBook,
-  borrowBook,
-  returnBook,
-  getBorrowedBooksForAdmin,
-  getBorrowedBooksForUser,
-  getReturnedBooksForAdmin,
-  getReturnedBooksForUser,
-  getAllUsersForAdmin,
-  borrowBookByLibrarian,
-  updateBook,
-  returnBookByAdmin,
+  getAllBooks, addBook, deleteBook, borrowBook, returnBook,
+  getBorrowedBooksForAdmin, getBorrowedBooksForUser,
+  getReturnedBooksForAdmin, getReturnedBooksForUser,
+  getAllUsersForAdmin, borrowBookByLibrarian, updateBook, returnBookByAdmin,
 } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { Search, Edit, Trash2, BookOpen, Clock, CheckCircle, UserPlus, Library as LibIcon } from 'lucide-react';
 
-// --- Utility function to check if a book is overdue ---
 const isOverdue = (dueDate) => new Date() > new Date(dueDate);
 
 // --- Memoized Child Components ---
 
-// Component for displaying the list of books/users in the dashboard view
 const BookList = memo(({ books, handleEdit, handleDelete, handleBorrow, borderButton, userRole }) => {
   const getAvailabilityStatus = (book) => book.quantity > 0;
 
   return (
-    <ul className="divide-y divide-gray-200 overflow-y-scroll h-full">
+    <div className="flex flex-col gap-2.5 sm:gap-4 overflow-y-auto h-full pb-4 custom-scrollbar pr-1">
       {books?.length === 0 ? (
-        <p className="text-center text-gray-500 py-4">No books found.</p>
+        <div className="text-center text-gray-500 py-10 bg-white rounded-2xl border border-gray-100 flex-shrink-0">
+          <BookOpen className="w-10 h-10 sm:w-12 sm:h-12 mx-auto text-gray-300 mb-2" />
+          <p className="text-sm sm:text-base">No books found.</p>
+        </div>
       ) : (
         books?.map((book) => {
           const isAvailable = getAvailabilityStatus(book);
           return (
-            <li key={book._id} className="py-4 flex flex-col md:flex-row items-start md:items-center justify-between">
-              {/* Left-hand side: Book details without the availability badge */}
-              <div className="flex-1">
-                <h3 className="text-lg font-semibold text-gray-900">{book.title}</h3>
-                <p className="text-sm text-gray-600">Author: {book.author}</p>
-                <p className="text-sm text-gray-600">ISBN: {book.isbn}</p>
-                {userRole === 'librarian' && (
-                  <p className={`text-sm ${book.quantity > 0 ? 'text-teal-800' : 'bg-red-200 text-red-800'} font-bold`}>
-                    Stock: {book.quantity}
-                  </p>
-                )}
+            <div key={book._id} className="p-3.5 sm:p-5 bg-white rounded-[1rem] sm:rounded-[1.25rem] shadow-[0_2px_8px_rgba(0,0,0,0.04)] border border-gray-100 transition-shadow hover:shadow-[0_4px_15px_rgba(0,0,0,0.06)] flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 w-full flex-shrink-0">
+              
+              <div className="flex-1 w-full overflow-hidden">
+                <div className="flex justify-between items-start mb-1 gap-2">
+                  <h3 className="text-[15px] sm:text-lg font-extrabold text-gray-900 leading-tight truncate">{book.title}</h3>
+                  {userRole !== 'librarian' && (
+                    <span className={`px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-xs font-bold rounded-full flex-shrink-0 ${isAvailable ? 'bg-teal-50 text-teal-700 border border-teal-200' : 'bg-red-50 text-red-700 border border-red-200'}`}>
+                      {isAvailable ? 'Available' : 'Unavailable'}
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] sm:text-sm text-gray-600 mb-1 font-medium truncate">{book.author}</p>
+                <div className="flex items-center gap-2 mt-1.5 flex-wrap">
+                  <p className="text-[10px] sm:text-xs text-gray-500 bg-gray-50 px-2 py-1 rounded-md border border-gray-100 truncate max-w-[140px] sm:max-w-none">ISBN: {book.isbn}</p>
+                  {userRole === 'librarian' && (
+                    <p className={`text-[10px] sm:text-xs px-2 py-1 rounded-md border font-bold ${book.quantity > 0 ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-red-50 text-red-700 border-red-200'}`}>
+                      Stock: {book.quantity}
+                    </p>
+                  )}
+                </div>
               </div>
 
-              {/* Right-hand side: Buttons or availability status */}
-              <div className="mt-4 md:mt-0 flex gap-2">
+              <div className="w-full sm:w-auto flex gap-2 sm:flex-shrink-0 mt-1 sm:mt-0">
                 {userRole === 'librarian' ? (
                   <>
-                    <button onClick={() => handleEdit(book)} className={borderButton}>Edit</button>
-                    <button onClick={() => handleDelete(book._id)} className="px-4 py-2 border border-red-500 text-red-600 rounded-lg hover:bg-red-50 transition-colors duration-200">Delete</button>
+                    <button onClick={() => handleEdit(book)} className={`flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 bg-purple-50 text-purple-700 border border-purple-200 rounded-lg sm:rounded-xl hover:bg-purple-100 font-bold text-xs sm:text-sm active:scale-95 transition-all`}>
+                      <Edit size={14} /> Edit
+                    </button>
+                    <button onClick={() => handleDelete(book._id)} className="flex-1 sm:flex-none flex items-center justify-center gap-1.5 px-3 py-2 sm:py-1.5 bg-red-50 text-red-600 border border-red-200 rounded-lg sm:rounded-xl hover:bg-red-100 font-bold text-xs sm:text-sm active:scale-95 transition-all">
+                      <Trash2 size={14} /> <span className="sm:hidden">Delete</span>
+                    </button>
                   </>
                 ) : (
-                  // Display the availability status on the right side for users
-                  <span className={`px-2 py-1 text-xs font-bold rounded-full mt-2 inline-block ${isAvailable ? 'bg-teal-200 text-teal-800' : 'bg-red-200 text-red-800'}`}>
-                    {isAvailable ? 'Available' : 'Unavailable'}
-                  </span>
+                  isAvailable && (
+                    <button onClick={() => handleBorrow(book._id)} className="w-full sm:w-auto flex items-center justify-center gap-1.5 px-4 py-2 sm:py-2 bg-gradient-to-r from-purple-600 to-teal-500 text-white rounded-lg sm:rounded-xl font-bold text-xs sm:text-sm shadow-md hover:opacity-90 active:scale-95 transition-all">
+                      <BookOpen size={14} className="sm:w-4 sm:h-4" /> Borrow
+                    </button>
+                  )
                 )}
               </div>
-            </li>
+            </div>
           );
         })
       )}
-    </ul>
+    </div>
   );
 });
 
-// Component for the Add New Book form
 const AddBookForm = memo(({ handleSubmit, formRef, buttonStyle, gradientButton, borderButton, editBook, setEditBook }) => {
   const isEditing = !!editBook;
 
-  // Use useEffect to populate the form fields when a book is selected for editing
   useEffect(() => {
     if (isEditing) {
       formRef.current.title.value = editBook.title;
@@ -83,7 +87,6 @@ const AddBookForm = memo(({ handleSubmit, formRef, buttonStyle, gradientButton, 
       formRef.current.isAvailable.checked = editBook.isAvailable;
       formRef.current.description.value = editBook.description;
     } else {
-      // Clear the form when not in editing mode
       formRef.current.reset();
     }
   }, [editBook, isEditing, formRef]);
@@ -92,34 +95,30 @@ const AddBookForm = memo(({ handleSubmit, formRef, buttonStyle, gradientButton, 
   const buttonText = isEditing ? 'Update Book' : 'Add Book';
 
   return (
-    <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-      <h2 className="text-xl font-bold mb-4 text-center text-gray-700">{formTitle}</h2>
-      <form onSubmit={handleSubmit} ref={formRef} className="space-y-4">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="text" name="title" placeholder="Book Title" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow" required />
-          <input type="text" name="author" placeholder="Author Name" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow" required />
+    <div className="flex flex-col h-full w-full overflow-y-auto custom-scrollbar sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:border sm:border-gray-100">
+      <h2 className="flex-shrink-0 text-base sm:text-xl font-extrabold mb-3 sm:mb-6 text-center text-gray-900">{formTitle}</h2>
+      <form onSubmit={handleSubmit} ref={formRef} className="space-y-3 sm:space-y-4 pb-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <input type="text" name="title" placeholder="Book Title" className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all outline-none text-sm" required />
+          <input type="text" name="author" placeholder="Author Name" className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all outline-none text-sm" required />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="text" name="isbn" placeholder="ISBN" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow" required />
-          <input type="number" name="price" placeholder="Price ($)" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow" required />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <input type="text" name="isbn" placeholder="ISBN" className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all outline-none text-sm" required />
+          <input type="number" name="price" placeholder="Price ($)" className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all outline-none text-sm" required />
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          <input type="number" name="quantity" placeholder="Quantity in Stock" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow" required />
-          <div className="flex items-center gap-2">
-            <input type="checkbox" name="isAvailable" id="isAvailable" defaultChecked className="rounded-full text-purple-600 focus:ring-teal-500" />
-            <label htmlFor="isAvailable" className="text-gray-700">Available</label>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+          <input type="number" name="quantity" placeholder="Quantity in Stock" className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all outline-none text-sm" required />
+          <div className="flex items-center gap-2 px-2">
+            <input type="checkbox" name="isAvailable" id="isAvailable" defaultChecked className="w-4 h-4 rounded text-purple-600 focus:ring-teal-500 border-gray-300" />
+            <label htmlFor="isAvailable" className="text-xs sm:text-sm text-gray-700 font-medium">Available for borrowing</label>
           </div>
         </div>
-        <textarea name="description" placeholder="Book Description" rows="3" className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow" required></textarea>
-        <div className="flex flex-col sm:flex-row gap-4">
-          <button type="submit" className={`w-full ${buttonStyle} ${gradientButton}`}>{buttonText}</button>
+        <textarea name="description" placeholder="Book Description" rows="3" className="w-full px-3 py-2 sm:px-4 sm:py-3 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 focus:border-purple-300 transition-all outline-none resize-none text-sm" required></textarea>
+        <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 pt-1">
+          <button type="submit" className={`w-full py-2.5 sm:py-3 rounded-xl shadow-md hover:opacity-90 font-bold text-sm text-white active:scale-[0.98] transition-all ${gradientButton}`}>{buttonText}</button>
           {isEditing && (
-            <button
-              type="button"
-              onClick={() => setEditBook(null)}
-              className={`w-full ${borderButton}`}
-            >
-              Cancel Edit
+            <button type="button" onClick={() => setEditBook(null)} className="w-full py-2.5 sm:py-3 bg-gray-100 text-gray-700 font-bold text-sm rounded-xl hover:bg-gray-200 active:scale-[0.98] transition-all">
+              Cancel
             </button>
           )}
         </div>
@@ -128,7 +127,6 @@ const AddBookForm = memo(({ handleSubmit, formRef, buttonStyle, gradientButton, 
   );
 });
 
-// New component for the librarian to assign a book
 const BorrowForm = memo(({ users, books, handleLibrarianBorrow, buttonStyle, gradientButton }) => {
   const formRef = useRef(null);
   const [userSearchTerm, setUserSearchTerm] = useState('');
@@ -144,16 +142,6 @@ const BorrowForm = memo(({ users, books, handleLibrarianBorrow, buttonStyle, gra
   const filteredBooks = books.filter(book =>
     book.quantity > 0 && book.title?.toLowerCase().includes(bookSearchTerm.toLowerCase())
   );
-
-  const handleUserSelect = (user) => {
-    setSelectedUser(user);
-    setUserSearchTerm(user.name || user.instituteName);
-  };
-
-  const handleBookSelect = (book) => {
-    setSelectedBook(book);
-    setBookSearchTerm(book.title);
-  };
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -171,24 +159,27 @@ const BorrowForm = memo(({ users, books, handleLibrarianBorrow, buttonStyle, gra
   };
 
   return (
-    <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-      <h2 className="text-xl font-bold mb-4 text-center text-gray-700">Assign Book to User</h2>
-      <form onSubmit={handleSubmit} ref={formRef} className="space-y-4">
+    <div className="flex flex-col h-full w-full overflow-y-auto custom-scrollbar sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:border sm:border-gray-100">
+      <h2 className="flex-shrink-0 text-base sm:text-xl font-extrabold mb-3 sm:mb-6 text-center text-gray-900 hidden sm:block">Assign Book</h2>
+      <form onSubmit={handleSubmit} ref={formRef} className="space-y-3 sm:space-y-4 pb-4">
         <div className="relative">
-          <label htmlFor="userSearch" className="block text-sm font-medium text-gray-700">Search User</label>
-          <input
-            type="text"
-            id="userSearch"
-            placeholder="Search by name or email..."
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow"
-            value={userSearchTerm}
-            onChange={(e) => { setUserSearchTerm(e.target.value); setSelectedUser(null); }}
-          />
+          <label className="block text-[10px] sm:text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider ml-1">Search User</label>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Name or email..."
+              className="w-full pl-9 pr-3 py-2 sm:pl-10 sm:pr-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 outline-none text-sm"
+              value={userSearchTerm}
+              onChange={(e) => { setUserSearchTerm(e.target.value); setSelectedUser(null); }}
+            />
+          </div>
           {userSearchTerm && filteredUsers.length > 0 && !selectedUser && (
-            <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-inner mt-1 max-h-48 overflow-y-auto">
+            <ul className="absolute z-20 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-40 overflow-y-auto custom-scrollbar">
               {filteredUsers.map(user => (
-                <li key={user._id} onClick={() => handleUserSelect(user)} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
-                  {user.name || user.instituteName} ({user.email || user.instituteEmail})
+                <li key={user._id} onClick={() => { setSelectedUser(user); setUserSearchTerm(user.name || user.instituteName); }} className="px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-50 hover:bg-purple-50 cursor-pointer">
+                  <span className="font-bold text-gray-800 block text-xs sm:text-sm truncate">{user.name || user.instituteName}</span>
+                  <span className="text-[10px] sm:text-xs text-gray-500 truncate block">{user.email || user.instituteEmail}</span>
                 </li>
               ))}
             </ul>
@@ -196,19 +187,21 @@ const BorrowForm = memo(({ users, books, handleLibrarianBorrow, buttonStyle, gra
         </div>
 
         <div className="relative">
-          <label htmlFor="bookSearch" className="block text-sm font-medium text-gray-700">Search Book</label>
-          <input
-            type="text"
-            id="bookSearch"
-            placeholder="Search by title..."
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow"
-            value={bookSearchTerm}
-            onChange={(e) => { setBookSearchTerm(e.target.value); setSelectedBook(null); }}
-          />
+          <label className="block text-[10px] sm:text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider ml-1">Search Book</label>
+          <div className="relative">
+            <BookOpen className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Book title..."
+              className="w-full pl-9 pr-3 py-2 sm:pl-10 sm:pr-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 outline-none text-sm"
+              value={bookSearchTerm}
+              onChange={(e) => { setBookSearchTerm(e.target.value); setSelectedBook(null); }}
+            />
+          </div>
           {bookSearchTerm && filteredBooks.length > 0 && !selectedBook && (
-            <ul className="absolute z-10 w-full bg-white border border-gray-300 rounded-lg shadow-inner mt-1 max-h-48 overflow-y-auto">
+            <ul className="absolute z-10 w-full bg-white border border-gray-200 rounded-xl shadow-lg mt-1 max-h-40 overflow-y-auto custom-scrollbar">
               {filteredBooks.map(book => (
-                <li key={book._id} onClick={() => handleBookSelect(book)} className="px-4 py-2 hover:bg-gray-100 cursor-pointer">
+                <li key={book._id} onClick={() => { setSelectedBook(book); setBookSearchTerm(book.title); }} className="px-3 py-2 sm:px-4 sm:py-3 border-b border-gray-50 hover:bg-purple-50 cursor-pointer text-xs sm:text-sm font-medium text-gray-800 truncate">
                   {book.title}
                 </li>
               ))}
@@ -217,250 +210,325 @@ const BorrowForm = memo(({ users, books, handleLibrarianBorrow, buttonStyle, gra
         </div>
 
         <div>
-          <label htmlFor="dueDate" className="block text-sm font-medium text-gray-700">Return Due Date</label>
+          <label className="block text-[10px] sm:text-xs font-bold text-gray-500 mb-1 uppercase tracking-wider ml-1">Due Date</label>
           <input
             type="date"
             name="dueDate"
-            id="dueDate"
-            className="w-full px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow"
+            className="w-full px-3 py-2 sm:px-4 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-purple-300 outline-none text-gray-700 text-sm"
             required
           />
         </div>
-        <button type="submit" className={`w-full ${buttonStyle} ${gradientButton}`}>Assign Book</button>
+        <div className="pt-1">
+          <button type="submit" className={`w-full py-2.5 sm:py-3 rounded-xl shadow-md hover:opacity-90 font-bold text-sm text-white active:scale-[0.98] transition-all ${gradientButton}`}>
+            Assign Book
+          </button>
+        </div>
       </form>
     </div>
   );
 });
 
-// Reusable component for displaying the returned book history
 const ReturnedBookList = memo(({ returnedBooks, userRole }) => (
-    <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-      <h2 className="text-xl font-bold mb-4 text-center text-gray-700">{userRole === 'librarian' ? 'Returned History' : 'My Returned History'}</h2>
-      <div className="overflow-y-auto max-h-[50vh]">
-        <ul className="divide-y divide-gray-200">
-          {returnedBooks?.length === 0 ? <p className="text-center text-gray-500">No returned books found.</p> : returnedBooks?.map((record) => {
-            // FIX: Handle both a date object and a valid date string
-            const formattedDate = record.returnedDate ? new Date(record.returnedDate).toLocaleDateString() : 'N/A';
-
-            return (
-              <li key={record.id} className="py-4 flex flex-col md:flex-row items-start md:items-center justify-between">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900">{record.title}</h3>
-                  <p className="text-sm text-gray-600">Author: {record.author}</p>
-                </div>
-                <div className="mt-2 md:mt-0 md:ml-4 text-right">
-                  {userRole === 'librarian' && record.returnedBy && (
-                    <p className="text-sm text-gray-600">
-                      <span className="font-semibold text-gray-800">Returned by:</span> {record.returnedBy}
+    <div className="flex flex-col h-full w-full overflow-hidden min-h-0 sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:border sm:border-gray-100">
+      <h2 className="flex-shrink-0 text-base sm:text-xl font-extrabold mb-3 sm:mb-6 text-center text-gray-900 hidden sm:block">
+        {userRole === 'librarian' ? 'Returned History' : 'My Returned History'}
+      </h2>
+      <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
+        <div className="flex flex-col gap-2.5 sm:gap-3 pb-4">
+          {returnedBooks?.length === 0 ? (
+            <div className="text-center text-gray-500 py-8 bg-white rounded-xl border border-gray-100 flex-shrink-0">
+              <CheckCircle className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+              <p className="text-sm">No returned books found.</p>
+            </div>
+          ) : (
+            returnedBooks?.map((record) => {
+              const formattedDate = record.returnedDate ? new Date(record.returnedDate).toLocaleDateString() : 'N/A';
+              return (
+                <div key={record.id} className="p-3.5 sm:p-4 bg-white rounded-[1rem] sm:rounded-xl shadow-sm border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 sm:gap-3 w-full flex-shrink-0">
+                  <div className="flex-1 overflow-hidden w-full">
+                    <h3 className="text-[15px] sm:text-base font-bold text-gray-900 leading-tight mb-0.5 truncate">{record.title}</h3>
+                    <p className="text-[11px] sm:text-xs text-gray-500 font-medium truncate">{record.author}</p>
+                  </div>
+                  <div className="w-full sm:w-auto bg-gray-50 sm:bg-transparent p-2 sm:p-0 rounded-lg sm:rounded-none sm:text-right flex-shrink-0">
+                    {userRole === 'librarian' && record.returnedBy && (
+                      <p className="text-[11px] sm:text-xs text-gray-600 mb-0.5 truncate max-w-[200px] sm:max-w-none">
+                        <span className="font-bold text-gray-400 uppercase tracking-wider text-[9px] sm:text-[10px]">User:</span> <span className="font-medium text-gray-800">{record.returnedBy}</span>
+                      </p>
+                    )}
+                    <p className="text-[11px] sm:text-xs text-gray-600">
+                      <span className="font-bold text-gray-400 uppercase tracking-wider text-[9px] sm:text-[10px]">Returned:</span> <span className="font-medium text-gray-800">{formattedDate}</span>
                     </p>
-                  )}
-                  <p className="text-sm text-gray-600">
-                    <span className="font-semibold text-gray-800">Returned on:</span> {formattedDate}
-                  </p>
+                  </div>
                 </div>
-              </li>
-            );
-          })}
-        </ul>
+              );
+          })
+          )}
+        </div>
       </div>
     </div>
 ));
 
-// Define memoized components outside the main component
 const LibrarianDashboard = memo(({
-  books,
-  borrowedBooks,
-  returnedBooks,
-  allUsers,
-  activeTab,
-  setActiveTab,
-  handleSubmit,
-  handleEdit,
-  handleDelete,
-  handleReturn,
-  handleLibrarianBorrow,
-  formRef,
-  buttonStyle,
-  gradientButton,
-  borderButton,
-  editBook,
-  setEditBook,
-  searchTerm,
-  setSearchTerm,
-}) => (
-  <>
-    <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-      <div className="flex justify-center mb-4 flex-wrap gap-2">
-        <button onClick={() => setActiveTab('add')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'add' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>Add New Book</button>
-        <button onClick={() => setActiveTab('users')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'users' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>All Users</button>
-        <button onClick={() => setActiveTab('total')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'total' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>Total Books</button>
-        <button onClick={() => setActiveTab('borrow')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'borrow' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>Assign</button>
-        <button onClick={() => setActiveTab('borrowed')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'borrowed' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>Borrowed Books</button>
-        <button onClick={() => setActiveTab('returned')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'returned' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>Returned History</button>
+  books, borrowedBooks, returnedBooks, allUsers, activeTab, setActiveTab,
+  handleSubmit, handleEdit, handleDelete, handleReturn, handleLibrarianBorrow,
+  formRef, buttonStyle, gradientButton, borderButton, editBook, setEditBook,
+  searchTerm, setSearchTerm,
+}) => {
+  
+  const renderTabs = () => {
+    const tabs = [
+      { id: 'total', label: 'All Books' },
+      { id: 'add', label: 'Add Book' },
+      { id: 'borrow', label: 'Assign Book' },
+      { id: 'borrowed', label: 'Borrowed' },
+      { id: 'returned', label: 'History' },
+      { id: 'users', label: 'Users' }
+    ];
+
+    return (
+      <div className="flex-shrink-0 w-full sm:w-max sm:mx-auto overflow-hidden sm:bg-white sm:p-1 sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100">
+        {/* ✅ Reduced tab gap */}
+        <div className="flex overflow-x-auto custom-scrollbar snap-x snap-mandatory gap-1.5 sm:gap-1 pb-1 sm:pb-0 sm:justify-center">
+          {tabs.map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)} 
+              className={`snap-start whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2 rounded-[0.8rem] sm:rounded-[0.6rem] font-bold text-xs sm:text-sm transition-all duration-200 flex-shrink-0 ${activeTab === tab.id ? 'bg-gray-900 text-white shadow-md' : 'bg-white sm:bg-transparent border border-gray-100 sm:border-none text-gray-600 hover:bg-gray-200'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    // ✅ Reduced gap between sections
+    <div className="flex-1 flex flex-col w-full min-h-0 gap-2 sm:gap-3">
+      {renderTabs()}
+
+      <div className="flex-1 bg-white shadow-sm sm:shadow-inner rounded-[1.25rem] sm:rounded-[1.5rem] p-2.5 sm:p-6 border border-gray-100 sm:border-none flex flex-col min-h-0 overflow-hidden w-full">
+        {activeTab === 'add' && <AddBookForm handleSubmit={handleSubmit} formRef={formRef} buttonStyle={buttonStyle} gradientButton={gradientButton} borderButton={borderButton} editBook={editBook} setEditBook={setEditBook} />}
+        
+        {activeTab === 'total' && (
+          <div className="flex flex-col h-full w-full min-h-0 overflow-hidden sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:shadow-inner">
+            <div className="flex-shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-6 w-full">
+              <h2 className="text-base sm:text-xl font-extrabold text-gray-900 hidden sm:block">Library Catalog</h2>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search catalog..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-[0.8rem] focus:ring-2 focus:ring-purple-300 outline-none text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 w-full overflow-hidden">
+              <BookList books={books} handleEdit={handleEdit} handleDelete={handleDelete} borderButton={borderButton} userRole="librarian" />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'borrow' && (
+          <BorrowForm users={allUsers} books={books} handleLibrarianBorrow={handleLibrarianBorrow} buttonStyle={buttonStyle} gradientButton={gradientButton} />
+        )}
+
+        {activeTab === 'borrowed' && (
+          <div className="flex flex-col h-full w-full min-h-0 overflow-hidden sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:shadow-inner">
+            <h2 className="flex-shrink-0 text-base sm:text-xl font-extrabold mb-3 sm:mb-6 text-center text-gray-900 hidden sm:block">Active Borrowings</h2>
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 w-full min-h-0">
+              <div className="flex flex-col gap-2.5 sm:gap-3 pb-4">
+                {borrowedBooks?.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8 bg-white rounded-xl border border-gray-100 flex-shrink-0">
+                     <Clock className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                     <p className="text-sm">No active borrowings.</p>
+                  </div>
+                ) : borrowedBooks?.map((record) => {
+                  const overdue = isOverdue(record.dueDate);
+                  const daysOverdue = overdue ? Math.ceil((new Date() - new Date(record.dueDate)) / (1000 * 60 * 60 * 24)) : 0;
+                  const fine = daysOverdue * 1;
+
+                  return (
+                    // ✅ INCREASED vertical padding (p-5 sm:p-6)
+                    <div key={record._id} className={`p-5 sm:p-6 bg-white rounded-[1rem] sm:rounded-xl shadow-sm border ${overdue ? 'border-red-200 shadow-red-100' : 'border-gray-100'} flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 w-full flex-shrink-0`}>
+                      <div className="flex-1 w-full overflow-hidden">
+                        <h3 className="text-[15px] sm:text-lg font-extrabold text-gray-900 leading-tight mb-1.5 truncate">{record.book?.title || 'Unknown Book'}</h3>
+                        <p className="text-[11px] sm:text-sm text-gray-500 font-medium mb-2 truncate">User: <span className="text-purple-600 font-bold">{record.user?.name || 'N/A'}</span></p>
+                        
+                        <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-100 space-y-1.5 sm:space-y-2 mt-2">
+                          <p className="text-[10px] sm:text-xs text-gray-500 flex justify-between"><span className="font-bold uppercase tracking-wider text-[9px] sm:text-[10px]">Borrowed:</span> {new Date(record.borrowDate).toLocaleDateString()}</p>
+                          <p className={`text-[10px] sm:text-xs flex justify-between ${overdue ? 'text-red-600 font-bold' : 'text-gray-500'}`}><span className="font-bold uppercase tracking-wider text-[9px] sm:text-[10px] text-gray-500">Due:</span> {new Date(record.dueDate).toLocaleDateString()}</p>
+                        </div>
+
+                        {overdue && (
+                          <div className="mt-3 inline-block bg-red-50 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-red-100">
+                            <span className="text-[11px] sm:text-xs font-bold text-red-600">
+                              Fine: ${fine.toFixed(2)} <span className="text-red-400 font-medium">({daysOverdue} days)</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="w-full sm:w-auto flex-shrink-0 mt-3 sm:mt-0">
+                         <button onClick={() => handleReturn(record._id)} className="w-full sm:w-auto px-4 py-2.5 sm:py-3 bg-purple-50 text-purple-700 font-bold rounded-lg sm:rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-xs sm:text-sm border border-purple-200">
+                           Mark Returned
+                         </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'returned' && <ReturnedBookList returnedBooks={returnedBooks} userRole="librarian" />}
+        
+        {activeTab === 'users' && (
+          <div className="flex flex-col h-full w-full min-h-0 overflow-hidden sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:shadow-inner">
+            <h2 className="flex-shrink-0 text-base sm:text-xl font-extrabold mb-3 sm:mb-6 text-center text-gray-900 hidden sm:block">Registered Users</h2>
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 min-h-0">
+              <div className="flex flex-col gap-2.5 sm:gap-3 w-full pb-4">
+                {allUsers?.length === 0 ? (
+                  <p className="text-center text-gray-500 py-4 flex-shrink-0 text-sm">No users found.</p>
+                ) : (
+                  allUsers?.map((user) => (
+                    <div key={user._id} className="p-3 sm:p-4 bg-white rounded-[1rem] sm:rounded-xl shadow-sm border border-gray-100 flex items-center gap-3 sm:gap-4 w-full overflow-hidden flex-shrink-0">
+                      <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-purple-100 to-teal-100 rounded-full flex items-center justify-center flex-shrink-0 border border-purple-200">
+                        <UserPlus size={16} className="text-purple-600 sm:w-[18px] sm:h-[18px]" />
+                      </div>
+                      <div className="overflow-hidden w-full">
+                        <h3 className="text-sm sm:text-base font-bold text-gray-900 truncate leading-tight">{user.name || user.instituteName}</h3>
+                        <p className="text-[10px] sm:text-xs text-gray-500 truncate">{user.email || user.instituteEmail}</p>
+                        <span className="inline-block mt-1 px-1.5 py-0.5 bg-gray-100 text-gray-600 text-[9px] sm:text-[10px] font-bold uppercase tracking-wider rounded border border-gray-200">{user.role}</span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
-
-    <div className="w-full max-w-4xl bg-white shadow-inner rounded-2xl p-8 space-y-8">
-      {activeTab === 'add' && <AddBookForm handleSubmit={handleSubmit} formRef={formRef} buttonStyle={buttonStyle} gradientButton={gradientButton} borderButton={borderButton} editBook={editBook} setEditBook={setEditBook} />}
-      {activeTab === 'total' && (
-        <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-700">All Books</h2>
-            <input
-              type="text"
-              placeholder="Search books..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-1/2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow"
-            />
-          </div>
-          <div className="overflow-y-auto max-h-[50vh]">
-            <BookList books={books} handleEdit={handleEdit} handleDelete={handleDelete} borderButton={borderButton} userRole="librarian" />
-          </div>
-        </div>
-      )}
-      {activeTab === 'borrow' && (
-        <BorrowForm users={allUsers} books={books} handleLibrarianBorrow={handleLibrarianBorrow} buttonStyle={buttonStyle} gradientButton={gradientButton} />
-      )}
-      {activeTab === 'borrowed' && (
-        <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-          <h2 className="text-xl font-bold mb-4 text-center text-gray-700">Borrowed Books</h2>
-          <div className="overflow-y-auto max-h-[50vh]">
-            <ul className="divide-y divide-gray-200">
-              {borrowedBooks?.length === 0 ? <p className="text-center text-gray-500">No borrowed books.</p> : borrowedBooks?.map((record) => {
-                const overdue = isOverdue(record.dueDate);
-                const daysOverdue = overdue ? Math.ceil((new Date() - new Date(record.dueDate)) / (1000 * 60 * 60 * 24)) : 0;
-                const fine = daysOverdue * 1;
-
-                return (
-                  <li key={record._id} className="py-4 flex flex-col md:flex-row items-start md:items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{record.book?.title || 'Unknown Book'}</h3>
-                      <p className="text-sm text-gray-600">User: {record.user?.name || 'N/A'}</p>
-                    </div>
-
-                    <div className="mt-4 md:mt-0 md:flex-1 md:flex md:flex-col md:items-center">
-                      <p className="text-sm text-gray-600">Borrowed On: {new Date(record.borrowDate).toLocaleDateString()}</p>
-                      <p className="text-sm text-gray-600">Due Date: {new Date(record.dueDate).toLocaleDateString()}</p>
-                      {overdue && (
-                        <span className="text-sm font-semibold text-red-600 mt-1">
-                          Fine: ${fine.toFixed(2)} <span className="text-gray-500">(Overdue by {daysOverdue} days)</span>
-                        </span>
-                      )}
-                    </div>
-                    
-                    <div className="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
-                       <button onClick={() => handleReturn(record._id)} className={borderButton}>Return</button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
-      )}
-      {activeTab === 'returned' && <ReturnedBookList returnedBooks={returnedBooks} userRole="librarian" />}
-      {activeTab === 'users' && (
-        <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-          <h2 className="text-xl font-bold mb-4 text-center text-gray-700">All Users</h2>
-          <div className="overflow-y-auto max-h-[50vh]">
-            <ul className="divide-y divide-gray-200">
-              {allUsers?.length === 0 ? (
-                <p className="text-center text-gray-500">No users found.</p>
-              ) : (
-                allUsers?.map((user) => (
-                  <li key={user._id} className="py-4">
-                    <h3 className="text-lg font-semibold text-gray-900">{user.name || user.instituteName}</h3>
-                    <p className="text-sm text-gray-600">Email: {user.email || user.instituteEmail}</p>
-                    <p className="text-sm text-gray-600">Role: {user.role}</p>
-                  </li>
-                ))
-              )}
-            </ul>
-          </div>
-        </div>
-      )}
-    </div>
-  </>
-));
-
+  );
+});
 
 const UserDashboard = memo(({
-  books,
-  borrowedBooks,
-  returnedBooks,
-  activeTab,
-  setActiveTab,
-  handleBorrow,
-  handleReturn,
-  gradientButton,
-  borderButton,
-  searchTerm,
-  setSearchTerm,
-}) => (
-  <>
-    <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-      <div className="flex justify-center mb-4 flex-wrap gap-2">
-        <button onClick={() => setActiveTab('total')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'total' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>All Books</button>
-        <button onClick={() => setActiveTab('borrowed')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'borrowed' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>My Borrowed Books</button>
-        <button onClick={() => setActiveTab('returned')} className={`px-4 py-2 rounded-lg font-semibold ${activeTab === 'returned' ? gradientButton : 'bg-gray-300 text-gray-700'}`}>My Returned History</button>
+  books, borrowedBooks, returnedBooks, activeTab, setActiveTab,
+  handleBorrow, handleReturn, gradientButton, borderButton,
+  searchTerm, setSearchTerm,
+}) => {
+  
+  const renderTabs = () => {
+    const tabs = [
+      { id: 'total', label: 'Library Catalog' },
+      { id: 'borrowed', label: 'My Borrowed' },
+      { id: 'returned', label: 'Return History' }
+    ];
+
+    return (
+      <div className="flex-shrink-0 w-full sm:w-max sm:mx-auto overflow-hidden sm:bg-white sm:p-1 sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100">
+        {/* ✅ Reduced tab gap */}
+        <div className="flex overflow-x-auto custom-scrollbar snap-x snap-mandatory gap-1.5 sm:gap-1 pb-1 sm:pb-0 px-1 sm:px-0 sm:justify-center">
+          {tabs.map(tab => (
+            <button 
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)} 
+              className={`snap-start whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2 rounded-[0.8rem] sm:rounded-[0.6rem] font-bold text-xs sm:text-sm transition-all duration-200 flex-shrink-0 ${activeTab === tab.id ? 'bg-gray-900 text-white shadow-md' : 'bg-white sm:bg-transparent border border-gray-100 sm:border-none text-gray-600 hover:bg-gray-200'}`}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+    );
+  };
+
+  return (
+    // ✅ Reduced gap between sections
+    <div className="flex-1 flex flex-col w-full min-h-0 gap-2 sm:gap-3">
+      {renderTabs()}
+      <div className="flex-1 w-full bg-white shadow-sm sm:shadow-inner rounded-[1.25rem] sm:rounded-[1.5rem] p-2.5 sm:p-6 border border-gray-100 sm:border-none flex flex-col min-h-0 overflow-hidden">
+        
+        {activeTab === 'total' && (
+          <div className="flex flex-col h-full w-full min-h-0 overflow-hidden sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:shadow-inner">
+            <div className="flex-shrink-0 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-3 mb-3 sm:mb-6 w-full">
+              <h2 className="text-base sm:text-xl font-extrabold text-gray-900 hidden sm:block">Explore Books</h2>
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 w-4 h-4" />
+                <input
+                  type="text"
+                  placeholder="Search by title, author..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-9 pr-3 py-2 sm:py-2 bg-gray-50 sm:bg-white border border-gray-200 rounded-[0.8rem] focus:ring-2 focus:ring-purple-300 outline-none text-sm"
+                />
+              </div>
+            </div>
+            <div className="flex-1 min-h-0 w-full overflow-hidden">
+              <BookList books={books} handleBorrow={handleBorrow} borderButton={borderButton} userRole="user" />
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'borrowed' && (
+          <div className="flex flex-col h-full w-full min-h-0 overflow-hidden sm:bg-gray-50 sm:p-6 sm:rounded-2xl sm:shadow-inner">
+            <h2 className="flex-shrink-0 text-base sm:text-xl font-extrabold mb-3 sm:mb-6 text-center text-gray-900 hidden sm:block">Books I'm Reading</h2>
+            <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 w-full min-h-0">
+              <div className="flex flex-col gap-2.5 sm:gap-3 pb-4">
+                {borrowedBooks?.length === 0 ? (
+                  <div className="text-center text-gray-500 py-8 bg-white rounded-xl border border-gray-100 flex-shrink-0">
+                     <BookOpen className="w-10 h-10 mx-auto text-gray-300 mb-2" />
+                     <p className="text-sm">You haven't borrowed any books yet.</p>
+                  </div>
+                ) : borrowedBooks?.map((record) => {
+                  const overdue = isOverdue(record.dueDate);
+                  const daysOverdue = overdue ? Math.ceil((new Date() - new Date(record.dueDate)) / (1000 * 60 * 60 * 24)) : 0;
+                  const fine = daysOverdue * 1;
+
+                  return (
+                    // ✅ INCREASED vertical padding (p-5 sm:p-6)
+                    <div key={record._id} className={`p-5 sm:p-6 bg-white rounded-[1rem] sm:rounded-xl shadow-sm border ${overdue ? 'border-red-200 shadow-red-100' : 'border-gray-100'} flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 w-full flex-shrink-0`}>
+                      <div className="flex-1 w-full overflow-hidden">
+                        <h3 className="text-[15px] sm:text-lg font-extrabold text-gray-900 leading-tight mb-1.5 truncate">{record.book?.title || 'Unknown Book'}</h3>
+                        <p className="text-[11px] sm:text-sm text-gray-500 font-medium mb-2 truncate">{record.book?.author || 'N/A'}</p>
+                        
+                        <div className="bg-gray-50 p-3 sm:p-4 rounded-lg border border-gray-100 flex justify-between items-center mt-2">
+                          <span className={`text-[10px] sm:text-xs font-bold uppercase tracking-wider ${overdue ? 'text-red-600' : 'text-gray-500'}`}>Due Date</span>
+                          <span className={`text-[11px] sm:text-sm font-extrabold ${overdue ? 'text-red-600' : 'text-gray-800'}`}>{new Date(record.dueDate).toLocaleDateString()}</span>
+                        </div>
+
+                        {overdue && (
+                          <div className="mt-3 inline-block bg-red-50 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-md border border-red-100">
+                            <span className="text-[11px] sm:text-xs font-bold text-red-600">
+                              Fine: ${fine.toFixed(2)} <span className="text-red-400 font-medium">({daysOverdue} days)</span>
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="w-full sm:w-auto flex-shrink-0 mt-3 sm:mt-0">
+                         <button onClick={() => handleReturn(record.book._id)} className="w-full sm:w-auto px-4 py-2.5 sm:py-3 bg-purple-50 text-purple-700 font-bold rounded-lg sm:rounded-xl hover:bg-purple-100 active:scale-95 transition-all text-xs sm:text-sm border border-purple-200">
+                           Return Book
+                         </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'returned' && <ReturnedBookList returnedBooks={returnedBooks} userRole="user" />}
       </div>
     </div>
-    <div className="w-full max-w-4xl bg-white shadow-inner rounded-2xl p-8 space-y-8">
-      {activeTab === 'total' && (
-        <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-          <div className="flex justify-between items-center mb-4">
-            <h2 className="text-xl font-bold text-gray-700">All Books</h2>
-            <input
-              type="text"
-              placeholder="Search books..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-1/2 px-4 py-2 border rounded-lg focus:ring-2 focus:ring-purple-300 transition-shadow"
-            />
-          </div>
-          <div className="overflow-y-auto max-h-[50vh]">
-            <BookList books={books} handleBorrow={handleBorrow} borderButton={borderButton} userRole="user" />
-          </div>
-        </div>
-      )}
-      {activeTab === 'borrowed' && (
-        <div className="bg-gray-50 p-6 rounded-xl shadow-inner">
-          <h2 className="text-xl font-bold mb-4 text-center text-gray-700">My Borrowed Books</h2>
-          <div className="overflow-y-auto max-h-[50vh]">
-            <ul className="divide-y divide-gray-200">
-              {borrowedBooks?.length === 0 ? <p className="text-center text-gray-500">You have no borrowed books.</p> : borrowedBooks?.map((record) => {
-                const overdue = isOverdue(record.dueDate);
-                const daysOverdue = overdue ? Math.ceil((new Date() - new Date(record.dueDate)) / (1000 * 60 * 60 * 24)) : 0;
-                const fine = daysOverdue * 1;
-
-                return (
-                  <li key={record._id} className="py-4 flex flex-col md:flex-row items-start md:items-center justify-between">
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{record.book?.title || 'Unknown Book'}</h3>
-                      <p className="text-sm text-gray-600">Author: {record.book?.author || 'N/A'}</p>
-                      <p className="text-sm text-gray-600">Return Date: {new Date(record.dueDate).toLocaleDateString()}</p>
-                    </div>
-                    <div className="mt-4 md:mt-0 flex gap-4 items-center">
-                      {overdue && (
-                        <span className="text-sm font-semibold text-red-600">
-                          Fine: ${fine.toFixed(2)} <span className="text-gray-500">(Overdue by {daysOverdue} days)</span>
-                        </span>
-                      )}
-                      <button onClick={() => handleReturn(record.book._id)} className={borderButton}>Return</button>
-                    </div>
-                  </li>
-                );
-              })}
-            </ul>
-          </div>
-        </div>
-      )}
-      {activeTab === 'returned' && <ReturnedBookList returnedBooks={returnedBooks} userRole="user" />}
-    </div>
-  </>
-));
-
+  );
+});
 
 const Library = ({ userRole }) => {
   const { loading } = useAuth();
@@ -541,13 +609,9 @@ const Library = ({ userRole }) => {
     }
   }, [displayMessage]);
 
-
   useEffect(() => {
     if (loading) return;
-
-    if (activeTab === 'add' && !editBook) {
-      return;
-    }
+    if (activeTab === 'add' && !editBook) return;
 
     switch (activeTab) {
       case 'total':
@@ -560,9 +624,7 @@ const Library = ({ userRole }) => {
         fetchReturnedBooks();
         break;
       case 'users':
-        if (userRole === 'librarian') {
-          fetchAllUsers();
-        }
+        if (userRole === 'librarian') fetchAllUsers();
         break;
       case 'borrow':
         if (userRole === 'librarian') {
@@ -575,7 +637,6 @@ const Library = ({ userRole }) => {
     }
   }, [userRole, activeTab, loading, fetchBooks, fetchBorrowedBooks, fetchReturnedBooks, fetchAllUsers, editBook]);
 
-  // Handle both add and edit logic in one function
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     const form = formRef.current;
@@ -637,7 +698,6 @@ const Library = ({ userRole }) => {
 
   const handleReturn = useCallback(async (recordId) => {
     const userConfirmed = window.confirm("Are you sure you want to return this book?");
-
     if (userConfirmed) {
       try {
         if (userRole === 'librarian') {
@@ -645,7 +705,6 @@ const Library = ({ userRole }) => {
         } else {
           await returnBook(recordId);
         }
-        
         displayMessage('Book return processed successfully!');
       } catch (error) {
         console.error('Error returning book:', error);
@@ -659,7 +718,6 @@ const Library = ({ userRole }) => {
 
   const handleDelete = useCallback(async (bookId) => {
     const userConfirmed = window.confirm("Are you sure you want to delete this book?");
-
     if (userConfirmed) {
       try {
         await deleteBook(bookId);
@@ -685,59 +743,52 @@ const Library = ({ userRole }) => {
   });
 
   return (
-    <div className="flex flex-col items-center min-h-screen"
-      style={{ background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", backgroundAttachment: "fixed" }}>
+    // ✅ SHIFTED UP: Reduced top padding (pt-1 sm:pt-2) to push content closer to the Institute Header
+    <div className="flex flex-col items-center h-full w-full max-w-[100vw] overflow-x-hidden pb-20 sm:pb-2 pt-1 sm:pt-2">
+      
       {showMessage && (
-        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-50 px-6 py-3 rounded-lg shadow-lg bg-white">
+        <div className="fixed top-20 sm:top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.1)] bg-gray-900 text-white font-bold text-sm animate-in slide-in-from-top-4 fade-in">
           {message}
         </div>
       )}
 
-      <div className="w-full max-w-4xl bg-white shadow-inner rounded-2xl p-8 space-y-8">
-        <div className="flex items-center justify-between mb-4">
-          <h1 className="text-4xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-teal-600 pb-1">
-            Library Management
-          </h1>
-          <span className="px-4 py-2 text-sm">
-            Current User: <span className="font-semibold">{userRole === 'librarian' ? 'Librarian' : 'User'}</span>
-          </span>
+      {/* ✅ REDUCED GAP: Gap between Header, Tabs, and Content reduced from gap-6 to gap-3 */}
+      <div className="flex flex-col w-[94%] sm:w-full max-w-4xl mx-auto h-full min-h-0 gap-2 sm:gap-3">
+        
+        <div className="flex-shrink-0 flex items-center justify-between bg-white p-3 sm:p-6 rounded-[1.25rem] sm:rounded-[2rem] shadow-sm border border-gray-100 w-full">
+          <div className="flex items-center gap-2.5 sm:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-[0.8rem] sm:rounded-2xl bg-gradient-to-br from-purple-100 to-teal-100 flex items-center justify-center border border-purple-200 flex-shrink-0">
+              <LibIcon className="text-purple-600 w-5 h-5 sm:w-6 sm:h-6" />
+            </div>
+            <div className="overflow-hidden">
+              <h1 className="text-xl sm:text-3xl font-extrabold text-gray-900 tracking-tight leading-none truncate">
+                Library
+              </h1>
+              <p className="text-[10px] sm:text-sm text-gray-500 font-medium mt-0.5 sm:mt-1 truncate">Campus resources</p>
+            </div>
+          </div>
+          <div className="text-right flex-shrink-0 bg-gray-50 px-2 sm:px-4 py-1.5 sm:py-2 rounded-lg sm:rounded-xl border border-gray-100">
+             <span className="text-[8px] sm:text-[10px] font-bold text-gray-400 uppercase tracking-wider block">Access</span>
+             <p className="font-extrabold text-purple-600 text-xs sm:text-sm">{userRole === 'librarian' ? 'Librarian' : 'Student'}</p>
+          </div>
         </div>
 
         {userRole === 'librarian' ? (
           <LibrarianDashboard
-            books={sortedBooks}
-            borrowedBooks={borrowedBooks}
-            returnedBooks={returnedBooks}
-            allUsers={allUsers}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            handleSubmit={handleSubmit}
-            handleEdit={handleEdit}
-            handleDelete={handleDelete}
-            handleReturn={handleReturn}
-            handleLibrarianBorrow={handleLibrarianBorrow}
-            formRef={formRef}
-            buttonStyle={buttonStyle}
-            gradientButton={gradientButton}
-            borderButton={borderButton}
-            editBook={editBook}
-            setEditBook={setEditBook}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
+            books={sortedBooks} borrowedBooks={borrowedBooks} returnedBooks={returnedBooks}
+            allUsers={allUsers} activeTab={activeTab} setActiveTab={setActiveTab}
+            handleSubmit={handleSubmit} handleEdit={handleEdit} handleDelete={handleDelete}
+            handleReturn={handleReturn} handleLibrarianBorrow={handleLibrarianBorrow}
+            formRef={formRef} buttonStyle={buttonStyle} gradientButton={gradientButton}
+            borderButton={borderButton} editBook={editBook} setEditBook={setEditBook}
+            searchTerm={searchTerm} setSearchTerm={setSearchTerm}
           />
         ) : (
           <UserDashboard
-            books={sortedBooks}
-            borrowedBooks={borrowedBooks}
-            returnedBooks={returnedBooks}
-            activeTab={activeTab}
-            setActiveTab={setActiveTab}
-            handleBorrow={handleBorrow}
-            handleReturn={handleReturn}
-            gradientButton={gradientButton}
-            borderButton={borderButton}
-            searchTerm={searchTerm}
-            setSearchTerm={setSearchTerm}
+            books={sortedBooks} borrowedBooks={borrowedBooks} returnedBooks={returnedBooks}
+            activeTab={activeTab} setActiveTab={setActiveTab} handleBorrow={handleBorrow}
+            handleReturn={handleReturn} gradientButton={gradientButton} borderButton={borderButton}
+            searchTerm={searchTerm} setSearchTerm={setSearchTerm}
           />
         )}
       </div>

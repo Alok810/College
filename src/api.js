@@ -1,11 +1,3 @@
-// import axios from "axios";
-
-// const api = axios.create({
-//   // ✅ FIXED: Points directly to your Express backend port
-//   baseURL: "http://localhost:4000/api/v1",
-//   withCredentials: true,
-// });
-
 import axios from "axios";
 
 // If in production, use the deployed backend URL. If local, use your PC's IP.
@@ -151,6 +143,16 @@ export const getInstituteByRegNumber = async (instituteRegistrationNumber) => {
   }
 };
 
+
+export const updateUserSettings = async (settingsData) => {
+  try {
+    // ✅ Changed from "/auth/settings" to "/user/settings/update"
+    const response = await api.put("/user/settings/update", settingsData);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to update settings.");
+  }
+};
 // ------------------- LIBRARY MANAGEMENT ENDPOINTS -------------------
 
 export const getAllBooks = async () => {
@@ -374,7 +376,6 @@ export const updateSocialPost = async (postId, content) => {
 
 export const updateUserProfile = async (formData) => {
   try {
-    // We are passing formData directly, and telling axios it contains files!
     const response = await api.put("/user/profile/update", formData, {
       headers: {
         "Content-Type": "multipart/form-data",
@@ -388,7 +389,6 @@ export const updateUserProfile = async (formData) => {
 
 // ------------------- FRIEND SYSTEM ENDPOINTS -------------------
 
-// Get all real friend data on load
 export const getMySocialData = async () => {
   try {
     const response = await api.get(`/friends/my-data`);
@@ -433,7 +433,6 @@ export const removeFriend = async (userId) => {
   }
 };
 
-
 // ------------------- LIVE CHAT ENDPOINTS -------------------
 
 export const accessChat = async (userId) => {
@@ -454,7 +453,6 @@ export const fetchChats = async () => {
   }
 };
 
-// ✅ BACK TO NORMAL IN api.js
 export const sendMessage = async (formData) => {
   try {
     const response = await api.post(`/chat/message`, formData);
@@ -514,7 +512,7 @@ export const markNotificationsAsRead = async () => {
     console.error("Failed to mark notifications as read:", error);
   }
 };
-// ✅ Corrected URL to match your backend's /social route
+
 export const deleteSocialComment = async (postId, commentId) => {
   try {
     const response = await api.delete(`/social/${postId}/comment/${commentId}`);
@@ -524,7 +522,6 @@ export const deleteSocialComment = async (postId, commentId) => {
   }
 };
 
-// Delete a specific notification
 export const deleteNotification = async (notificationId) => {
   try {
     const response = await api.delete(`/notification/${notificationId}`);
@@ -534,13 +531,140 @@ export const deleteNotification = async (notificationId) => {
   }
 };
 
-// Delete a chat message
 export const deleteChatMessage = async (messageId) => {
   try {
     const response = await api.delete(`/chat/message/${messageId}`);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || "Failed to delete message");
+  }
+};
+
+// ------------------- RESULT SYSTEM ENDPOINTS -------------------
+
+export const getMyResults = async () => {
+  try {
+    const res = await api.get('/results/my-results'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getAllResultsForAdmin = async () => {
+  try {
+    const res = await api.get('/results/all'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const publishResult = async (resultData) => {
+  try {
+    const res = await api.post('/results', resultData); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const updateResult = async (resultId, resultData) => {
+  try {
+    const res = await api.put(`/results/${resultId}`, resultData); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const deleteResult = async (resultId) => {
+  try {
+    const res = await api.delete(`/results/${resultId}`); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getUserResults = async (userId) => {
+  try {
+    const res = await api.get(`/results/user/${userId}`); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// Add this to the bottom of your src/api.js
+
+export const getClassResultsForStudents = async () => {
+  try {
+    const res = await api.get('/results/class-results'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const publishBatchResults = async (publishData) => {
+    try {
+        // ✅ Changed API to api, and /result/ to /results/
+        const response = await api.put('/results/publish/batch', publishData);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const bulkUploadResults = async (bulkData) => {
+    try {
+        // ✅ Changed API to api, and /result/ to /results/
+        const response = await api.post('/results/bulk', bulkData);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// ------------------- COURSE BLUEPRINT ENDPOINTS -------------------
+
+export const saveCourseBlueprint = async (courseData) => {
+  try {
+    const res = await api.post('/courses', courseData);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// ✅ ONLY ONE VERSION OF THIS FUNCTION REMAINS NOW!
+export const getCourseBlueprint = async (batch, branch, semester) => {
+  try {
+    const res = await api.get(`/courses/${batch}/${branch}/${semester}`);
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// ------------------- ADMIN DASHBOARD ENDPOINTS -------------------
+
+export const getAdminStats = async () => {
+  try {
+    const res = await api.get('/admin/stats'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getAdminUsers = async () => {
+  try {
+    const res = await api.get('/admin/users'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
   }
 };
 

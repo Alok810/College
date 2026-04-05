@@ -1,5 +1,5 @@
 import React, { createContext, useState, useContext, useEffect } from 'react';
-import { io } from "socket.io-client"; // ✅ 1. Import socket.io
+import { io } from "socket.io-client"; 
 import { useAuth } from './AuthContext'; 
 import { 
   toggleFriendRequest, 
@@ -7,13 +7,12 @@ import {
   rejectFriendRequest, 
   removeFriend,
   getMySocialData,
-  fetchNotifications, // ✅ 2. Import your new API calls
+  fetchNotifications, 
   markNotificationsAsRead 
 } from '../api';
 
 const FriendContext = createContext();
 
-// ✅ Setup the dynamic ENDPOINT for WebSockets
 const ENDPOINT = import.meta.env.MODE === "production" 
   ? "https://rigya-backend.onrender.com" 
   : "http://localhost:4000";
@@ -26,29 +25,31 @@ export const FriendProvider = ({ children }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [notifications, setNotifications] = useState([]);
 
-  // ✅ 3. FETCH BOTH SOCIAL DATA AND DB NOTIFICATIONS
   useEffect(() => {
     const loadSocialData = async () => {
       if (!authData) return; 
 
       try {
-        // FIXED: Added the missing comma in Promise.all
         const [socialData, notifData] = await Promise.all([
-          getMySocialData(),
-          fetchNotifications()
+          getMySocialData().catch(err => { console.error("Backend failed to load friends:", err.message); return null; }),
+          fetchNotifications().catch(err => { console.error("Backend failed to load notifications:", err.message); return null; })
         ]);
         
-        setFriends(socialData.friends);
-        setRequests(socialData.friendRequests);
-        
-        const mappedSuggestions = socialData.suggestions.map(user => ({
-          ...user,
-          requestSent: socialData.sentRequests.some(sent => sent._id === user._id)
-        }));
-        setSuggestions(mappedSuggestions);
+        const safeFriends = socialData?.friends || [];
+        const safeRequests = socialData?.friendRequests || [];
+        const safeSuggestions = socialData?.suggestions || [];
+        const safeSentRequests = socialData?.sentRequests || []; // ✅ Now we track these properly!
 
-        // Turn real friend requests into notifications
-        const requestNotifications = socialData.friendRequests.map(req => ({
+        setFriends(safeFriends);
+        setRequests(safeRequests);
+        
+        // ✅ THE FIX: Merge suggestions and sentRequests so Profile.jsx can ALWAYS find them!
+        const mappedSuggestions = safeSuggestions.map(user => ({ ...user, requestSent: false }));
+        const mappedSentRequests = safeSentRequests.map(user => ({ ...user, requestSent: true }));
+        
+        setSuggestions([...mappedSuggestions, ...mappedSentRequests]);
+
+        const requestNotifications = safeRequests.map(req => ({
           _id: `req_${req._id}`,
           user: {
             _id: req._id,
@@ -61,40 +62,38 @@ export const FriendProvider = ({ children }) => {
           type: 'friend_request'
         }));
         
-        // Extract the real DB notifications (Likes)
         const dbNotifications = notifData?.notifications || [];
-
-        // ✅ COMBINE both friend requests AND real notifications!
         setNotifications([...requestNotifications, ...dbNotifications]);
 
       } catch (error) {
-        console.error("Failed to load real friend data:", error.message);
+        console.error("Failed to process friend data:", error.message);
       }
     };
 
     loadSocialData();
   }, [authData]); 
 
-  // ✅ 4. LISTEN FOR LIVE WEB SOCKET EVENTS
   useEffect(() => {
     if (!authData) return;
 
-    // FIXED: Use the dynamic ENDPOINT instead of hardcoded localhost
-    const socket = io(ENDPOINT);
+    const socket = io(ENDPOINT, {
+      withCredentials: true 
+    });
     socket.emit("join", authData._id);
 
-    // Listen for the "like" notification from the backend
     socket.on("new notification", (newNotification) => {
       console.log("🔔 New Notification Received!", newNotification);
-      // Put the newest notification at the very top of the list
       setNotifications((prev) => [newNotification, ...prev]);
+      
+      // ✅ THE FIX: If it's a friend request, immediately add it to the Friend Requests tab!
+      if (newNotification.type === 'friend_request') {
+          setRequests((prev) => [newNotification.user, ...prev]);
+      }
     });
 
     return () => socket.disconnect();
   }, [authData]);
 
-  
-  // === REAL BACKEND API HANDLERS ===
   const handleAcceptRequest = async (userId) => {
     try {
       await acceptFriendRequest(userId);
@@ -122,9 +121,15 @@ export const FriendProvider = ({ children }) => {
   const handleAddFriend = async (userId) => {
     try {
       await toggleFriendRequest(userId);
-      setSuggestions(prev =>
-        prev.map(user => user._id === userId ? { ...user, requestSent: true } : user)
-      );
+      // ✅ THE FIX: Force the user into the suggestions state with requestSent: true
+      setSuggestions(prev => {
+          const exists = prev.find(u => u._id === userId);
+          if (exists) {
+              return prev.map(user => user._id === userId ? { ...user, requestSent: true } : user);
+          } else {
+              return [...prev, { _id: userId, requestSent: true }];
+          }
+      });
     } catch (error) {
       console.error("Failed to send request:", error.message);
     }
@@ -133,9 +138,7 @@ export const FriendProvider = ({ children }) => {
   const handleCancelRequest = async (userId) => {
     try {
       await toggleFriendRequest(userId); 
-      setSuggestions(prev =>
-        prev.map(user => user._id === userId ? { ...user, requestSent: false } : user)
-      );
+      setSuggestions(prev => prev.map(user => user._id === userId ? { ...user, requestSent: false } : user));
     } catch (error) {
       console.error("Failed to cancel request:", error.message);
     }
@@ -154,12 +157,9 @@ export const FriendProvider = ({ children }) => {
     }
   };
 
-  // ✅ 5. UPDATE DATABASE WHEN MARKING AS READ
   const handleMarkAllAsRead = async () => {
     try {
-      // Tell the backend to update the database
       await markNotificationsAsRead();
-      // Update the UI instantly
       setNotifications(prev => prev.map(n => ({ ...n, seen: true })));
     } catch (error) {
       console.error("Failed to mark notifications as read", error);

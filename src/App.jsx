@@ -22,7 +22,7 @@ import Tab from "./components/Tab";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import { FriendProvider } from "./context/FriendContext";
-import { ChatProvider } from "./context/ChatContext"; 
+import { ChatProvider } from "./context/ChatContext";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 import { checkBackendConnection, getSocialFeed } from "./api";
@@ -32,10 +32,12 @@ import SearchSidebar from "./components/SearchSidebar";
 import CreatePost from "./components/CreatePost";
 import MessageSidebar from "./components/Message";
 import NotificationSidebar from "./components/NotificationSidebar";
+import InstallPrompt from './components/InstallPrompt'; // ✅ Added Import
 
 const AppContent = () => {
   const location = useLocation();
-  const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password";
+  const hideSidebar =
+    location.pathname === "/auth" || location.pathname === "/reset-password";
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   // ✅ MOBILE DETECTION & MODAL CONTROLLER
@@ -61,15 +63,15 @@ const AppContent = () => {
     const fetchFeed = async () => {
       if (!authData) return;
       setIsFetching(true);
-      
+
       try {
         const feedData = await getSocialFeed(page, 10);
-        
+
         setPosts((prevPosts) => {
           if (page === 1) return feedData.posts;
-          
+
           const newPosts = feedData.posts.filter(
-            (newPost) => !prevPosts.some((p) => p._id === newPost._id)
+            (newPost) => !prevPosts.some((p) => p._id === newPost._id),
           );
           return [...prevPosts, ...newPosts];
         });
@@ -83,7 +85,7 @@ const AppContent = () => {
     };
 
     fetchFeed();
-  }, [authData, page]); 
+  }, [authData, page]);
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
@@ -127,18 +129,22 @@ const AppContent = () => {
 
   const isLibrarianDesignation = authData?.designation === "Librarian";
   const isLibrarianUserType = authData?.userType === "Librarian";
-  const isLibrarianRole = isLibrarianUserType || (isLibrarianDesignation && (authData?.userType === "Official" || authData?.userType === "Other"));
+  const isLibrarianRole =
+    isLibrarianUserType ||
+    (isLibrarianDesignation &&
+      (authData?.userType === "Official" || authData?.userType === "Other"));
   const userRole = isLibrarianRole ? "librarian" : "user";
 
-  const contentMarginLeft = hideSidebar || isMobile ? "0" : (isSidebarOpen ? "16rem" : "5rem");
-  
+  const contentMarginLeft =
+    hideSidebar || isMobile ? "0" : isSidebarOpen ? "16rem" : "5rem";
+
   const contentPaddingTop = `calc(${headerHeight} + 2rem)`;
   const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
   const maskCutoffLine = `calc(${contentPaddingTop} - 0.40rem)`;
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-white shadow-xl">
+      <div className="flex flex-col items-center justify-center min-h-[100dvh] bg-white shadow-xl">
         <div className="w-12 h-12 border-4 border-t-4 border-purple-600 rounded-full animate-spin mb-4"></div>
         <h1 className="text-xl font-bold text-gray-700">Loading...</h1>
       </div>
@@ -146,63 +152,78 @@ const AppContent = () => {
   }
 
   return (
-    // ✅ 1. Changed min-h-screen to h-screen and added overflow-hidden to lock the outer body!
     <div
-      className="relative h-screen w-full overflow-hidden"
+      className="relative h-[100dvh] w-full overflow-hidden"
       style={{
-        background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
+        background:
+          "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         backgroundAttachment: "fixed",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
       }}
     >
-      {/* ✅ 2. Changed min-h-screen to h-screen to strictly fit the monitor */}
-      <div className="flex h-screen transition-all duration-300">
+     <div className="flex h-[100dvh] transition-all duration-300">
+        
+        {/* ✅ CHANGED: Set z-40 here so the entire sidebar stays under the header globally */}
         {!hideSidebar && (
-          <div className="fixed left-0 top-0 h-screen transition-all duration-300 z-20">
+          <div className="fixed left-0 top-0 h-[100dvh] transition-all duration-300 z-40">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
           </div>
         )}
 
-        {/* ✅ 3. Added h-screen to the main content area so it doesn't stretch down */}
-        <div className="flex-1 h-screen transition-all duration-300" style={{ marginLeft: contentMarginLeft }}>
+        <div
+          className="flex-1 h-[100dvh] transition-all duration-300 relative"
+          style={{ marginLeft: contentMarginLeft }}
+        >
+          {/* ✅ CHANGED: Set z-50 here so the Institute Header is always the top layer (even on mobile!) */}
           {!hideSidebar && (
-            <InstituteHeader
-              ref={headerRef}
-              isSidebarOpen={isSidebarOpen}
-              instituteName={instituteName}
-              instituteLogo={instituteLogo}
-              horizontalOffset={headerOffset} 
-            />
+            <div className="relative z-50">
+              <InstituteHeader
+                ref={headerRef}
+                isSidebarOpen={isSidebarOpen}
+                instituteName={instituteName}
+                instituteLogo={instituteLogo}
+                horizontalOffset={headerOffset}
+              />
+            </div>
           )}
 
-          {/* ✅ 4. Changed py-6 to pb-6 (to prevent conflicting top padding) and changed height to "100%" instead of "100vh" */}
           <div
-            className={`px-0 pb-6 md:px-6 md:pb-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+            className={`px-0 pb-32 md:px-6 md:pb-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+// ... rest of your code continues normally
             onScroll={handleScroll}
             style={{
               paddingTop: contentPaddingTop,
-              height: "100%", 
+              height: "100%",
               WebkitMaskImage: `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
               maskImage: `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
             }}
           >
             <Routes>
               <Route element={<ProtectedRoute />}>
-                <Route path="/" element={
-                  <>
-                    <Home posts={posts} contentOffset={contentOffset} />
-                    {isFetching && page > 1 && (
-                      <div className="flex justify-center my-4">
-                        <div className="w-6 h-6 border-2 border-t-2 border-purple-600 rounded-full animate-spin"></div>
-                      </div>
-                    )}
-                  </>
-                } />
+                <Route
+                  path="/"
+                  element={
+                    <>
+                      <Home posts={posts} contentOffset={contentOffset} />
+                      {isFetching && page > 1 && (
+                        <div className="flex justify-center my-4">
+                          <div className="w-6 h-6 border-2 border-t-2 border-purple-600 rounded-full animate-spin"></div>
+                        </div>
+                      )}
+                    </>
+                  }
+                />
 
                 <Route path="/friends" element={<Friend />} />
-                <Route path="/profile" element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />} />
-                <Route path="/profile/:ProfileId" element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />} />
+                <Route
+                  path="/profile"
+                  element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />}
+                />
+                <Route
+                  path="/profile/:ProfileId"
+                  element={<Profile isSidebarOpen={isSidebarOpen} posts={posts} />}
+                />
 
                 <Route path="/settings" element={<Settings />} />
                 <Route path="/logout" element={<Logout />} />
@@ -211,11 +232,14 @@ const AppContent = () => {
                 <Route path="/voice" element={<Voice />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/interaction" element={<Interaction />} />
-                <Route path="/library" element={<Library userRole={userRole} />} />
+                <Route
+                  path="/library"
+                  element={<Library userRole={userRole} />}
+                />
                 <Route path="/hostel" element={<Hostel />} />
                 <Route path="/club" element={<Club />} />
               </Route>
-              
+
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Routes>
@@ -224,40 +248,53 @@ const AppContent = () => {
 
         {/* Desktop Tab Sidebar */}
         {!hideSidebar && isHomePage && (
-          <div className="hidden lg:block fixed top-0 right-0 w-80 h-screen py-4 pr-4 z-40">
+          <div className="hidden lg:block fixed top-0 right-0 w-80 h-[100dvh] py-4 pr-4 z-40">
             <Tab onPostCreated={handleAddPost} />
           </div>
         )}
 
-        {/* ✅ MOBILE BOTTOM NAVIGATION & MODALS */}
+        {/* ✅ MOBILE BOTTOM NAVIGATION, MODALS, AND INSTALL PROMPT */}
         {!hideSidebar && (
           <>
-            <BottomNav activeModal={activeMobileModal} setActiveModal={setActiveMobileModal} />
+            <InstallPrompt /> {/* PWA Install Prompt Component */}
             
-            {isMobile && activeMobileModal === 'search' && (
-              <SearchSidebar isExpanded={true} onClose={() => setActiveMobileModal(null)} />
-            )}
-            
-            {isMobile && activeMobileModal === 'post' && (
-              <CreatePost 
-                onClose={() => setActiveMobileModal(null)} 
-                onPostCreated={(post) => { 
-                  handleAddPost(post); 
-                  setActiveMobileModal(null); 
-                }} 
+            <BottomNav
+              activeModal={activeMobileModal}
+              setActiveModal={setActiveMobileModal}
+            />
+
+            {isMobile && activeMobileModal === "search" && (
+              <SearchSidebar
+                isExpanded={true}
+                onClose={() => setActiveMobileModal(null)}
               />
             )}
-            
-            {isMobile && activeMobileModal === 'messages' && (
-              <MessageSidebar isExpanded={true} onClose={() => setActiveMobileModal(null)} />
+
+            {isMobile && activeMobileModal === "post" && (
+              <CreatePost
+                onClose={() => setActiveMobileModal(null)}
+                onPostCreated={(post) => {
+                  handleAddPost(post);
+                  setActiveMobileModal(null);
+                }}
+              />
             )}
-            
-            {isMobile && activeMobileModal === 'notifications' && (
-              <NotificationSidebar isExpanded={true} onClose={() => setActiveMobileModal(null)} />
+
+            {isMobile && activeMobileModal === "messages" && (
+              <MessageSidebar
+                isExpanded={true}
+                onClose={() => setActiveMobileModal(null)}
+              />
+            )}
+
+            {isMobile && activeMobileModal === "notifications" && (
+              <NotificationSidebar
+                isExpanded={true}
+                onClose={() => setActiveMobileModal(null)}
+              />
             )}
           </>
         )}
-
       </div>
     </div>
   );

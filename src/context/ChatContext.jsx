@@ -24,14 +24,19 @@ export const ChatProvider = ({ children }) => {
   const [typingChats, setTypingChats] = useState([]); 
   const [onlineUsers, setOnlineUsers] = useState([]); 
   
-  // ✅ NEW: We need to put the socket into React State so it can be shared with ChatBox
+// ✅ NEW: We need to put the socket into React State so it can be shared with ChatBox
   const [socketInstance, setSocketInstance] = useState(null);
 
   useEffect(() => {
     if (authData) {
-      socket = io(ENDPOINT);
+      // ✅ ADDED withCredentials to the connection!
+      socket = io(ENDPOINT, {
+          withCredentials: true
+      });
+      
       socket.emit("join", authData._id); 
       setSocketInstance(socket); // ✅ Save the connection into the state
+      
       return () => socket.disconnect();
     }
   }, [authData]);

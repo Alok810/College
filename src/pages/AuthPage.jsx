@@ -14,14 +14,16 @@ function generateCaptcha() {
 }
 
 export default function AuthPage() {
-  const { setIsAuthenticated, fetchAuthData } = useAuth(); // ADDED fetchAuthData here
+  const { setIsAuthenticated, fetchAuthData } = useAuth(); 
   const [formData, setFormData] = useState({
     email: "",
     password: "",
     confirmPassword: "",
     captcha: "",
     name: "",
-    id: "",
+    registrationNo: "", // ✅ Changed from 'id' to 'registrationNo' for backend fixes
+    batch: "", 
+    branch: "", 
     instituteName: "",
     instituteType: "",
     affiliationNumber: "",
@@ -65,7 +67,9 @@ export default function AuthPage() {
       confirmPassword: "",
       captcha: "",
       name: "",
-      id: "",
+      registrationNo: "", // ✅ Changed from 'id' to 'registrationNo'
+      batch: "", 
+      branch: "",
       instituteName: "",
       instituteType: "",
       affiliationNumber: "",
@@ -286,12 +290,8 @@ export default function AuthPage() {
           userType: userType
         });
         if (response.success) {
-          // This is the correct logic now:
           setIsAuthenticated(true);
           navigate("/");
-          // The issue is that the AuthContext's useEffect will run on the next render,
-          // but you need the data to be there immediately.
-          // The previous fix of calling fetchAuthData() here is the way to go.
         } else {
           alert(response.message);
         }
@@ -310,7 +310,53 @@ export default function AuthPage() {
           return (
             <>
               <input name="name" type="text" value={formData.name} placeholder="Student Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="id" type="text" value={formData.id} placeholder="Student ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              {/* ✅ Replaced Student ID with Registration No. */}
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Registration No." onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              
+              <div className="flex gap-2">
+                <select 
+                  name="batch" 
+                  value={formData.batch} 
+                  onChange={handleChange} 
+                  className="w-1/2 px-4 py-2 border rounded-lg bg-white" 
+                  required
+                >
+                  <option value="" disabled>Select Batch</option>
+                  <option value="2026-2030">2026-2030</option>
+                  <option value="2025-2029">2025-2029</option>
+                  <option value="2024-2028">2024-2028</option>
+                  <option value="2023-2027">2023-2027</option>
+                  <option value="2022-2026">2022-2026</option>
+                  <option value="2021-2025">2021-2025</option>
+                  <option value="2020-2024">2020-2024</option>
+                </select>
+                
+                <select 
+                  name="branch" 
+                  value={formData.branch} 
+                  onChange={handleChange} 
+                  className="w-1/2 px-4 py-2 border rounded-lg bg-white" 
+                  required
+                >
+                  <option value="" disabled>Select Branch</option>
+                  <option value="CSE">Computer Science and Engineering (CSE)</option>
+                  <option value="CE">Computer Engineering (CE)</option>
+                  <option value="IT">Information Technology (IT)</option>
+                  <option value="AI_DS">Artificial Intelligence & Data Science</option>
+                  <option value="ECE">Electronics and Communication (ECE)</option>
+                  <option value="EE">Electrical Engineering (EE)</option>
+                  <option value="EEE">Electrical & Electronics (EEE)</option>
+                  <option value="ME">Mechanical Engineering (ME)</option>
+                  <option value="Civil">Civil Engineering (Civil)</option>
+                  <option value="Chemical">Chemical Engineering</option>
+                  <option value="Metallurgy">Metallurgical and Materials</option>
+                  <option value="Production">Production and Industrial</option>
+                  <option value="Aerospace">Aerospace / Aeronautical</option>
+                  <option value="Biotech">Biotechnology</option>
+                  <option value="Other">Other</option>
+                </select>
+              </div>
+
               <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
             </>
           );
@@ -318,7 +364,7 @@ export default function AuthPage() {
           return (
             <>
               <input name="name" type="text" value={formData.name} placeholder="Teacher Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="id" type="text" value={formData.id} placeholder="Teacher ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Teacher ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
               <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
             </>
           );
@@ -326,7 +372,7 @@ export default function AuthPage() {
           return (
             <>
               <input name="name" type="text" value={formData.name} placeholder="Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="id" type="text" value={formData.id} placeholder="Employee / Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Employee / Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
               <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
               <select name="designation" value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required>
                 <option value="">Select Designation</option>
@@ -354,7 +400,7 @@ export default function AuthPage() {
           return (
             <>
               <input name="name" type="text" value={formData.name} placeholder="Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="id" type="text" value={formData.id} placeholder="Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
               <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
               <select name="designation" value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required>
                 <option value="">Select Role</option>
@@ -461,7 +507,7 @@ export default function AuthPage() {
           <option value="Head Master">Head Master</option>
           <option value="Teacher">Teacher</option>
         </select>
-        <input name="id" type="text" value={formData.id} placeholder="Admin ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+        <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Admin ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
         {showAdminOtpInput && !isAdminOtpVerified ? (
           <div className="flex items-center gap-2">
             <input name="adminEmail" type="email" value={formData.adminEmail} placeholder="Admin Email" onChange={handleChange} className="w-3/4 px-4 py-2 border rounded-lg" required disabled={true} />
