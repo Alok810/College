@@ -26,7 +26,6 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     const contentRef = useRef(null);
     const totalCr = result.subjects?.reduce((sum, sub) => sum + (parseFloat(sub.credits) || 0), 0);
 
-    // ✅ THE FIX: Pass the ref directly, not as an arrow function
     const handleDownloadPDF = useReactToPrint({
         contentRef: contentRef, 
         documentTitle: `Transcript_${displayData?.registrationNo || 'Student'}_${result.semester.replace(' ', '_')}`,
@@ -221,9 +220,19 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
     const currentUserData = authData?.user || authData || {};
     const displayData = isCurrentUser ? currentUserData : (fetchedTargetUser || currentUserData);
 
+    // ✅ CHECK ROLES & VERIFICATION
+    const isOfficial = authData?.userType === "Institute" || authData?.role === "admin" || authData?.role === "superadmin";
+    const isVerified = authData?.isVerifiedByInstitute === true;
+
     useEffect(() => {
         const fetchData = async () => {
             if (!isCurrentUser && !isResultsPublic) {
+                setLoading(false);
+                return;
+            }
+
+            // ✅ BOUNCER CHECK: Stop API calls if student is unverified
+            if (!isOfficial && !isVerified) {
                 setLoading(false);
                 return;
             }
@@ -262,12 +271,27 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
         };
 
         if (userId) fetchData();
-    }, [userId, isCurrentUser, isResultsPublic]);
+    }, [userId, isCurrentUser, isResultsPublic, isOfficial, isVerified]);
 
     if (loading) {
         return (
             <div className="flex justify-center items-center py-16 bg-white rounded-[1.5rem] shadow-sm border border-gray-100 w-full">
                 <Loader2 className="w-8 h-8 text-purple-600 animate-spin" />
+            </div>
+        );
+    }
+
+    // ✅ SHOW BOUNCER SCREEN IF UNVERIFIED
+    if (!isOfficial && !isVerified) {
+        return (
+            <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-slate-200 flex-1 w-full animate-in fade-in duration-300">
+                <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6 border-4 border-amber-100">
+                    <Lock className="w-10 h-10 text-amber-500" />
+                </div>
+                <h1 className="text-xl sm:text-2xl font-black text-slate-900 mb-2">Verification Pending</h1>
+                <p className="text-slate-500 font-medium text-sm text-center max-w-sm px-4">
+                    Your account must be verified by the Institute Administration before you can access academic records.
+                </p>
             </div>
         );
     }

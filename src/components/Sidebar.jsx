@@ -1,6 +1,9 @@
+// src/components/Sidebar.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
+// ✅ IMPORT THE SHIELD ICON FOR THE SUPER ADMIN BUTTON
+import { ShieldCheck } from "lucide-react"; 
 
 import homeIcon from "../assets/house.png";
 import leftArrow from "../assets/left.png";
@@ -26,11 +29,14 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
-  // ✅ ADDED: active:scale-[0.98] and active:bg-white/60 so it "presses down" on mobile tap
+  // ✅ CHECK USER ROLES
+  const userRole = authData?.role || authData?.user?.role;
+  const isSuperAdmin = userRole === "superadmin";
+  const isInstituteAdmin = authData?.userType === "Institute" || userRole === "admin";
+
   const linkClass =
     "group flex items-center gap-3 py-2 px-4 rounded hover:bg-white/40 active:bg-white/60 active:scale-[0.98] transition-all duration-200";
 
-  // ✅ ADDED: group-active:scale-95 so the icon shrinks slightly when tapped on mobile
   const iconClass = "w-6 h-6 min-w-[24px] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-md group-active:scale-95";
 
   useEffect(() => {
@@ -48,7 +54,6 @@ export default function Sidebar({ isOpen, setIsOpen }) {
       {/* MOBILE LOGO BUTTON */}
       {!isOpen && (
         <button
-          // ✅ ADDED: active:scale-95 for touch feedback
           className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-xl shadow-lg hover:bg-[#A9E0FF] hover:scale-105 active:scale-95 transition-all"
           onClick={() => setIsOpen(true)}
         >
@@ -156,15 +161,33 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               {isOpen && "Club"}
             </NavLink>
 
-            <NavLink to="/admin" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
-              <img src={adminIcon} alt="Admin" className={iconClass} />
-              {isOpen && "Admin"}
-            </NavLink>
-
             <NavLink to="/interaction" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
               <img src={interactionIcon} alt="Interaction" className={iconClass} />
               {isOpen && "Interaction"}
             </NavLink>
+
+            {/* ✅ THE INSTITUTE ADMIN BUTTON (Conditionally Rendered) */}
+            {isInstituteAdmin && (
+              <NavLink to="/admin" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+                <img src={adminIcon} alt="Admin" className={iconClass} />
+                {isOpen && "Admin"}
+              </NavLink>
+            )}
+
+            {/* ✅ THE SUPER ADMIN BUTTON (Conditionally Rendered) */}
+            {isSuperAdmin && (
+              <>
+                <div className="border-t border-white/50 my-2 pt-2"></div>
+                <NavLink 
+                    to="/superadmin" 
+                    className={`group flex items-center gap-3 py-2.5 px-4 rounded-lg bg-indigo-50/60 hover:bg-indigo-100/80 active:bg-indigo-200 border border-indigo-200/50 shadow-sm active:scale-[0.98] transition-all duration-200 ${!isOpen ? "justify-center" : "justify-start"}`}
+                >
+                  <ShieldCheck className={`w-6 h-6 min-w-[24px] text-indigo-600 transition-transform duration-300 group-hover:scale-110 group-active:scale-95`} />
+                  {isOpen && <span className="font-extrabold text-indigo-800 tracking-wide text-sm uppercase">Super Admin</span>}
+                </NavLink>
+              </>
+            )}
+            
           </nav>
         </div>
 
@@ -186,6 +209,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 <p className="font-semibold text-gray-800 truncate">
                   {authData?.name || authData?.full_name || "Unknown User"}
                 </p>
+                {/* Optional: Show their role if they are superadmin */}
+                {isSuperAdmin && <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider">Super Admin</span>}
               </div>
             )}
           </div>

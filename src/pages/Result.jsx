@@ -149,7 +149,6 @@ const StudentClassView = memo(({ results, users, currentPage, totalPages, setCur
           )}
         </div>
 
-        {/* ✅ Pagination for Class Rankings */}
         {totalPages > 1 && (
           <div className="flex justify-center items-center gap-4 py-6 flex-shrink-0">
             <button 
@@ -192,7 +191,6 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
   const [blueprintSubjects, setBlueprintSubjects] = useState([]);
   const [editIndex, setEditIndex] = useState(null);
   const [newSubDef, setNewSubDef] = useState({ subjectCode: '', subjectName: '', type: 'Theory', credits: '', extFull: 70, intFull: 30, totalMax: 100, passExt: 21, passTotal: 35 });
-
   const [isBlueprintSaving, setIsBlueprintSaving] = useState(false);
   const [hasJustSavedBlueprint, setHasJustSavedBlueprint] = useState(false);
 
@@ -223,14 +221,17 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
   const [manageBranch, setManageBranch] = useState('');
   const [manageSemester, setManageSemester] = useState('');
 
-  // --- FILTERS & SORTING ---
   const filteredStudents = users.filter(user => user.userType === 'Student' && (!uploadBatch || user.batch === uploadBatch) && (!uploadBranch || user.branch === uploadBranch));
   
+  // 🚀 OPTIMIZATION 1: Use Hash Map for blazing fast searching in filtering/sorting
   const filteredResults = useMemo(() => {
+    const userMap = new Map();
+    users.forEach(u => userMap.set(u._id, u));
+
     let filtered = results.filter(r => {
       if (!r.isPublished) return false; 
 
-      const studentObj = users.find(u => u._id === (r.student._id || r.student));
+      const studentObj = userMap.get(r.student._id || r.student);
       if (manageSearch) {
         const searchLower = manageSearch.toLowerCase();
         const nameMatch = studentObj?.name?.toLowerCase().includes(searchLower);
@@ -244,8 +245,8 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
     });
 
     filtered.sort((a, b) => {
-      const studentA = users.find(u => u._id === (a.student._id || a.student)) || {};
-      const studentB = users.find(u => u._id === (b.student._id || b.student)) || {};
+      const studentA = userMap.get(a.student._id || a.student) || {};
+      const studentB = userMap.get(b.student._id || b.student) || {};
 
       if (studentA.batch !== studentB.batch) return (studentB.batch || '').localeCompare(studentA.batch || '');
       if (studentA.branch !== studentB.branch) return (studentA.branch || '').localeCompare(studentB.branch || '');
@@ -256,12 +257,17 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
     return filtered;
   }, [results, users, manageSearch, manageBatch, manageBranch, manageSemester]);
 
+  // 🚀 OPTIMIZATION 2: Hash Map for Drafts
   const pendingDraftsForPublish = useMemo(() => {
     if (!publishBatch || !publishBranch || !publishSemester) return [];
+    
+    const userMap = new Map();
+    users.forEach(u => userMap.set(u._id, u));
+
     return results.filter(r => {
       if (r.isPublished) return false;
       if (r.semester !== publishSemester) return false;
-      const studentObj = users.find(u => u._id === (r.student._id || r.student));
+      const studentObj = userMap.get(r.student._id || r.student);
       return studentObj && studentObj.batch === publishBatch && studentObj.branch === publishBranch;
     });
   }, [results, users, publishBatch, publishBranch, publishSemester]);
@@ -420,11 +426,20 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
             const bulkPayload = [];
             let skippedCount = 0; 
 
+            // 🚀 OPTIMIZATION 3: Hash Map for blazing fast CSV processing
+            const studentMap = new Map();
+            filteredStudents.forEach(s => {
+                if (s.registrationNo) {
+                    studentMap.set(String(s.registrationNo).trim(), s);
+                }
+            });
+
             for (let row of csvData) {
               const regNo = String(row['RegistrationNo'] || '').trim();
               if (!regNo) continue;
 
-              const student = filteredStudents.find(s => String(s.registrationNo).trim() === regNo);
+              // Instantly lookup the student
+              const student = studentMap.get(regNo);
 
               if (!student) {
                 console.warn(`⚠️ Skipped: Student ${regNo} not found in ${uploadBranch} ${uploadBatch}.`);
@@ -953,7 +968,6 @@ const AdminDashboard = memo(({ results, users, handleUpload, handleDelete, fetch
                 })}
               </div>
 
-              {/* ✅ Pagination for Admin Manage Tab */}
               {totalPages > 1 && (
                 <div className="flex justify-center items-center gap-4 py-4 bg-white border-t border-slate-200 flex-shrink-0 mt-auto sticky bottom-0">
                   <button 
@@ -994,25 +1008,24 @@ const Result = () => {
   const [users, setUsers] = useState([]);
   const [message, setMessage] = useState('');
   
-  // ✅ 1. ADD PAGINATION STATE
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-  const isOfficial = authData?.userType === "Institute" || authData?.role === "admin";
+  const isOfficial = authData?.userType === "Institute" || authData?.role === "admin" || authData?.role === "superadmin";
+  
+  // ✅ THE BOUNCER: Check if they are explicitly verified
+  const isVerified = authData?.isVerifiedByInstitute === true;
 
   const displayMessage = useCallback((msg) => {
     setMessage(msg);
     setTimeout(() => setMessage(''), 3000);
   }, []);
 
-  // ✅ 2. PASS THE PAGE NUMBER AND EXTRACT .results
   const fetchData = useCallback(async (page = 1) => {
     try {
       if (isOfficial) {
-        // Fetch Admin Data 
         const resultsResponse = await getAllResultsForAdmin(page); 
         
-        // Extract .results safely
         setResults(resultsResponse.results || resultsResponse);
         if (resultsResponse.pagination) setTotalPages(resultsResponse.pagination.totalPages);
 
@@ -1037,10 +1050,12 @@ const Result = () => {
     }
   }, [isOfficial, authData]);
 
-  // ✅ 3. RE-FETCH WHEN PAGE CHANGES
   useEffect(() => { 
-    if (!loading) fetchData(currentPage); 
-  }, [loading, fetchData, currentPage]);
+    // ✅ ONLY fetch data if they are an official OR they are verified
+    if (!loading && (isOfficial || isVerified)) {
+        fetchData(currentPage); 
+    }
+  }, [loading, fetchData, currentPage, isOfficial, isVerified]);
 
   const handleUpload = async (resultData, isUpdate, resultId) => {
     try {
@@ -1069,12 +1084,28 @@ const Result = () => {
     }
   };
 
+  // ✅ IF NOT VERIFIED: Show the waiting screen instead of the UI
+  if (!loading && !isOfficial && !isVerified) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full w-full p-6">
+        <div className="bg-white p-10 rounded-[2rem] border border-slate-200 shadow-sm max-w-md text-center flex flex-col items-center">
+           <div className="w-20 h-20 bg-amber-50 rounded-full flex items-center justify-center mb-6 border-4 border-amber-100">
+             <Lock className="w-10 h-10 text-amber-500" />
+           </div>
+           <h1 className="text-2xl font-black text-slate-900 mb-2">Account Pending</h1>
+           <p className="text-slate-500 font-medium text-sm">
+             Your account is currently waiting for verification from the Institute Administration. You will gain access to your Academic Results once approved.
+           </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col items-center h-full w-full max-w-[100vw] overflow-x-hidden pb-0 sm:pb-2 pt-1 sm:pt-2">
       {message && <div className="fixed top-20 sm:top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-lg bg-slate-900 text-white font-bold text-sm animate-in slide-in-from-top-4 fade-in">{message}</div>}
       <div className="flex flex-col w-[94%] sm:w-full max-w-4xl mx-auto h-full min-h-0 gap-2 sm:gap-3">
         {isOfficial ? (
-          // ✅ 4. PASS PAGINATION PROPS TO ADMIN DASHBOARD
           <AdminDashboard 
             results={results} 
             users={users} 

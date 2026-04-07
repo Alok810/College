@@ -18,6 +18,7 @@ import Interaction from "./pages/Interaction";
 import Library from "./pages/Library";
 import Hostel from "./pages/Hostel";
 import Club from "./pages/Club";
+import SuperAdminDashboard from "./pages/SuperAdminDashboard"; 
 import Tab from "./components/Tab";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -32,7 +33,10 @@ import SearchSidebar from "./components/SearchSidebar";
 import CreatePost from "./components/CreatePost";
 import MessageSidebar from "./components/Message";
 import NotificationSidebar from "./components/NotificationSidebar";
-import InstallPrompt from './components/InstallPrompt'; // ✅ Added Import
+import InstallPrompt from './components/InstallPrompt';
+
+// ✅ IMPORT THE NEW ANNOUNCEMENT BANNER
+import AnnouncementBanner from "./components/AnnouncementBanner";
 
 const AppContent = () => {
   const location = useLocation();
@@ -40,7 +44,7 @@ const AppContent = () => {
     location.pathname === "/auth" || location.pathname === "/reset-password";
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // ✅ MOBILE DETECTION & MODAL CONTROLLER
+  // MOBILE DETECTION & MODAL CONTROLLER
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeMobileModal, setActiveMobileModal] = useState(null);
 
@@ -162,9 +166,11 @@ const AppContent = () => {
         backgroundSize: "cover",
       }}
     >
-     <div className="flex h-[100dvh] transition-all duration-300">
+      {/* ✅ ADDED THE MEGAPHONE BANNER HERE. It sits on top of everything else. */}
+      {!hideSidebar && <AnnouncementBanner />}
+
+      <div className="flex h-[100dvh] transition-all duration-300">
         
-        {/* ✅ CHANGED: Set z-40 here so the entire sidebar stays under the header globally */}
         {!hideSidebar && (
           <div className="fixed left-0 top-0 h-[100dvh] transition-all duration-300 z-40">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
@@ -175,7 +181,6 @@ const AppContent = () => {
           className="flex-1 h-[100dvh] transition-all duration-300 relative"
           style={{ marginLeft: contentMarginLeft }}
         >
-          {/* ✅ CHANGED: Set z-50 here so the Institute Header is always the top layer (even on mobile!) */}
           {!hideSidebar && (
             <div className="relative z-50">
               <InstituteHeader
@@ -190,7 +195,6 @@ const AppContent = () => {
 
           <div
             className={`px-0 pb-32 md:px-6 md:pb-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
-// ... rest of your code continues normally
             onScroll={handleScroll}
             style={{
               paddingTop: contentPaddingTop,
@@ -232,6 +236,7 @@ const AppContent = () => {
                 <Route path="/voice" element={<Voice />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/interaction" element={<Interaction />} />
+                <Route path="/superadmin" element={<SuperAdminDashboard />} />
                 <Route
                   path="/library"
                   element={<Library userRole={userRole} />}
@@ -253,10 +258,10 @@ const AppContent = () => {
           </div>
         )}
 
-        {/* ✅ MOBILE BOTTOM NAVIGATION, MODALS, AND INSTALL PROMPT */}
+        {/* MOBILE BOTTOM NAVIGATION, MODALS, AND INSTALL PROMPT */}
         {!hideSidebar && (
           <>
-            <InstallPrompt /> {/* PWA Install Prompt Component */}
+            <InstallPrompt /> 
             
             <BottomNav
               activeModal={activeMobileModal}

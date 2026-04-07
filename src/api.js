@@ -3,7 +3,7 @@ import axios from "axios";
 // If in production, use the deployed backend URL. If local, use your PC's IP.
 const BACKEND_URL = import.meta.env.MODE === "production" 
   ? "https://rigya-backend.onrender.com" // We will update this later!
-  : "http://localhost:4000"; // Your local IP for testing
+  : ""; // Your local IP for testing  http://localhost:4000
 
 // ✅ Changed to lowercase 'api' and added 'export const'
 export const api = axios.create({
@@ -143,16 +143,15 @@ export const getInstituteByRegNumber = async (instituteRegistrationNumber) => {
   }
 };
 
-
 export const updateUserSettings = async (settingsData) => {
   try {
-    // ✅ Changed from "/auth/settings" to "/user/settings/update"
     const response = await api.put("/user/settings/update", settingsData);
     return response.data;
   } catch (error) {
     throw new Error(error.response?.data?.message || "Failed to update settings.");
   }
 };
+
 // ------------------- LIBRARY MANAGEMENT ENDPOINTS -------------------
 
 export const getAllBooks = async () => {
@@ -596,8 +595,6 @@ export const getUserResults = async (userId) => {
   }
 };
 
-// Add this to the bottom of your src/api.js
-
 export const getClassResultsForStudents = async (page = 1, limit = 50) => {
   try {
     const res = await api.get(`/results/class-results?page=${page}&limit=${limit}`); 
@@ -609,7 +606,6 @@ export const getClassResultsForStudents = async (page = 1, limit = 50) => {
 
 export const publishBatchResults = async (publishData) => {
     try {
-        // ✅ Changed API to api, and /result/ to /results/
         const response = await api.put('/results/publish/batch', publishData);
         return response.data;
     } catch (error) {
@@ -619,12 +615,39 @@ export const publishBatchResults = async (publishData) => {
 
 export const bulkUploadResults = async (bulkData) => {
     try {
-        // ✅ Changed API to api, and /result/ to /results/
         const response = await api.post('/results/bulk', bulkData);
         return response.data;
     } catch (error) {
         throw error.response?.data || error.message;
     }
+};
+
+// ✅ ADDED: Re-evaluation Request endpoints (For later!)
+export const requestRevaluation = async (resultId, reason) => {
+  try {
+    const res = await api.post(`/results/${resultId}/revaluation`, { reason });
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getPendingRevaluations = async () => {
+  try {
+    const res = await api.get('/results/revaluations/pending');
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const resolveRevaluation = async (resultId, status, remarks) => {
+  try {
+    const res = await api.put(`/results/${resultId}/revaluation/resolve`, { status, remarks });
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
 };
 
 // ------------------- COURSE BLUEPRINT ENDPOINTS -------------------
@@ -638,7 +661,6 @@ export const saveCourseBlueprint = async (courseData) => {
   }
 };
 
-// ✅ ONLY ONE VERSION OF THIS FUNCTION REMAINS NOW!
 export const getCourseBlueprint = async (batch, branch, semester) => {
   try {
     const res = await api.get(`/courses/${batch}/${branch}/${semester}`);
@@ -652,20 +674,223 @@ export const getCourseBlueprint = async (batch, branch, semester) => {
 
 export const getAdminStats = async () => {
   try {
-    const res = await api.get('/admin/stats'); 
+    const res = await api.get('/admin/stats');
     return res.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
 
-export const getAdminUsers = async (page = 1, limit = 50) => {
+export const getAdminUsers = async () => {
   try {
-    const res = await api.get(`/admin/users?page=${page}&limit=${limit}`); 
+    const res = await api.get('/admin/users');
     return res.data;
   } catch (error) {
     throw error.response?.data || error;
   }
 };
 
-export default api;
+// ✅ ADDED: Institute User Verification Desk Endpoints
+export const getPendingInstituteUsers = async () => {
+  try {
+    const res = await api.get('/admin/users/pending');
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const verifyInstituteUser = async (userId, action) => {
+  try {
+    const res = await api.put(`/admin/users/${userId}/verify`, { action });
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// ------------------- SUPER ADMIN ENDPOINTS -------------------
+
+export const getSuperAdminStats = async () => {
+  try {
+    const res = await api.get('/superadmin/stats'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getSuperAdminInstitutes = async () => {
+  try {
+    const res = await api.get('/superadmin/institutes'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const toggleInstituteApproval = async (instituteId, isApproved) => {
+  try {
+    const res = await api.put(`/superadmin/institutes/${instituteId}/approve`, { isApproved }); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const getActiveAnnouncements = async () => {
+  try {
+    const res = await api.get('/superadmin/announcements/active'); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const createAnnouncement = async (data) => {
+  try {
+    const res = await api.post('/superadmin/announcements', data); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+export const deactivateAnnouncement = async (id) => {
+  try {
+    const res = await api.delete(`/superadmin/announcements/${id}`); 
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
+// ------------------- CAMPUS MANAGEMENT ENDPOINTS -------------------
+
+export const updateUserDesignation = async (userId, designation) => {
+    try {
+        // ✅ Changed API.put to api.put
+        const { data } = await api.put(`/admin/users/${userId}/designation`, { designation });
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+// ==========================================
+// CLUB MANAGEMENT API
+// ==========================================
+
+export const createClub = async (clubData) => {
+    try {
+        const { data } = await api.post(`/user/clubs`, clubData); // Ensure you have a route for POST /user/clubs pointing to createClub
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const fetchCampusClubs = async () => {
+    try {
+        const { data } = await api.get('/user/clubs');
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const requestJoinClub = async (clubId) => {
+    try {
+        const { data } = await api.post(`/user/clubs/${clubId}/request`); 
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const handleClubRequest = async (clubId, studentId, action) => {
+    try {
+        const { data } = await api.put(`/user/clubs/${clubId}/request`, { studentId, action });
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const promoteClubMember = async (clubId, studentId, roleTitle) => {
+    try {
+        const { data } = await api.put(`/user/clubs/${clubId}/promote`, { studentId, roleTitle });
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const removeClubMember = async (clubId, studentId) => {
+    try {
+        // We pass studentId in the body. If it's null, the backend assumes the logged-in user is leaving voluntarily.
+        const { data } = await api.put(`/user/clubs/${clubId}/remove`, { studentId });
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const addClubRole = async (clubId, roleData) => {
+    try {
+        const { data } = await api.post(`/user/clubs/${clubId}/roles`, roleData);
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const transferClubLeadership = async (clubId, transferData) => {
+    try {
+        const { data } = await api.put(`/user/clubs/${clubId}/transfer`, transferData);
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const deleteClub = async (clubId) => {
+    try {
+        const { data } = await api.delete(`/user/clubs/${clubId}`);
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+// ==========================================
+// EVENT API
+// ==========================================
+
+export const fetchCampusEvents = async () => {
+    try {
+        const { data } = await api.get('/user/events');
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+export const createEvent = async (eventData) => {
+    try {
+        const { data } = await api.post('/user/events', eventData);
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};
+
+// Search users by name or registration number
+export const searchUsers = async (query) => {
+    try {
+        const { data } = await api.get(`/user/search?search=${query}`);
+        return data;
+    } catch (error) {
+        throw error.response?.data || error;
+    }
+};

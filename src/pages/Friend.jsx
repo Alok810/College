@@ -3,6 +3,9 @@ import { Link } from 'react-router-dom';
 import { UserCheck, UserPlus, UserX, MessageSquare, ChevronLeft, ChevronRight, UsersRound, X } from 'lucide-react';
 import { useFriends } from '../context/FriendContext'; 
 
+// ✅ IMPORT THE BOUNCER COMPONENT
+import RequireVerification from '../components/RequireVerification';
+
 // --- Helper for Fallback Images ---
 const getAvatar = (user) => {
   return user.profilePicture || `https://ui-avatars.com/api/?name=${user.name || user.full_name || 'User'}&background=EBF4FF&color=4F46E5`;
@@ -106,7 +109,6 @@ const SuggestionCard = ({ user, onAdd, onRemove, onCancel }) => {
 // 3. All Friends Card - 📱 FIXED WIDTH FOR MOBILE
 const FriendCard = ({ user, onUnfriend }) => {
   return (
-    // ✅ ADDED: mx-auto and max-w-[calc(100vw-2rem)] to ensure it never chops off the screen
     <div className="flex items-center justify-between p-3 sm:p-4 bg-white rounded-2xl shadow-[0_2px_10px_rgba(0,0,0,0.03)] border border-gray-50 transition-all hover:shadow-[0_4px_15px_rgba(0,0,0,0.06)] w-full max-w-[calc(100vw-2rem)] mx-auto sm:max-w-none">
       
       {/* Left: Avatar & Info */}
@@ -136,7 +138,6 @@ const FriendCard = ({ user, onUnfriend }) => {
           className="flex items-center justify-center p-2 sm:px-4 sm:py-2 bg-purple-50 text-purple-700 rounded-xl hover:bg-purple-100 transition-all active:scale-95"
           title="Message"
         >
-          {/* ✅ FIXED: Reduced icon size slightly for mobile to save space */}
           <MessageSquare size={16} className="stroke-[2.5px] sm:w-5 sm:h-5 sm:mr-1.5" />
           <span className="hidden sm:block text-sm font-bold">Message</span>
         </Link>
@@ -151,6 +152,7 @@ const FriendCard = ({ user, onUnfriend }) => {
     </div>
   );
 };
+
 // 4. Horizontal Scroller Component - 📱 Smooth Snapping
 const HorizontalScroller = ({ children }) => {
   const scrollRef = React.useRef(null);
@@ -207,88 +209,89 @@ export default function Friend() {
   } = useFriends();
 
   return (
-    // ✅ CHANGED: pb-28 added here to prevent bottom nav overlap on mobile!
-    <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 pb-28 sm:pb-8 space-y-8">
+    // ✅ WRAP THE ENTIRE RETURN IN REQUIREVERIFICATION
+    <RequireVerification>
+        <div className="max-w-4xl mx-auto p-4 sm:p-6 lg:p-8 pb-28 sm:pb-8 space-y-8">
 
-      {/* --- 1. Friend Requests Section --- */}
-      {requests.length > 0 && (
-        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-          <div className="flex justify-between items-end mb-1 sm:mb-2">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">Friend Requests</h2>
-              <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5">People waiting to connect</p>
+        {/* --- 1. Friend Requests Section --- */}
+        {requests.length > 0 && (
+            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="flex justify-between items-end mb-1 sm:mb-2">
+                <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">Friend Requests</h2>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5">People waiting to connect</p>
+                </div>
             </div>
-          </div>
-          <HorizontalScroller>
-            {requests.map(user => (
-              <FriendRequestCard
-                key={user._id}
-                user={user}
-                onAccept={handleAcceptRequest}
-                onDecline={handleDeclineRequest}
-              />
-            ))}
-          </HorizontalScroller>
-        </section>
-      )}
-
-      {/* --- 2. People You May Know Section --- */}
-      {suggestions.length > 0 && (
-        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
-          <div className="flex justify-between items-end mb-1 sm:mb-2">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">People You May Know</h2>
-              <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5">Discover students</p>
-            </div>
-            <Link to="#" className="text-xs sm:text-sm font-bold text-purple-600 hover:text-teal-500 transition-colors pb-1">
-              See all
-            </Link>
-          </div>
-          <HorizontalScroller>
-            {suggestions.map(user => (
-              <SuggestionCard
-                key={user._id}
-                user={user}
-                onAdd={handleAddFriend}
-                onRemove={handleRemoveSuggestion}
-                onCancel={handleCancelRequest}
-              />
-            ))}
-          </HorizontalScroller>
-        </section>
-      )}
-
-      {/* --- 3. All Friends Section --- */}
-      <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
-        <div className="flex items-center gap-3 mb-4 sm:mb-5">
-          <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">All Friends</h2>
-          <span className="px-3 py-1 bg-white border border-gray-200 text-gray-600 text-xs sm:text-sm font-bold rounded-full shadow-sm">
-            {friends.length}
-          </span>
-        </div>
-        
-        {friends.length > 0 ? (
-          // ✅ CHANGED: Uses flex-col on mobile for a clean list, switches to grid on desktop
-          <div className="flex flex-col md:grid md:grid-cols-2 gap-3 sm:gap-4">
-            {friends.map(user => (
-              <FriendCard
-                key={user._id}
-                user={user}
-                onUnfriend={handleUnfriend}
-              />
-            ))}
-          </div>
-        ) : (
-          <div className="p-8 sm:p-12 bg-white rounded-[2rem] shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center mt-4">
-            <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-              <UsersRound size={32} className="text-gray-400 stroke-2" />
-            </div>
-            <h3 className="text-lg font-bold text-gray-800 mb-1">No friends yet</h3>
-            <p className="text-gray-500 text-sm font-medium max-w-sm">Connect with other students at your institute to start building your network!</p>
-          </div>
+            <HorizontalScroller>
+                {requests.map(user => (
+                <FriendRequestCard
+                    key={user._id}
+                    user={user}
+                    onAccept={handleAcceptRequest}
+                    onDecline={handleDeclineRequest}
+                />
+                ))}
+            </HorizontalScroller>
+            </section>
         )}
-      </section>
 
-    </div>
+        {/* --- 2. People You May Know Section --- */}
+        {suggestions.length > 0 && (
+            <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-100">
+            <div className="flex justify-between items-end mb-1 sm:mb-2">
+                <div>
+                <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">People You May Know</h2>
+                <p className="text-xs sm:text-sm font-medium text-gray-500 mt-0.5">Discover students</p>
+                </div>
+                <Link to="#" className="text-xs sm:text-sm font-bold text-purple-600 hover:text-teal-500 transition-colors pb-1">
+                See all
+                </Link>
+            </div>
+            <HorizontalScroller>
+                {suggestions.map(user => (
+                <SuggestionCard
+                    key={user._id}
+                    user={user}
+                    onAdd={handleAddFriend}
+                    onRemove={handleRemoveSuggestion}
+                    onCancel={handleCancelRequest}
+                />
+                ))}
+            </HorizontalScroller>
+            </section>
+        )}
+
+        {/* --- 3. All Friends Section --- */}
+        <section className="animate-in fade-in slide-in-from-bottom-4 duration-500 delay-200">
+            <div className="flex items-center gap-3 mb-4 sm:mb-5">
+            <h2 className="text-xl sm:text-2xl font-extrabold text-gray-900 tracking-tight">All Friends</h2>
+            <span className="px-3 py-1 bg-white border border-gray-200 text-gray-600 text-xs sm:text-sm font-bold rounded-full shadow-sm">
+                {friends.length}
+            </span>
+            </div>
+            
+            {friends.length > 0 ? (
+            <div className="flex flex-col md:grid md:grid-cols-2 gap-3 sm:gap-4">
+                {friends.map(user => (
+                <FriendCard
+                    key={user._id}
+                    user={user}
+                    onUnfriend={handleUnfriend}
+                />
+                ))}
+            </div>
+            ) : (
+            <div className="p-8 sm:p-12 bg-white rounded-[2rem] shadow-sm border border-gray-100 text-center flex flex-col items-center justify-center mt-4">
+                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+                <UsersRound size={32} className="text-gray-400 stroke-2" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-800 mb-1">No friends yet</h3>
+                <p className="text-gray-500 text-sm font-medium max-w-sm">Connect with other students at your institute to start building your network!</p>
+            </div>
+            )}
+        </section>
+
+        </div>
+    </RequireVerification>
   );
 }

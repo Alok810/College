@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, ChevronUp, ChevronDown } from 'lucide-react';
+import { MessageSquare, ChevronUp, ChevronDown, Users as UsersIcon } from 'lucide-react';
 import ChatBox from './ChatBox'; 
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
@@ -62,8 +62,15 @@ const MessageSidebar = ({ onClose }) => {
     }
   };
 
-  const handleMessageClick = (userId) => {
-    openChat(userId);
+  // ✅ THE FIX IS HERE: Don't use openChat for groups!
+  const handleMessageClick = (chat) => {
+    if (chat.isGroupChat) {
+        // Just instantly set the chat to the active window
+        setActiveChat(chat); 
+    } else {
+        const otherUser = chat.participants.find(p => p._id !== authData?._id);
+        if (otherUser) openChat(otherUser._id);
+    }
     setIsExpanded(true);
   };
 
@@ -75,11 +82,20 @@ const MessageSidebar = ({ onClose }) => {
   const getUniqueChats = () => {
     const uniqueChats = [];
     const seenUsers = new Set();
+    const seenGroups = new Set();
+
     sidebarChats.forEach((chat) => {
-      const otherUser = chat.participants.find(p => p._id !== authData?._id);
-      if (otherUser && !seenUsers.has(otherUser._id)) {
-        seenUsers.add(otherUser._id);
-        uniqueChats.push(chat);
+      if (chat.isGroupChat) {
+          if (!seenGroups.has(chat._id)) {
+              seenGroups.add(chat._id);
+              uniqueChats.push(chat);
+          }
+      } else {
+          const otherUser = chat.participants.find(p => p._id !== authData?._id);
+          if (otherUser && !seenUsers.has(otherUser._id)) {
+              seenUsers.add(otherUser._id);
+              uniqueChats.push(chat);
+          }
       }
     });
     return uniqueChats;
@@ -90,7 +106,6 @@ const MessageSidebar = ({ onClose }) => {
   // ==========================================
   if (!isMobile) {
     return (
-      // ✅ ADDED 'overflow-hidden' HERE TO FIX THE CORNERS
       <div className={`fixed top-[5.5rem] right-0 mr-4 bg-white shadow-2xl flex flex-col z-50 rounded-xl overflow-hidden transition-all duration-300 ease-in-out ${(isExpanded || activeChat) ? 'w-80 h-[400px]' : 'w-[320px] h-16'}`}>
         {activeChat ? (
           <ChatBox onBack={handleBackToMessages} />
@@ -120,30 +135,46 @@ const MessageSidebar = ({ onClose }) => {
                   <p className="text-center text-gray-500 mt-10 text-sm">No messages yet. Go to a friend's profile to start chatting!</p>
                 ) : (
                   getUniqueChats().map((chat) => {
-                    const otherUser = chat.participants.find(p => p._id !== authData?._id);
-                    const avatar = otherUser.profilePicture || `https://ui-avatars.com/api/?name=${otherUser.name || 'User'}&background=EBF4FF&color=4F46E5`;
-                    const isOnline = onlineUsers.includes(otherUser._id);
+                    const isGroup = chat.isGroupChat;
+                    let title, avatar, isOnline = false;
+
+                    if (isGroup) {
+                        title = chat.chatName;
+                        avatar = null; 
+                    } else {
+                        const otherUser = chat.participants.find(p => p._id !== authData?._id);
+                        if(!otherUser) return null;
+                        title = otherUser.name || otherUser.full_name;
+                        avatar = otherUser.profilePicture || `https://ui-avatars.com/api/?name=${title}&background=EBF4FF&color=4F46E5`;
+                        isOnline = onlineUsers.includes(otherUser._id);
+                    }
 
                     return (
                       <div
                         key={chat._id}
                         className='flex items-center gap-3 p-2.5 mb-2 rounded-xl cursor-pointer transition-all duration-300 bg-gradient-to-r from-indigo-50/80 to-teal-50/80 hover:from-indigo-100 hover:to-teal-100 shadow-sm'
-                        onClick={() => handleMessageClick(otherUser._id)}
+                        onClick={() => handleMessageClick(chat)}
                       >
                         <div className="relative flex-shrink-0">
-                          <img src={avatar} alt={otherUser.name} className='w-11 h-11 rounded-full object-cover shadow-sm bg-white' />
-                          {isOnline && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>}
+                          {isGroup ? (
+                              <div className="w-11 h-11 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-sm">
+                                  <UsersIcon size={20} />
+                              </div>
+                          ) : (
+                              <img src={avatar} alt={title} className='w-11 h-11 rounded-full object-cover shadow-sm bg-white' />
+                          )}
+                          {isOnline && !isGroup && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white rounded-full"></span>}
                         </div>
                         <div className='flex-grow overflow-hidden'>
                           <div className='flex justify-between items-start'>
-                            <p className="font-semibold text-[15px] truncate text-gray-800 leading-tight">{otherUser.name || otherUser.full_name}</p>
+                            <p className="font-semibold text-[15px] truncate text-gray-800 leading-tight">{title}</p>
                             <p className='text-xs text-gray-400 flex-shrink-0 ml-2 pt-0.5'>
                               {chat.latestMessage && formatTimeAgo(chat.latestMessage.createdAt)}
                             </p>
                           </div>
                           <div className='flex justify-between items-center mt-1'>
                             <p className="text-[13px] truncate min-w-0 text-gray-500">
-                              {chat.latestMessage ? chat.latestMessage.content : 'Started a conversation'}
+                              {chat.latestMessage ? chat.latestMessage.content : (isGroup ? 'Group Created' : 'Started a conversation')}
                             </p>
                           </div>
                         </div>
@@ -194,30 +225,46 @@ const MessageSidebar = ({ onClose }) => {
                 </div>
               ) : (
                 getUniqueChats().map((chat) => {
-                  const otherUser = chat.participants.find(p => p._id !== authData?._id);
-                  const avatar = otherUser.profilePicture || `https://ui-avatars.com/api/?name=${otherUser.name || 'User'}&background=EBF4FF&color=4F46E5`;
-                  const isOnline = onlineUsers.includes(otherUser._id);
+                  const isGroup = chat.isGroupChat;
+                  let title, avatar, isOnline = false;
+
+                  if (isGroup) {
+                      title = chat.chatName;
+                      avatar = null; 
+                  } else {
+                      const otherUser = chat.participants.find(p => p._id !== authData?._id);
+                      if(!otherUser) return null;
+                      title = otherUser.name || otherUser.full_name;
+                      avatar = otherUser.profilePicture || `https://ui-avatars.com/api/?name=${title}&background=EBF4FF&color=4F46E5`;
+                      isOnline = onlineUsers.includes(otherUser._id);
+                  }
 
                   return (
                     <div
                       key={chat._id}
                       className="flex items-center gap-4 p-3 rounded-2xl cursor-pointer transition-all duration-300 shadow-sm border border-purple-50 bg-gradient-to-r from-purple-50/80 to-teal-50/80 hover:from-purple-100 hover:to-teal-100"
-                      onClick={() => handleMessageClick(otherUser._id)}
+                      onClick={() => handleMessageClick(chat)}
                     >
                       <div className="relative flex-shrink-0">
-                        <img src={avatar} alt={otherUser.name} className="w-14 h-14 rounded-full object-cover shadow-sm bg-white" />
-                        {isOnline && <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></span>}
+                         {isGroup ? (
+                              <div className="w-14 h-14 rounded-full bg-indigo-100 border border-indigo-200 flex items-center justify-center text-indigo-600 shadow-sm">
+                                  <UsersIcon size={24} />
+                              </div>
+                          ) : (
+                              <img src={avatar} alt={title} className='w-14 h-14 rounded-full object-cover shadow-sm bg-white' />
+                          )}
+                        {isOnline && !isGroup && <span className="absolute bottom-0 right-0 w-3.5 h-3.5 bg-green-500 border-2 border-white rounded-full"></span>}
                       </div>
                       
                       <div className='flex-grow overflow-hidden'>
                         <div className='flex justify-between items-center'>
-                          <p className="font-bold text-lg text-gray-800 truncate">{otherUser.name || otherUser.full_name}</p>
+                          <p className="font-bold text-lg text-gray-800 truncate">{title}</p>
                           <p className='text-xs text-gray-500 font-medium ml-2 flex-shrink-0'>
                             {chat.latestMessage && formatTimeAgo(chat.latestMessage.createdAt)}
                           </p>
                         </div>
                         <p className="text-sm truncate min-w-0 text-gray-600 font-medium mt-0.5">
-                          {chat.latestMessage ? chat.latestMessage.content : 'Started a conversation'}
+                          {chat.latestMessage ? chat.latestMessage.content : (isGroup ? 'Group Created' : 'Started a conversation')}
                         </p>
                       </div>
                     </div>
