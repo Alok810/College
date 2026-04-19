@@ -34,17 +34,13 @@ import CreatePost from "./components/CreatePost";
 import MessageSidebar from "./components/Message";
 import NotificationSidebar from "./components/NotificationSidebar";
 import InstallPrompt from './components/InstallPrompt';
-
-// ✅ IMPORT THE NEW ANNOUNCEMENT BANNER
 import AnnouncementBanner from "./components/AnnouncementBanner";
 
 const AppContent = () => {
   const location = useLocation();
-  const hideSidebar =
-    location.pathname === "/auth" || location.pathname === "/reset-password";
+  const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password";
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
-  // MOBILE DETECTION & MODAL CONTROLLER
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeMobileModal, setActiveMobileModal] = useState(null);
 
@@ -65,7 +61,9 @@ const AppContent = () => {
 
   useEffect(() => {
     const fetchFeed = async () => {
-      if (!authData) return;
+      // 🟢 THE FIX: Do not attempt to fetch the social feed unless the user is truly logged in!
+      if (!authData || !authData._id) return;
+      
       setIsFetching(true);
 
       try {
@@ -73,7 +71,6 @@ const AppContent = () => {
 
         setPosts((prevPosts) => {
           if (page === 1) return feedData.posts;
-
           const newPosts = feedData.posts.filter(
             (newPost) => !prevPosts.some((p) => p._id === newPost._id),
           );
@@ -82,14 +79,19 @@ const AppContent = () => {
 
         setHasMore(feedData.hasMore);
       } catch (error) {
+        // We only log the error if we actually tried to fetch and it failed.
         console.error("Failed to load feed:", error.message);
       } finally {
         setIsFetching(false);
       }
     };
 
-    fetchFeed();
-  }, [authData, page]);
+    // Only run this effect if we are on the homepage. 
+    // It's a waste to load the feed if they are just sitting on the settings page!
+    if (location.pathname === "/") {
+        fetchFeed();
+    }
+  }, [authData, page, location.pathname]);
 
   const handleScroll = (e) => {
     const { scrollTop, scrollHeight, clientHeight } = e.target;
@@ -159,15 +161,14 @@ const AppContent = () => {
     <div
       className="relative h-[100dvh] w-full overflow-hidden"
       style={{
-        background:
-          "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
+        background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         backgroundAttachment: "fixed",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
       }}
     >
-      {/* ✅ ADDED THE MEGAPHONE BANNER HERE. It sits on top of everything else. */}
-      {!hideSidebar && <AnnouncementBanner />}
+      {/* 🟢 THE FIX: Only show announcements if the user is fully logged in */}
+      {!hideSidebar && authData && authData._id && <AnnouncementBanner />}
 
       <div className="flex h-[100dvh] transition-all duration-300">
         

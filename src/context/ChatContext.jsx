@@ -1,20 +1,15 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, { createContext, useContext, useState, useEffect, useCallback } from "react";
 import { io } from "socket.io-client";
 import { useAuth } from "./AuthContext";
 import { fetchChats, accessChat, fetchMessages, sendMessage as apiSendMessage, markMessagesAsRead, deleteChatMessage } from "../api";
 
 const ChatContext = createContext();
-// const ENDPOINT = "http://localhost:4000"; 
-
-// const ENDPOINT = import.meta.env.MODE === "production" 
-//   ? "https://rigya-backend.onrender.com"
-//   : "http://localhost:4000";
-// let socket;
 
 const ENDPOINT = import.meta.env.MODE === "production" 
   ? "https://rigya-backend.onrender.com" 
   : "http://localhost:4000";
-  let socket;
+
+let socket;
 
 export const ChatProvider = ({ children }) => {
   const { authData } = useAuth();
@@ -24,41 +19,65 @@ export const ChatProvider = ({ children }) => {
   const [typingChats, setTypingChats] = useState([]); 
   const [onlineUsers, setOnlineUsers] = useState([]); 
   
-// ✅ NEW: We need to put the socket into React State so it can be shared with ChatBox
   const [socketInstance, setSocketInstance] = useState(null);
 
+  // 🟢 LAZY FETCHING STATES
+  const [hasLoadedChats, setHasLoadedChats] = useState(false);
+  const [isLoadingChats, setIsLoadingChats] = useState(false);
+
   useEffect(() => {
-    if (authData) {
-      // ✅ ADDED withCredentials to the connection!
-      socket = io(ENDPOINT, {
-          withCredentials: true
-      });
-      
-      socket.emit("join", authData._id); 
-      setSocketInstance(socket); // ✅ Save the connection into the state
-      
-      return () => socket.disconnect();
-    }
+    // 🟢 BULLETPROOF FIX: Do not connect the socket unless user is fully validated
+    if (!authData || !authData._id) return;
+
+    socket = io(ENDPOINT, {
+        withCredentials: true
+    });
+    
+    socket.emit("join", authData._id); 
+    setSocketInstance(socket); 
+    
+    return () => socket.disconnect();
   }, [authData]);
 
-  const loadSidebarChats = async () => {
-    if (!authData) return;
-    const data = await fetchChats();
-    if(data) setSidebarChats(data.chats);
-  };
+  // 🟢 LAZY FETCH FUNCTION
+  // We use `force = false` by default so the UI can call it lazily.
+  // We pass `force = true` inside socket events so background updates still work!
+  const loadSidebarChats = useCallback(async (force = false) => {
+    if (!authData || !authData._id) return;
+    
+    // If it's a lazy UI request, check the cache. If it's a socket forcing an update, skip the cache check.
+    if (!force && (hasLoadedChats || isLoadingChats)) return;
 
-  useEffect(() => { loadSidebarChats(); }, [authData]);
+    try {
+      if (!force) setIsLoadingChats(true); // Only show skeletons for initial load
+      
+      const data = await fetchChats();
+      if (data) {
+        setSidebarChats(data.chats);
+      }
+      
+      setHasLoadedChats(true);
+    } catch (error) {
+      console.error("Backend failed to load chats:", error);
+    } finally {
+      if (!force) setIsLoadingChats(false);
+    }
+  }, [authData, hasLoadedChats, isLoadingChats]);
+
+  // ❌ REMOVED the eager useEffect that was causing the 401 Unauthorized errors!
+  // useEffect(() => { loadSidebarChats(); }, [authData]);
 
   useEffect(() => {
-    if (!socket) return;
+    if (!socketInstance) return;
 
     const messageHandler = (newMessageReceived) => {
       if (!activeChat || activeChat._id !== newMessageReceived.chat._id) {
-        loadSidebarChats();
+        // 🟢 Force background refresh of sidebar to show new unread message
+        loadSidebarChats(true);
       } else {
         setMessages((prev) => [...prev, newMessageReceived]);
         markMessagesAsRead(activeChat._id);
-        socket.emit("mark as read", { 
+        socketInstance.emit("mark as read", { 
           receiverId: newMessageReceived.sender._id, 
           chatId: activeChat._id 
         });
@@ -71,25 +90,26 @@ export const ChatProvider = ({ children }) => {
       if (activeChat && activeChat._id === chatId) {
         setMessages((prev) => prev.map(m => ({ ...m, seen: true })));
       }
-      loadSidebarChats();
+      // 🟢 Force background refresh
+      loadSidebarChats(true);
     };
 
     const onlineUsersHandler = (users) => setOnlineUsers(users);
 
-    socket.on("message received", messageHandler);
-    socket.on("typing", typingHandler);
-    socket.on("stop typing", stopTypingHandler);
-    socket.on("messages read", readHandler);
-    socket.on("get-online-users", onlineUsersHandler); 
+    socketInstance.on("message received", messageHandler);
+    socketInstance.on("typing", typingHandler);
+    socketInstance.on("stop typing", stopTypingHandler);
+    socketInstance.on("messages read", readHandler);
+    socketInstance.on("get-online-users", onlineUsersHandler); 
 
     return () => {
-      socket.off("message received", messageHandler);
-      socket.off("typing", typingHandler);
-      socket.off("stop typing", stopTypingHandler);
-      socket.off("messages read", readHandler);
-      socket.off("get-online-users", onlineUsersHandler); 
+      socketInstance.off("message received", messageHandler);
+      socketInstance.off("typing", typingHandler);
+      socketInstance.off("stop typing", stopTypingHandler);
+      socketInstance.off("messages read", readHandler);
+      socketInstance.off("get-online-users", onlineUsersHandler); 
     };
-  }, [activeChat]);
+  }, [activeChat, socketInstance, loadSidebarChats]);
 
   const openChat = async (targetUserId) => {
     const data = await accessChat(targetUserId);
@@ -98,8 +118,10 @@ export const ChatProvider = ({ children }) => {
     setMessages(msgData.messages);
 
     await markMessagesAsRead(data.chat._id);
-    socket.emit("mark as read", { receiverId: targetUserId, chatId: data.chat._id });
-    loadSidebarChats();
+    if (socketInstance) {
+      socketInstance.emit("mark as read", { receiverId: targetUserId, chatId: data.chat._id });
+    }
+    loadSidebarChats(true); // Force refresh
   };
 
   const sendNewMessage = async (formData) => {
@@ -107,9 +129,11 @@ export const ChatProvider = ({ children }) => {
     
     const data = await apiSendMessage(formData);
     
-    socket.emit("new message", data.message);
+    if (socketInstance) {
+      socketInstance.emit("new message", data.message);
+    }
     setMessages((prev) => [...prev, data.message]);
-    loadSidebarChats(); 
+    loadSidebarChats(true); // Force refresh
   };
 
   const handleDeleteMessage = async (messageId) => {
@@ -122,14 +146,20 @@ export const ChatProvider = ({ children }) => {
     }
   };
 
-  const emitTyping = (receiverId, chatId) => socket.emit("typing", { receiverId, chatId });
-  const emitStopTyping = (receiverId, chatId) => socket.emit("stop typing", { receiverId, chatId });
+  const emitTyping = (receiverId, chatId) => socketInstance?.emit("typing", { receiverId, chatId });
+  const emitStopTyping = (receiverId, chatId) => socketInstance?.emit("stop typing", { receiverId, chatId });
 
   return (
     <ChatContext.Provider value={{
-      sidebarChats, activeChat, setActiveChat, messages, openChat, sendNewMessage, loadSidebarChats,
+      sidebarChats, activeChat, setActiveChat, messages, openChat, sendNewMessage, 
+      
+      // 🟢 EXPORT LAZY FETCH CONTROLS
+      loadSidebarChats, // You will call this function inside your UI components!
+      isLoadingChats,
+      hasLoadedChats,
+      
       typingChats, emitTyping, emitStopTyping, handleDeleteMessage, onlineUsers,
-      socket: socketInstance // ✅ FIXED: Now we are actively sharing the socket connection!
+      socket: socketInstance 
     }}>
       {children}
     </ChatContext.Provider>

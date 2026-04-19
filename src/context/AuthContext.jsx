@@ -6,8 +6,11 @@ const AuthContext = createContext(null);
 export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [authData, setAuthData] = useState({});
-  const [instituteData, setInstituteData] = useState({});
+  
+  // 🟢 THE FIX: Start these as 'null' instead of '{}' so our lazy-fetch 
+  // checks in Chat/Friends know for a fact when the user is logged out.
+  const [authData, setAuthData] = useState(null);
+  const [instituteData, setInstituteData] = useState(null);
 
   // This function will fetch and set all auth data
   const fetchAuthData = async () => {
@@ -19,13 +22,12 @@ export const AuthProvider = ({ children }) => {
         setAuthData(userData);
 
         if (userData.userType !== 'Institute' && userData.instituteRegistrationNumber) {
-          // CORRECTED: Pass the registration number to the API function
           const instituteResponse = await getInstituteByRegNumber(userData.instituteRegistrationNumber);
           if (instituteResponse.success) {
             setInstituteData(instituteResponse.institute);
           } else {
             console.error("Failed to fetch institute details:", instituteResponse.message);
-            setInstituteData({});
+            setInstituteData(null); // Reset to null on failure
           }
         } else if (userData.userType === 'Institute') {
           setInstituteData({
@@ -33,14 +35,16 @@ export const AuthProvider = ({ children }) => {
             instituteLogo: userData.logo?.url,
           });
         } else {
-          setInstituteData({});
+          setInstituteData(null);
         }
       }
     } catch (error) {
+      // 🟢 Normal expected behavior for logged-out users!
       setIsAuthenticated(false);
-      setAuthData({});
-      setInstituteData({});
-      console.error("Auth check failed:", error);
+      setAuthData(null);      // Explicitly nullify
+      setInstituteData(null); // Explicitly nullify
+      // We can console.log this, but it's safe to ignore when users are on the login screen.
+      console.log("Auth check failed (User is likely logged out):", error.message);
     } finally {
       setLoading(false);
     }

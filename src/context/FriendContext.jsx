@@ -1,4 +1,4 @@
-import React, { createContext, useState, useContext, useEffect } from 'react';
+import React, { createContext, useState, useContext, useEffect, useCallback } from 'react';
 import { io } from "socket.io-client"; 
 import { useAuth } from './AuthContext'; 
 import { 
@@ -24,12 +24,23 @@ export const FriendProvider = ({ children }) => {
   const [friends, setFriends] = useState([]);
   const [suggestions, setSuggestions] = useState([]);
   const [notifications, setNotifications] = useState([]);
+  
+  // 🟢 LAZY FETCHING STATES
+  const [hasLoaded, setHasLoaded] = useState(false);
+  const [isLoading, setIsLoading] = useState(false); // Used to show skeletons
 
-  useEffect(() => {
-    const loadSocialData = async () => {
-      if (!authData) return; 
+  // 🟢 THE LAZY FETCH FUNCTION
+  // Wrapped in useCallback so it doesn't trigger unnecessary re-renders
+  const fetchSocialDataOnDemand = useCallback(async () => {
+      // 1. Security check
+      if (!authData || !authData._id) return; 
+      
+      // 2. Cache check: If we already have the data, instantly return. No delay!
+      if (hasLoaded || isLoading) return; 
 
       try {
+        setIsLoading(true); // Tell the UI to show skeletons
+
         const [socialData, notifData] = await Promise.all([
           getMySocialData().catch(err => { console.error("Backend failed to load friends:", err.message); return null; }),
           fetchNotifications().catch(err => { console.error("Backend failed to load notifications:", err.message); return null; })
@@ -38,12 +49,11 @@ export const FriendProvider = ({ children }) => {
         const safeFriends = socialData?.friends || [];
         const safeRequests = socialData?.friendRequests || [];
         const safeSuggestions = socialData?.suggestions || [];
-        const safeSentRequests = socialData?.sentRequests || []; // ✅ Now we track these properly!
+        const safeSentRequests = socialData?.sentRequests || []; 
 
         setFriends(safeFriends);
         setRequests(safeRequests);
         
-        // ✅ THE FIX: Merge suggestions and sentRequests so Profile.jsx can ALWAYS find them!
         const mappedSuggestions = safeSuggestions.map(user => ({ ...user, requestSent: false }));
         const mappedSentRequests = safeSentRequests.map(user => ({ ...user, requestSent: true }));
         
@@ -65,16 +75,19 @@ export const FriendProvider = ({ children }) => {
         const dbNotifications = notifData?.notifications || [];
         setNotifications([...requestNotifications, ...dbNotifications]);
 
+        // 3. Mark as loaded so we never fetch again this session!
+        setHasLoaded(true);
+
       } catch (error) {
         console.error("Failed to process friend data:", error.message);
+      } finally {
+        setIsLoading(false); // Turn off skeletons
       }
-    };
+  }, [authData, hasLoaded, isLoading]);
 
-    loadSocialData();
-  }, [authData]); 
-
+  // We still want WebSockets to connect automatically so real-time events aren't missed
   useEffect(() => {
-    if (!authData) return;
+    if (!authData || !authData._id) return;
 
     const socket = io(ENDPOINT, {
       withCredentials: true 
@@ -85,7 +98,6 @@ export const FriendProvider = ({ children }) => {
       console.log("🔔 New Notification Received!", newNotification);
       setNotifications((prev) => [newNotification, ...prev]);
       
-      // ✅ THE FIX: If it's a friend request, immediately add it to the Friend Requests tab!
       if (newNotification.type === 'friend_request') {
           setRequests((prev) => [newNotification.user, ...prev]);
       }
@@ -121,7 +133,6 @@ export const FriendProvider = ({ children }) => {
   const handleAddFriend = async (userId) => {
     try {
       await toggleFriendRequest(userId);
-      // ✅ THE FIX: Force the user into the suggestions state with requestSent: true
       setSuggestions(prev => {
           const exists = prev.find(u => u._id === userId);
           if (exists) {
@@ -171,6 +182,12 @@ export const FriendProvider = ({ children }) => {
     friends,
     suggestions,
     notifications,
+    
+    // 🟢 EXPOSE THE LAZY FETCHING STATES
+    fetchSocialDataOnDemand,
+    isLoadingSocialData: isLoading,
+    hasLoadedSocialData: hasLoaded,
+
     handleAcceptRequest,
     handleDeclineRequest,
     handleAddFriend,

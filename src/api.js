@@ -2,14 +2,30 @@ import axios from "axios";
 
 // If in production, use the deployed backend URL. If local, use your PC's IP.
 const BACKEND_URL = import.meta.env.MODE === "production" 
-  ? "https://rigya-backend.onrender.com" // We will update this later!
-  : ""; // Your local IP for testing  http://localhost:4000
+  ? "https://rigya-backend.onrender.com" 
+  : "http://localhost:4000"; 
 
-// ✅ Changed to lowercase 'api' and added 'export const'
 export const api = axios.create({
   baseURL: `${BACKEND_URL}/api/v1`,
   withCredentials: true,
 });
+
+// 🟢 THE GLOBAL SAFETY NET: Auto-Logout on Expired Session
+api.interceptors.response.use(
+  (response) => response, // If the request succeeds, pass it through normally
+  (error) => {
+    // If the backend says "401 Unauthorized" AND we aren't already on the Auth/Reset page...
+    if (error.response && error.response.status === 401) {
+      if (window.location.pathname !== '/auth' && window.location.pathname !== '/reset-password') {
+        console.warn("Session expired or invalid. Redirecting to login...");
+        
+        // Force the browser to go to the login page
+        window.location.href = '/auth'; 
+      }
+    }
+    return Promise.reject(error); // Pass the error back to the component
+  }
+);
 
 export const checkBackendConnection = async () => {
   try {
@@ -316,9 +332,9 @@ export const createSocialPost = async (formData) => {
   }
 };
 
-export const getSocialFeed = async () => {
+export const getSocialFeed = async (page = 1, limit = 10) => {
   try {
-    const response = await api.get("/social/feed");
+    const response = await api.get(`/social/feed?page=${page}&limit=${limit}`);
     return response.data;
   } catch (error) {
     const errorMessage = error.response?.data?.message || "Failed to fetch feed.";
@@ -622,7 +638,6 @@ export const bulkUploadResults = async (bulkData) => {
     }
 };
 
-// ✅ ADDED: Re-evaluation Request endpoints (For later!)
 export const requestRevaluation = async (resultId, reason) => {
   try {
     const res = await api.post(`/results/${resultId}/revaluation`, { reason });
@@ -661,10 +676,8 @@ export const saveCourseBlueprint = async (courseData) => {
   }
 };
 
-// Inside src/api.js
 export const getCourseBlueprint = async (batch, branch, semester) => {
     try {
-        // ✅ Add encodeURIComponent so spaces and special characters don't break the URL
         const response = await api.get(`/courses/${encodeURIComponent(batch)}/${encodeURIComponent(branch)}/${encodeURIComponent(semester)}`);
         return response.data;
     } catch (error) {
@@ -701,7 +714,6 @@ export const getAdminUsers = async () => {
   }
 };
 
-// ✅ ADDED: Institute User Verification Desk Endpoints
 export const getPendingInstituteUsers = async () => {
   try {
     const res = await api.get('/admin/users/pending');
@@ -780,7 +792,6 @@ export const deactivateAnnouncement = async (id) => {
 
 export const updateUserDesignation = async (userId, designation) => {
     try {
-        // ✅ Changed API.put to api.put
         const { data } = await api.put(`/admin/users/${userId}/designation`, { designation });
         return data;
     } catch (error) {
@@ -794,7 +805,7 @@ export const updateUserDesignation = async (userId, designation) => {
 
 export const createClub = async (clubData) => {
     try {
-        const { data } = await api.post(`/user/clubs`, clubData); // Ensure you have a route for POST /user/clubs pointing to createClub
+        const { data } = await api.post(`/user/clubs`, clubData); 
         return data;
     } catch (error) {
         throw error.response?.data || error;
@@ -839,7 +850,6 @@ export const promoteClubMember = async (clubId, studentId, roleTitle) => {
 
 export const removeClubMember = async (clubId, studentId) => {
     try {
-        // We pass studentId in the body. If it's null, the backend assumes the logged-in user is leaving voluntarily.
         const { data } = await api.put(`/user/clubs/${clubId}/remove`, { studentId });
         return data;
     } catch (error) {
@@ -896,7 +906,6 @@ export const createEvent = async (eventData) => {
     }
 };
 
-// Search users by name or registration number
 export const searchUsers = async (query) => {
     try {
         const { data } = await api.get(`/user/search?search=${query}`);
@@ -910,7 +919,6 @@ export const searchUsers = async (query) => {
 // 🏢 DEPARTMENT API (PUBLIC & PRIVATE)
 // ==========================================
 
-// Public route to fetch branches during registration
 export const getPublicDepartments = async (regNum) => {
     try {
         const response = await api.get(`/departments/public/${regNum}`);
@@ -920,7 +928,6 @@ export const getPublicDepartments = async (regNum) => {
     }
 };
 
-// Private routes for the Admin/HOD dashboard
 export const getInstituteDepartments = async () => {
     try {
         const response = await api.get('/departments');

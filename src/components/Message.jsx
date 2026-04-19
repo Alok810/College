@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { MessageSquare, ChevronUp, ChevronDown, Users as UsersIcon } from 'lucide-react';
+import { MessageSquare, ChevronUp, ChevronDown, Users as UsersIcon, Loader2 } from 'lucide-react'; // 🟢 Added Loader2
 import ChatBox from './ChatBox'; 
 import { useChat } from '../context/ChatContext';
 import { useAuth } from '../context/AuthContext';
@@ -23,7 +23,8 @@ const formatTimeAgo = (date) => {
 };
 
 const MessageSidebar = ({ onClose }) => {
-  const { sidebarChats, activeChat, setActiveChat, openChat, onlineUsers } = useChat();
+  // 🟢 EXTRACT THE LAZY FETCHING VARIABLES HERE
+  const { sidebarChats, activeChat, setActiveChat, openChat, onlineUsers, loadSidebarChats, isLoadingChats } = useChat();
   const { authData } = useAuth();
   
   const [isExpanded, setIsExpanded] = useState(false);
@@ -38,9 +39,13 @@ const MessageSidebar = ({ onClose }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // 🟢 MOBILE FIX: Since this component mounts when clicked on mobile, we fetch the chats immediately.
   useEffect(() => {
-    if (isMobile) setIsExpanded(true);
-  }, [isMobile]);
+    if (isMobile) {
+        setIsExpanded(true);
+        loadSidebarChats(); 
+    }
+  }, [isMobile, loadSidebarChats]);
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
@@ -58,14 +63,16 @@ const MessageSidebar = ({ onClose }) => {
     } else if (isMobile && onClose) {
       onClose(); 
     } else {
+      // 🟢 DESKTOP CLICK FIX: If they click to open, ensure we are fetching!
+      if (!isExpanded) {
+          loadSidebarChats();
+      }
       setIsExpanded(!isExpanded);
     }
   };
 
-  // ✅ THE FIX IS HERE: Don't use openChat for groups!
   const handleMessageClick = (chat) => {
     if (chat.isGroupChat) {
-        // Just instantly set the chat to the active window
         setActiveChat(chat); 
     } else {
         const otherUser = chat.participants.find(p => p._id !== authData?._id);
@@ -106,7 +113,11 @@ const MessageSidebar = ({ onClose }) => {
   // ==========================================
   if (!isMobile) {
     return (
-      <div className={`fixed top-[5.5rem] right-0 mr-4 bg-white shadow-2xl flex flex-col z-50 rounded-xl overflow-hidden transition-all duration-300 ease-in-out ${(isExpanded || activeChat) ? 'w-80 h-[400px]' : 'w-[320px] h-16'}`}>
+      <div 
+        className={`fixed top-[5.5rem] right-0 mr-4 bg-white shadow-2xl flex flex-col z-50 rounded-xl overflow-hidden transition-all duration-300 ease-in-out ${(isExpanded || activeChat) ? 'w-80 h-[400px]' : 'w-[320px] h-16'}`}
+        // 🟢 PRE-FETCH ON HOVER: When the mouse touches the collapsed sidebar, start fetching!
+        onMouseEnter={() => loadSidebarChats()}
+      >
         {activeChat ? (
           <ChatBox onBack={handleBackToMessages} />
         ) : (
@@ -131,7 +142,13 @@ const MessageSidebar = ({ onClose }) => {
 
             {isExpanded && !activeChat && (
               <div className="flex-grow pt-2 overflow-y-auto no-scrollbar px-3 pb-3">
-                {sidebarChats.length === 0 ? (
+                {/* 🟢 LOADING STATE: Show spinner while fetching */}
+                {isLoadingChats ? (
+                  <div className="flex flex-col items-center justify-center h-full text-indigo-500 mt-10">
+                      <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                      <p className="text-xs font-bold text-slate-400">Loading chats...</p>
+                  </div>
+                ) : sidebarChats.length === 0 ? (
                   <p className="text-center text-gray-500 mt-10 text-sm">No messages yet. Go to a friend's profile to start chatting!</p>
                 ) : (
                   getUniqueChats().map((chat) => {
@@ -218,7 +235,13 @@ const MessageSidebar = ({ onClose }) => {
             </div>
 
             <div className="flex-grow overflow-y-auto px-4 pb-8 custom-scrollbar space-y-2.5 mt-2">
-              {sidebarChats.length === 0 ? (
+              {/* 🟢 LOADING STATE FOR MOBILE */}
+              {isLoadingChats ? (
+                 <div className="flex flex-col items-center justify-center h-[50vh] text-indigo-500">
+                    <Loader2 className="w-10 h-10 animate-spin mb-3" />
+                    <p className="text-sm font-bold text-slate-400">Loading your chats...</p>
+                 </div>
+              ) : sidebarChats.length === 0 ? (
                 <div className="flex flex-col items-center justify-center h-[50vh] text-gray-400">
                   <MessageSquare size={48} className="mb-3 opacity-20" />
                   <p className="text-lg">No messages yet.</p>

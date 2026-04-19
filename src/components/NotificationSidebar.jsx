@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { Bell, ChevronUp, CheckCheck, X } from 'lucide-react';
+import { Bell, ChevronUp, CheckCheck, X, Loader2 } from 'lucide-react'; // 🟢 Added Loader2
 import { useFriends } from '../context/FriendContext'; 
 import { deleteNotification } from '../api'; 
 import { motion } from 'framer-motion';
@@ -22,7 +22,9 @@ const formatTimeAgo = (date) => {
 };
 
 const NotificationSidebar = ({ onClose }) => {
-  const { notifications, handleMarkAllAsRead } = useFriends();
+  // 🟢 Extract our new Lazy Fetching tools from the context!
+  const { notifications, handleMarkAllAsRead, isLoadingSocialData, fetchSocialDataOnDemand } = useFriends();
+  
   const [isExpanded, setIsExpanded] = useState(false);
   const [deletedIds, setDeletedIds] = useState([]); 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -33,18 +35,21 @@ const NotificationSidebar = ({ onClose }) => {
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  if (isMobile && !isExpanded) setIsExpanded(true);
+  // 🟢 FOR MOBILE: Mobile modals only mount when clicked, so we fetch immediately on mount.
+  // Don't worry, the Context prevents it from fetching twice if it already loaded!
+  useEffect(() => {
+    if (isMobile) {
+      setIsExpanded(true);
+      fetchSocialDataOnDemand();
+    }
+  }, [isMobile, fetchSocialDataOnDemand]);
 
   const visibleNotifications = notifications.filter(n => !deletedIds.includes(n._id));
   const unreadCount = visibleNotifications.filter(n => !n.seen).length;
 
-  // ✅ HELPER: Consolidates logic for both views
   const renderNotificationItem = (n, isMobileView) => {
     const isSystem = !n.user || n.type === 'system';
-    
-    // 🚀 Uses the saved acronym (e.g., "NIAMT") from the DB
     const sender = isSystem ? (n.senderName || 'Admin') : (n.user?.name || 'User');
-    
     const avatar = isSystem 
       ? `https://ui-avatars.com/api/?name=${sender}&background=E0E7FF&color=4338CA&bold=true`
       : (n.user?.profilePicture || `https://ui-avatars.com/api/?name=${sender}&background=EBF4FF&color=4F46E5`);
@@ -74,8 +79,18 @@ const NotificationSidebar = ({ onClose }) => {
 
   if (!isMobile) {
     return (
-      <div className={`fixed top-[5.5rem] right-0 mr-4 bg-white shadow-2xl flex flex-col z-50 rounded-xl overflow-hidden transition-all duration-300 ${isExpanded ? 'w-80 h-[400px]' : 'w-[320px] h-16'}`}>
-        <div className={`flex justify-between items-center cursor-pointer ${isExpanded ? 'p-3 border-b border-gray-100' : 'px-4 h-full'}`} onClick={() => setIsExpanded(!isExpanded)}>
+      <div 
+        className={`fixed top-[5.5rem] right-0 mr-4 bg-white shadow-2xl flex flex-col z-50 rounded-xl overflow-hidden transition-all duration-300 ${isExpanded ? 'w-80 h-[400px]' : 'w-[320px] h-16'}`}
+        // 🟢 PRE-FETCH ON HOVER: When the mouse touches the collapsed sidebar, start fetching!
+        onMouseEnter={() => fetchSocialDataOnDemand()}
+      >
+        <div 
+            className={`flex justify-between items-center cursor-pointer ${isExpanded ? 'p-3 border-b border-gray-100' : 'px-4 h-full'}`} 
+            onClick={() => {
+                setIsExpanded(!isExpanded);
+                fetchSocialDataOnDemand(); // Fallback trigger if they click before hovering
+            }}
+        >
           {isExpanded ? (
             <div className="flex justify-between items-center w-full">
               <h3 className="font-bold text-xl text-gray-800">Notifications</h3>
@@ -96,7 +111,13 @@ const NotificationSidebar = ({ onClose }) => {
         </div>
         {isExpanded && (
           <div className="flex-grow pt-2 overflow-y-auto no-scrollbar px-3 pb-3">
-            {visibleNotifications.length === 0 ? (
+            {/* 🟢 LOADING STATE: Show spinner while fetching */}
+            {isLoadingSocialData ? (
+              <div className="flex flex-col items-center justify-center h-full text-indigo-500 mt-10">
+                  <Loader2 className="w-8 h-8 animate-spin mb-2" />
+                  <p className="text-xs font-bold text-slate-400">Syncing notifications...</p>
+              </div>
+            ) : visibleNotifications.length === 0 ? (
               <div className="flex flex-col items-center justify-center h-full text-gray-400 mt-10"><Bell size={32} className="mb-2 opacity-20" /><p className="text-sm">You're all caught up!</p></div>
             ) : visibleNotifications.map(n => renderNotificationItem(n, false))}
           </div>
@@ -118,7 +139,13 @@ const NotificationSidebar = ({ onClose }) => {
           <button onClick={handleMarkAllAsRead} className="p-2 bg-purple-50 text-purple-600 rounded-full hover:bg-purple-100 transition-colors"><CheckCheck size={20} /></button>
         </div>
         <div className="flex-grow overflow-y-auto px-4 pb-8 space-y-2.5 mt-2">
-          {visibleNotifications.length === 0 ? (
+          {/* 🟢 LOADING STATE FOR MOBILE */}
+          {isLoadingSocialData ? (
+             <div className="flex flex-col items-center justify-center h-[50vh] text-indigo-500">
+                <Loader2 className="w-10 h-10 animate-spin mb-3" />
+                <p className="text-sm font-bold text-slate-400">Syncing notifications...</p>
+             </div>
+          ) : visibleNotifications.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-[50vh] text-gray-400"><Bell size={48} className="mb-3 opacity-20" /><p className="text-lg">You're all caught up!</p></div>
           ) : visibleNotifications.map(n => renderNotificationItem(n, true))}
         </div>

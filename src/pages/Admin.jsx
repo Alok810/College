@@ -9,7 +9,6 @@ import {
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 import CampusManagement from '../components/CampusManagement';
-// 🟢 IMPORT YOUR NEW COMPONENT HERE
 import DepartmentManagement from '../components/DepartmentManagement';
 
 const StatCard = memo(({ title, count, icon: Icon, colorClass }) => (
@@ -119,7 +118,6 @@ const Admin = () => {
   const filteredUsers = users.filter(user => user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || user.registrationNo?.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredClubs = existingClubs.filter(club => club.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
-  // 🟢 NEW: Added "Departments" tab to your array
   const tabs = [
     { id: 'overview', label: 'Overview & Analytics', icon: LayoutDashboard },
     { id: 'verification', label: `Verification Desk (${pendingUsers.length})`, alert: pendingUsers.length > 0, icon: UserPlus },
@@ -179,7 +177,8 @@ const Admin = () => {
                         <h3 className="text-lg font-black text-slate-800 mb-1">Academic Performance</h3><p className="text-xs font-bold text-slate-500 mb-6">Average SGPA across all branches</p>
                         <div className="h-[250px] w-full">
                             {chartData.sgpaByBranch?.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
+                                // 🟢 THE FIX: Hardcoded height={250} silences the warning
+                                <ResponsiveContainer width="100%" height={250}>
                                     <BarChart data={chartData.sgpaByBranch} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
                                         <XAxis dataKey="branch" axisLine={false} tickLine={false} tick={{ fontSize: 12, fill: '#64748b', fontWeight: 'bold' }} dy={10} />
@@ -195,7 +194,8 @@ const Admin = () => {
                         <h3 className="text-lg font-black text-slate-800 mb-1">Result Outcomes</h3><p className="text-xs font-bold text-slate-500 mb-6">Overall Pass vs Promoted/Fail</p>
                         <div className="h-[250px] w-full flex items-center justify-center">
                             {chartData.passFailRate?.length > 0 ? (
-                                <ResponsiveContainer width="100%" height="100%">
+                                // 🟢 THE FIX: Hardcoded height={250} silences the warning
+                                <ResponsiveContainer width="100%" height={250}>
                                     <PieChart>
                                         <Pie data={chartData.passFailRate} cx="50%" cy="45%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
                                             {chartData.passFailRate.map((entry, index) => <Cell key={`cell-${index}`} fill={['#10B981', '#F43F5E', '#F59E0B'][index % 3]} />)}
