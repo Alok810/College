@@ -661,13 +661,24 @@ export const saveCourseBlueprint = async (courseData) => {
   }
 };
 
+// Inside src/api.js
 export const getCourseBlueprint = async (batch, branch, semester) => {
-  try {
-    const res = await api.get(`/courses/${batch}/${branch}/${semester}`);
-    return res.data;
-  } catch (error) {
-    throw error.response?.data || error;
-  }
+    try {
+        // ✅ Add encodeURIComponent so spaces and special characters don't break the URL
+        const response = await api.get(`/courses/${encodeURIComponent(batch)}/${encodeURIComponent(branch)}/${encodeURIComponent(semester)}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const getFacultyAssignedSubjects = async (facultyId) => {
+    try {
+        const response = await api.get(`/courses/faculty/${facultyId}`);
+        return response.data.subjects;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
 };
 
 // ------------------- ADMIN DASHBOARD ENDPOINTS -------------------
@@ -892,5 +903,74 @@ export const searchUsers = async (query) => {
         return data;
     } catch (error) {
         throw error.response?.data || error;
+    }
+};
+
+// ==========================================
+// 🏢 DEPARTMENT API (PUBLIC & PRIVATE)
+// ==========================================
+
+// Public route to fetch branches during registration
+export const getPublicDepartments = async (regNum) => {
+    try {
+        const response = await api.get(`/departments/public/${regNum}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+// Private routes for the Admin/HOD dashboard
+export const getInstituteDepartments = async () => {
+    try {
+        const response = await api.get('/departments');
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const createDepartment = async (departmentData) => {
+    try {
+        const response = await api.post('/departments', departmentData);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const updateDepartment = async (id, departmentData) => {
+    try {
+        const response = await api.put(`/departments/${id}`, departmentData);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const deleteDepartment = async (id) => {
+    try {
+        const response = await api.delete(`/departments/${id}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const getDepartmentStudents = async (branchAbbreviation) => {
+    try {
+        const response = await api.get(`/departments/students/${branchAbbreviation}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
+export const getDepartmentTeachers = async (branch) => {
+    try {
+        const response = await api.get(`/user/department-teachers/${encodeURIComponent(branch)}`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
     }
 };

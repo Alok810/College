@@ -1,14 +1,16 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { getAdminStats, getAdminUsers, getPendingInstituteUsers, verifyInstituteUser, fetchCampusClubs, deleteClub } from '../api'; // ✅ Added deleteClub
+import { getAdminStats, getAdminUsers, getPendingInstituteUsers, verifyInstituteUser, fetchCampusClubs, deleteClub } from '../api'; 
 import { 
   ShieldAlert, ShieldCheck, Users, BarChart3, GraduationCap, Building2, 
   Search, Settings, CheckCircle, XCircle, UserPlus, MoreVertical, LayoutDashboard,
-  Briefcase, Trash2, Tent // ✅ Added Trash2 and Tent icons
+  Briefcase, Trash2, Tent 
 } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 import CampusManagement from '../components/CampusManagement';
+// 🟢 IMPORT YOUR NEW COMPONENT HERE
+import DepartmentManagement from '../components/DepartmentManagement';
 
 const StatCard = memo(({ title, count, icon: Icon, colorClass }) => (
   <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-indigo-300 transition-colors">
@@ -34,7 +36,6 @@ const AccessDenied = () => (
   </div>
 );
 
-// Helper function to extract initials for the premium avatars
 const getInitials = (name) => {
     if (!name) return 'U';
     const parts = name.trim().split(' ');
@@ -96,16 +97,14 @@ const Admin = () => {
     }
   };
 
-  // ✅ NEW: Admin Delete Club Handler
   const handleDeleteClub = async (clubId, clubName) => {
       const confirmText = prompt(`WARNING: This will permanently delete the club "${clubName}" and all its associated data. Type the name of the club to confirm:`);
       
       if (confirmText === clubName) {
           try {
-              // Ensure your api.js has a deleteClub function that hits your backend DELETE endpoint
               await deleteClub(clubId);
               alert(`${clubName} has been successfully deleted.`);
-              fetchAdminData(); // Refresh the list after deletion
+              fetchAdminData();
           } catch (error) {
               alert(error.message || "Failed to delete the club.");
           }
@@ -118,14 +117,14 @@ const Admin = () => {
   if (!isInstituteAdmin) return <div className="max-w-4xl mx-auto w-[94%] h-full flex flex-col items-center pt-4"><AccessDenied /></div>;
 
   const filteredUsers = users.filter(user => user.name?.toLowerCase().includes(searchTerm.toLowerCase()) || user.registrationNo?.toLowerCase().includes(searchTerm.toLowerCase()));
-  
-  // Also filter clubs in settings if admin wants to search
   const filteredClubs = existingClubs.filter(club => club.name?.toLowerCase().includes(searchTerm.toLowerCase()));
 
+  // 🟢 NEW: Added "Departments" tab to your array
   const tabs = [
     { id: 'overview', label: 'Overview & Analytics', icon: LayoutDashboard },
     { id: 'verification', label: `Verification Desk (${pendingUsers.length})`, alert: pendingUsers.length > 0, icon: UserPlus },
     { id: 'users', label: 'User Directory', icon: Users },
+    { id: 'departments', label: 'Departments', icon: Building2 }, 
     { id: 'management', label: 'Campus Management', icon: Briefcase }, 
     { id: 'settings', label: 'Settings', icon: Settings }
   ];
@@ -142,7 +141,7 @@ const Admin = () => {
             {tabs.map((tab, index) => (
               <button 
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }} // Clear search when swapping tabs
+                onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }} 
                 className={`relative px-3 sm:px-5 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all whitespace-nowrap flex items-center gap-1.5
                   ${activeTab === tab.id ? 'bg-[#4F46E5] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
               >
@@ -326,6 +325,11 @@ const Admin = () => {
                   )}
                 </div>
               </div>
+            )}
+
+            {/* 🟢 NEW DEPARTMENT MANAGEMENT TAB */}
+            {activeTab === 'departments' && (
+                <DepartmentManagement users={users} />
             )}
 
             {activeTab === 'management' && (
