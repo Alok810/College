@@ -2,8 +2,8 @@ import axios from "axios";
 
 // If in production, use the deployed backend URL. If local, use your PC's IP.
 const BACKEND_URL = import.meta.env.MODE === "production" 
-  ? "https://rigya-backend.onrender.com" 
-  : "http://localhost:4000"; 
+  ? "https://api.rigya.in" 
+  : "http://localhost:4000";
 
 export const api = axios.create({
   baseURL: `${BACKEND_URL}/api/v1`,
