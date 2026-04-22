@@ -35,12 +35,16 @@ import MessageSidebar from "./components/Message";
 import NotificationSidebar from "./components/NotificationSidebar";
 import InstallPrompt from './components/InstallPrompt';
 import AnnouncementBanner from "./components/AnnouncementBanner";
+import ResumeBuilder from './pages/ResumeBuilder';
 
 const AppContent = () => {
   const location = useLocation();
-  const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password";
+  const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password" || location.pathname === "/resume-builder";
+  
+  // 🟢 1. Detect if we are currently on the Profile page
+  const isProfilePage = location.pathname.startsWith("/profile");
+  
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
-
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeMobileModal, setActiveMobileModal] = useState(null);
 
@@ -61,7 +65,6 @@ const AppContent = () => {
 
   useEffect(() => {
     const fetchFeed = async () => {
-      // 🟢 THE FIX: Do not attempt to fetch the social feed unless the user is truly logged in!
       if (!authData || !authData._id) return;
       
       setIsFetching(true);
@@ -79,15 +82,12 @@ const AppContent = () => {
 
         setHasMore(feedData.hasMore);
       } catch (error) {
-        // We only log the error if we actually tried to fetch and it failed.
         console.error("Failed to load feed:", error.message);
       } finally {
         setIsFetching(false);
       }
     };
 
-    // Only run this effect if we are on the homepage. 
-    // It's a waste to load the feed if they are just sitting on the settings page!
     if (location.pathname === "/") {
         fetchFeed();
     }
@@ -144,9 +144,12 @@ const AppContent = () => {
   const contentMarginLeft =
     hideSidebar || isMobile ? "0" : isSidebarOpen ? "16rem" : "5rem";
 
-  const contentPaddingTop = `calc(${headerHeight} + 2rem)`;
+  const contentPaddingTop = hideSidebar ? "0px" : `calc(${headerHeight} + 2rem)`; 
   const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
-  const maskCutoffLine = `calc(${contentPaddingTop} - 0.40rem)`;
+  const maskCutoffLine = hideSidebar ? "0px" : `calc(${contentPaddingTop} - 0.40rem)`; 
+
+  // 🟢 2. Intelligent Scroll Lock: Lock outer scroll ONLY on desktop profiles
+  const lockOuterScroll = isProfilePage && !isMobile;
 
   if (loading) {
     return (
@@ -161,13 +164,13 @@ const AppContent = () => {
     <div
       className="relative h-[100dvh] w-full overflow-hidden"
       style={{
-        background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
+        backgroundColor: hideSidebar ? "#f9fafb" : "transparent",
+        backgroundImage: hideSidebar ? "none" : "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", 
         backgroundAttachment: "fixed",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
       }}
     >
-      {/* 🟢 THE FIX: Only show announcements if the user is fully logged in */}
       {!hideSidebar && authData && authData._id && <AnnouncementBanner />}
 
       <div className="flex h-[100dvh] transition-all duration-300">
@@ -194,14 +197,15 @@ const AppContent = () => {
             </div>
           )}
 
+          {/* 🟢 3. Apply the scroll lock dynamically to this container */}
           <div
-            className={`px-0 pb-32 md:px-6 md:pb-6 overflow-y-auto overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+            className={`px-0 ${hideSidebar ? "pb-0" : "pb-32"} md:px-6 md:${hideSidebar ? "pb-0" : "pb-6"} ${lockOuterScroll ? "overflow-hidden" : "overflow-y-auto"} overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
             onScroll={handleScroll}
             style={{
               paddingTop: contentPaddingTop,
               height: "100%",
-              WebkitMaskImage: `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
-              maskImage: `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
+              WebkitMaskImage: hideSidebar ? "none" : `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
+              maskImage: hideSidebar ? "none" : `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
             }}
           >
             <Routes>
@@ -244,8 +248,11 @@ const AppContent = () => {
                 />
                 <Route path="/hostel" element={<Hostel />} />
                 <Route path="/club" element={<Club />} />
+                
+                <Route path="/resume-builder" element={<ResumeBuilder />} />
               </Route>
 
+              {/* Public Routes */}
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
             </Routes>

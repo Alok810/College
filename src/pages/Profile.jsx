@@ -16,14 +16,26 @@ import {
   UserPlus,
   UserCheck,
   Clock,
+  FileText, 
+  Monitor, // 🟢 Added for dropdown
+  Printer  // 🟢 Added for dropdown
 } from "lucide-react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, Link, useNavigate } from "react-router-dom"; // 🟢 Added useNavigate
 import PostCard from "../components/PostCard";
 import EditProfile from "../components/EditProfile";
 import { useFriends } from "../context/FriendContext";
 import { useAuth } from "../context/AuthContext";
 import { getUserById } from "../api";
 import ProfileResults from "../components/ProfileResults";
+import ResumeTab from "../components/ResumeTab";
+
+// ==========================================
+// 🧩 HELPER FUNCTION
+// ==========================================
+const getAvatar = (usr) => {
+  if (!usr) return `https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5&size=150`;
+  return usr.profilePicture || `https://ui-avatars.com/api/?name=${usr.name || usr.full_name || 'User'}&background=EBF4FF&color=4F46E5&size=150`;
+};
 
 const Loading = () => (
   <div className="flex justify-center items-center min-h-screen">
@@ -133,18 +145,20 @@ const FriendListTab = ({ friends }) => {
         {friends.map((friend) => (
           <div
             key={friend._id}
-            className="flex items-center gap-4 p-3 bg-gray-50 rounded-lg border border-gray-100"
+            // 🟢 CHANGED: Swapped bg-gray-50 to bg-white, added shadow-sm, hover:shadow-md, and hover:-translate-y-0.5
+            className="flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
           >
             <Link to={`/profile/${friend._id}`}>
               <img
-                src={friend.profilePicture || "https://via.placeholder.com/150"}
+                src={getAvatar(friend)}
                 className="w-14 h-14 rounded-full object-cover shadow-sm bg-white"
+                alt="Friend"
               />
             </Link>
             <div className="flex-grow overflow-hidden">
               <Link to={`/profile/${friend._id}`}>
-                <h5 className="font-bold text-gray-800 truncate hover:text-purple-600">
-                  {friend.full_name}
+                <h5 className="font-bold text-gray-800 truncate hover:text-purple-600 transition-colors">
+                  {friend.name || friend.full_name}
                 </h5>
               </Link>
             </div>
@@ -161,7 +175,9 @@ const ProfileMainContent = ({
   activeTab,
   friends,
   isCurrentUser,
-  instituteLogo 
+  instituteLogo,
+  resumeViewMode,    // 🟢 Receive state
+  setResumeViewMode  // 🟢 Receive state
 }) => {
   return (
     <div className="space-y-4">
@@ -189,6 +205,16 @@ const ProfileMainContent = ({
             instituteLogo={instituteLogo} 
           />
         )}
+
+        {/* 🟢 Pass state down to ResumeTab */}
+        {activeTab === "resume" && (
+          <ResumeTab 
+            user={user} 
+            isCurrentUser={isCurrentUser} 
+            viewMode={resumeViewMode} 
+            setViewMode={setResumeViewMode} 
+          />
+        )}
       </div>
     </div>
   );
@@ -202,27 +228,84 @@ const DesktopProfileHeader = ({
   setActiveTab,
   isCurrentUser,
   setShowEdit,
+  resumeViewMode,
+  setResumeViewMode
 }) => {
+  const navigate = useNavigate(); // 🟢 Use navigate for the Edit button inside dropdown
+
   const navItems = [
     { name: "Post", icon: Star, tab: "posts" },
     { name: "Media", icon: ImageIcon, tab: "media" },
     { name: "Friend", icon: FriendsIcon, tab: "friends" },
     { name: "Result", icon: BarChart3, tab: "results" },
+    { name: "Resume", icon: FileText, tab: "resume" },
   ];
+
   return (
     <div className="sticky top-[0.5rem] z-40 bg-white/95 backdrop-blur-md shadow-md p-1.5 rounded-xl hidden lg:block w-full border border-gray-50 flex-shrink-0">
       <div className="flex justify-between items-center h-full px-2">
         <div className="flex space-x-1">
-          {navItems.map((item) => (
-            <button
-              key={item.name}
-              onClick={() => setActiveTab(item.tab)}
-              className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
-            >
-              <item.icon className="w-4 h-4" /> {item.name}
-            </button>
-          ))}
+          {navItems.map((item) => {
+            
+            // 🟢 IF IT IS THE RESUME TAB, RENDER THE HOVER DROPDOWN!
+            if (item.tab === "resume") {
+              return (
+                <div key={item.name} className="relative group">
+                  <button
+                    onClick={() => setActiveTab(item.tab)}
+                    className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
+                  >
+                    <item.icon className="w-4 h-4" /> {item.name}
+                  </button>
+                  
+                  {/* Dropdown Box */}
+                  <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 w-48 origin-top-left">
+                    <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden flex flex-col py-1">
+                      
+                      <button 
+                        onClick={() => { setActiveTab("resume"); setResumeViewMode("web"); }}
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "web" && activeTab === "resume" ? "text-purple-700 bg-purple-50" : "text-gray-700 hover:bg-gray-50"}`}
+                      >
+                        <Monitor className="w-4 h-4" /> Web View
+                      </button>
+                      
+                      <button 
+                        onClick={() => { setActiveTab("resume"); setResumeViewMode("a4"); }}
+                        className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "a4" && activeTab === "resume" ? "text-teal-700 bg-teal-50" : "text-gray-700 hover:bg-gray-50"}`}
+                      >
+                        <Printer className="w-4 h-4" /> A4 Document
+                      </button>
+                      
+                      {isCurrentUser && (
+                        <>
+                          <div className="h-px bg-gray-100 my-1 w-full"></div>
+                          <button 
+                            onClick={() => navigate('/resume-builder')}
+                            className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors w-full text-left"
+                          >
+                            <Edit className="w-4 h-4" /> Edit Resume
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            }
+
+            // Normal Tab Button
+            return (
+              <button
+                key={item.name}
+                onClick={() => setActiveTab(item.tab)}
+                className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
+              >
+                <item.icon className="w-4 h-4" /> {item.name}
+              </button>
+            );
+          })}
         </div>
+        
         {isCurrentUser && (
           <button
             className={`px-4 py-2 text-sm font-bold rounded-lg transition duration-150 flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm hover:opacity-90`}
@@ -285,10 +368,7 @@ const DesktopProfileSidebar = ({
       </div>
       <div className="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-16 z-10 bg-white">
         <img
-          src={
-            user.profilePicture ||
-            `https://ui-avatars.com/api/?name=${user.name || "User"}&background=EBF4FF&color=4F46E5&size=150`
-          }
+          src={getAvatar(user)} // 🟢 UPDATED: Using the smart avatar helper!
           alt={`Profile`}
           className="w-full h-full object-cover"
         />
@@ -367,11 +447,12 @@ const MobileTabBar = ({
     { name: "Posts", icon: Star, tab: "posts" },
     { name: "Media", icon: ImageIcon, tab: "media" },
     { name: "Friends", icon: FriendsIcon, tab: "friends" },
+    { name: "Resume", icon: FileText, tab: "resume" },
   ];
   return (
     <div className="lg:hidden fixed bottom-[4rem] left-0 right-0 z-40 w-full pointer-events-none">
-      <div className="bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] rounded-t-3xl px-6 py-2.5 flex justify-between items-center pointer-events-auto">
-        <div className="flex space-x-6 flex-1 justify-center items-center">
+      <div className="bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] rounded-t-3xl px-6 py-2.5 flex justify-between items-center pointer-events-auto overflow-x-auto">
+        <div className="flex space-x-4 flex-1 justify-center items-center">
           {navItems.map((item) => (
             <button
               key={item.name}
@@ -536,7 +617,7 @@ const MobileProfileSidebar = ({
 // ==========================================
 // 🚀 MAIN COMPONENT EXPORT
 // ==========================================
-const Profile = ({ isSidebarOpen, posts: allPosts }) => {
+const Profile = ({posts: allPosts }) => {
   const { ProfileId } = useParams();
   const { authData, instituteData } = useAuth(); 
   const isCurrentUser = !ProfileId || ProfileId === authData?._id;
@@ -557,6 +638,9 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
   const [activeTab, setActiveTab] = useState("posts");
   const [friendshipStatus, setFriendshipStatus] = useState("not_friends");
   const [friendList, setFriendList] = useState([]);
+
+  // 🟢 Added state for the resume view mode
+  const [resumeViewMode, setResumeViewMode] = useState("web");
 
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
@@ -606,8 +690,7 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
     if (isCurrentUser) setFriendList(friends);
     else setFriendList([]);
     setActiveTab("posts");
-  }, [ProfileId, friends, requests, suggestions, isCurrentUser]);
-
+  }, [ProfileId, friends, requests, suggestions, isCurrentUser, authData]);
   if (!user) return <Loading />;
 
   // 📱 MOBILE RENDER
@@ -633,6 +716,8 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
             activeTab={activeTab}
             friends={friendList}
             instituteLogo={instituteData?.instituteLogo || instituteData?.logo?.url}
+            resumeViewMode={resumeViewMode} 
+            setResumeViewMode={setResumeViewMode} 
           />
         </div>
 
@@ -656,9 +741,7 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
 
   // 💻 DESKTOP RENDER
   return (
-    // ✅ 1. REMOVED ALL custom manual margins and translations. Let App.jsx handle the push!
     <div className="pt-1.5 w-full">
-      {/* ✅ 2. Cleaned up the flex container to center itself dynamically (mx-auto handles the math perfectly as the width shrinks/grows) */}
       <div className="w-full max-w-[1100px] mx-auto px-4 relative flex items-start justify-center gap-4 lg:gap-6 lg:h-[calc(100vh-5rem)]">
         
         {/* Fixed Sidebar Container */}
@@ -676,13 +759,14 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
           />
         </div>
 
-        {/* ✅ 3. ADDED min-w-[400px] so the content refuses to squish internally! */}
         <div className="flex-1 min-w-[400px] flex flex-col h-full">
           <DesktopProfileHeader
             activeTab={activeTab}
             setActiveTab={setActiveTab}
             isCurrentUser={isCurrentUser}
             setShowEdit={setShowEdit}
+            resumeViewMode={resumeViewMode} 
+            setResumeViewMode={setResumeViewMode} 
           />
           <div
             className="flex-grow overflow-y-scroll mt-4 pb-10"
@@ -694,6 +778,8 @@ const Profile = ({ isSidebarOpen, posts: allPosts }) => {
               activeTab={activeTab}
               friends={friendList}
               instituteLogo={instituteData?.instituteLogo || instituteData?.logo?.url} 
+              resumeViewMode={resumeViewMode} 
+              setResumeViewMode={setResumeViewMode} 
             />
           </div>
         </div>

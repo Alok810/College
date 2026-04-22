@@ -981,3 +981,24 @@ export const getDepartmentTeachers = async (branch) => {
         throw error.response?.data || error.message;
     }
 };
+
+// ------------------- RESUME BUILDER ENDPOINTS -------------------
+export const saveUserResume = async (resumeData) => {
+  try {
+    const response = await api.put("/user/resume/update", { resumeData });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to save resume.");
+  }
+};
+
+// 🔥 FIXED: Added '/resume' to match app.js routing
+export const enhanceTextWithAI = async (text) => {
+  try {
+    const response = await api.post("/resume/enhance-text", { text });
+    return response.data.enhancedText;
+  } catch (error) {
+    console.error("Error enhancing text:", error);
+    throw error;
+  }
+};

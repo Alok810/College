@@ -20,6 +20,8 @@
     "emoji-picker-react": "^4.18.0",
     "framer-motion": "^12.23.12",
     "global": "^4.4.0",
+    "html2canvas": "^1.4.1",
+    "jspdf": "^4.2.1",
     "lucide-react": "^0.539.0",
     "moment": "^2.30.1",
     "mongoose": "^8.17.1",
