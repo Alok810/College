@@ -140,7 +140,7 @@ const CampusManagement = ({ users, existingClubs, fetchAdminData }) => {
         alert("Designation successfully assigned!");
         fetchAdminData(); 
         setSelectedUserForDesignation(''); setSelectedRole(''); setCustomRole('');
-    } catch (error) {
+    } catch  {
         alert("Failed to update designation.");
     } finally {
         setIsUpdatingRole(false);

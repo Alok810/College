@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState, useCallback } from 'react';
 import Peer from 'simple-peer';
 import { Video, Mic, VideoOff, MicOff, PhoneOff, PhoneIncoming, Phone } from 'lucide-react';
 
@@ -63,7 +63,7 @@ const VideoCall = ({ socket, myId, otherUserId, otherUserName, onClose, incoming
       socket.off("call-accepted");
       socket.off("remote-media-changed"); // Clean up our new listener
     };
-  }, [socket]);
+  }, [socket, handleClose]);
 
   const callUser = () => {
     setIsCalling(true);
@@ -107,12 +107,12 @@ const VideoCall = ({ socket, myId, otherUserId, otherUserName, onClose, incoming
     handleClose();
   };
 
-  const handleClose = () => {
+const handleClose = useCallback(() => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
     }
     onClose(); 
-  };
+  }, [onClose]);
 
   // ✅ UPDATED: Tell the backend when we turn off our camera
   const toggleVideo = () => {

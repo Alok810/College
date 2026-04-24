@@ -1,4 +1,6 @@
 import React, { useState, useEffect, useRef, memo, useCallback } from 'react';
+// 🟢 1. Imported useSearchParams from react-router-dom
+import { useSearchParams } from 'react-router-dom';
 import {
   getAllBooks, addBook, deleteBook, borrowBook, returnBook,
   getBorrowedBooksForAdmin, getBorrowedBooksForUser,
@@ -12,7 +14,7 @@ const isOverdue = (dueDate) => new Date() > new Date(dueDate);
 
 // --- Memoized Child Components ---
 
-const BookList = memo(({ books, handleEdit, handleDelete, handleBorrow, borderButton, userRole }) => {
+const BookList = memo(({ books, handleEdit, handleDelete, handleBorrow, userRole }) => {
   const getAvailabilityStatus = (book) => book.quantity > 0;
 
   return (
@@ -74,7 +76,7 @@ const BookList = memo(({ books, handleEdit, handleDelete, handleBorrow, borderBu
   );
 });
 
-const AddBookForm = memo(({ handleSubmit, formRef, buttonStyle, gradientButton, borderButton, editBook, setEditBook }) => {
+const AddBookForm = memo(({ handleSubmit, formRef, gradientButton, editBook, setEditBook }) => {
   const isEditing = !!editBook;
 
   useEffect(() => {
@@ -127,7 +129,7 @@ const AddBookForm = memo(({ handleSubmit, formRef, buttonStyle, gradientButton, 
   );
 });
 
-const BorrowForm = memo(({ users, books, handleLibrarianBorrow, buttonStyle, gradientButton }) => {
+const BorrowForm = memo(({ users, books, handleLibrarianBorrow, gradientButton }) => {
   const formRef = useRef(null);
   const [userSearchTerm, setUserSearchTerm] = useState('');
   const [bookSearchTerm, setBookSearchTerm] = useState('');
@@ -269,7 +271,7 @@ const ReturnedBookList = memo(({ returnedBooks, userRole }) => (
 ));
 
 const LibrarianDashboard = memo(({
-  books, borrowedBooks, returnedBooks, allUsers, activeTab, setActiveTab,
+  books, borrowedBooks, returnedBooks, allUsers, activeTab, handleTabChange,
   handleSubmit, handleEdit, handleDelete, handleReturn, handleLibrarianBorrow,
   formRef, buttonStyle, gradientButton, borderButton, editBook, setEditBook,
   searchTerm, setSearchTerm,
@@ -287,12 +289,12 @@ const LibrarianDashboard = memo(({
 
     return (
       <div className="flex-shrink-0 w-full sm:w-max sm:mx-auto overflow-hidden sm:bg-white sm:p-1 sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100">
-        {/* ✅ Reduced tab gap */}
         <div className="flex overflow-x-auto custom-scrollbar snap-x snap-mandatory gap-1.5 sm:gap-1 pb-1 sm:pb-0 sm:justify-center">
           {tabs.map(tab => (
             <button 
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)} 
+              // 🟢 2. Use handleTabChange instead of setActiveTab
+              onClick={() => handleTabChange(tab.id)} 
               className={`snap-start whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2 rounded-[0.8rem] sm:rounded-[0.6rem] font-bold text-xs sm:text-sm transition-all duration-200 flex-shrink-0 ${activeTab === tab.id ? 'bg-gray-900 text-white shadow-md' : 'bg-white sm:bg-transparent border border-gray-100 sm:border-none text-gray-600 hover:bg-gray-200'}`}
             >
               {tab.label}
@@ -304,7 +306,6 @@ const LibrarianDashboard = memo(({
   };
 
   return (
-    // ✅ Reduced gap between sections
     <div className="flex-1 flex flex-col w-full min-h-0 gap-2 sm:gap-3">
       {renderTabs()}
 
@@ -352,7 +353,6 @@ const LibrarianDashboard = memo(({
                   const fine = daysOverdue * 1;
 
                   return (
-                    // ✅ INCREASED vertical padding (p-5 sm:p-6)
                     <div key={record._id} className={`p-5 sm:p-6 bg-white rounded-[1rem] sm:rounded-xl shadow-sm border ${overdue ? 'border-red-200 shadow-red-100' : 'border-gray-100'} flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 w-full flex-shrink-0`}>
                       <div className="flex-1 w-full overflow-hidden">
                         <h3 className="text-[15px] sm:text-lg font-extrabold text-gray-900 leading-tight mb-1.5 truncate">{record.book?.title || 'Unknown Book'}</h3>
@@ -418,8 +418,8 @@ const LibrarianDashboard = memo(({
 });
 
 const UserDashboard = memo(({
-  books, borrowedBooks, returnedBooks, activeTab, setActiveTab,
-  handleBorrow, handleReturn, gradientButton, borderButton,
+  books, borrowedBooks, returnedBooks, activeTab, handleTabChange,
+  handleBorrow, handleReturn, borderButton,
   searchTerm, setSearchTerm,
 }) => {
   
@@ -432,12 +432,12 @@ const UserDashboard = memo(({
 
     return (
       <div className="flex-shrink-0 w-full sm:w-max sm:mx-auto overflow-hidden sm:bg-white sm:p-1 sm:rounded-xl sm:shadow-sm sm:border sm:border-gray-100">
-        {/* ✅ Reduced tab gap */}
         <div className="flex overflow-x-auto custom-scrollbar snap-x snap-mandatory gap-1.5 sm:gap-1 pb-1 sm:pb-0 px-1 sm:px-0 sm:justify-center">
           {tabs.map(tab => (
             <button 
               key={tab.id}
-              onClick={() => setActiveTab(tab.id)} 
+              // 🟢 3. Use handleTabChange instead of setActiveTab
+              onClick={() => handleTabChange(tab.id)} 
               className={`snap-start whitespace-nowrap px-3 py-1.5 sm:px-4 sm:py-2 rounded-[0.8rem] sm:rounded-[0.6rem] font-bold text-xs sm:text-sm transition-all duration-200 flex-shrink-0 ${activeTab === tab.id ? 'bg-gray-900 text-white shadow-md' : 'bg-white sm:bg-transparent border border-gray-100 sm:border-none text-gray-600 hover:bg-gray-200'}`}
             >
               {tab.label}
@@ -449,7 +449,6 @@ const UserDashboard = memo(({
   };
 
   return (
-    // ✅ Reduced gap between sections
     <div className="flex-1 flex flex-col w-full min-h-0 gap-2 sm:gap-3">
       {renderTabs()}
       <div className="flex-1 w-full bg-white shadow-sm sm:shadow-inner rounded-[1.25rem] sm:rounded-[1.5rem] p-2.5 sm:p-6 border border-gray-100 sm:border-none flex flex-col min-h-0 overflow-hidden">
@@ -491,7 +490,6 @@ const UserDashboard = memo(({
                   const fine = daysOverdue * 1;
 
                   return (
-                    // ✅ INCREASED vertical padding (p-5 sm:p-6)
                     <div key={record._id} className={`p-5 sm:p-6 bg-white rounded-[1rem] sm:rounded-xl shadow-sm border ${overdue ? 'border-red-200 shadow-red-100' : 'border-gray-100'} flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4 w-full flex-shrink-0`}>
                       <div className="flex-1 w-full overflow-hidden">
                         <h3 className="text-[15px] sm:text-lg font-extrabold text-gray-900 leading-tight mb-1.5 truncate">{record.book?.title || 'Unknown Book'}</h3>
@@ -533,6 +531,10 @@ const UserDashboard = memo(({
 const Library = ({ userRole }) => {
   const { loading } = useAuth();
 
+  // 🟢 4. Swapped out useState for useSearchParams at the top level
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'total';
+
   const [books, setBooks] = useState([]);
   const [borrowedBooks, setBorrowedBooks] = useState([]);
   const [returnedBooks, setReturnedBooks] = useState([]);
@@ -544,7 +546,6 @@ const Library = ({ userRole }) => {
   const formRef = useRef(null);
   const [message, setMessage] = useState('');
   const [showMessage, setShowMessage] = useState(false);
-  const [activeTab, setActiveTab] = useState('total');
 
   const buttonStyle = "py-2 rounded-lg shadow-md hover:opacity-90 font-semibold text-white";
   const gradientButton = "bg-gradient-to-r from-purple-600 to-teal-600";
@@ -637,6 +638,11 @@ const Library = ({ userRole }) => {
     }
   }, [userRole, activeTab, loading, fetchBooks, fetchBorrowedBooks, fetchReturnedBooks, fetchAllUsers, editBook]);
 
+  // 🟢 5. Create the handleTabChange function to pass to the dashboards
+  const handleTabChange = useCallback((tabId) => {
+    setSearchParams({ tab: tabId }, { replace: true });
+  }, [setSearchParams]);
+
   const handleSubmit = useCallback(async (e) => {
     e.preventDefault();
     const form = formRef.current;
@@ -662,28 +668,28 @@ const Library = ({ userRole }) => {
         setBooks(prev => [...prev, newBook]);
       }
       formRef.current.reset();
-      setActiveTab('total');
+      handleTabChange('total'); // 🟢 Switched to handleTabChange
     } catch (error) {
       console.error(`Error ${editBook ? 'updating' : 'adding'} book:`, error);
       displayMessage(error.message || `Failed to ${editBook ? 'update' : 'add'} book.`);
     }
-  }, [displayMessage, formRef, editBook, setActiveTab, setEditBook]);
+  }, [displayMessage, formRef, editBook, handleTabChange, setEditBook]);
 
   const handleEdit = useCallback((book) => {
     setEditBook(book);
-    setActiveTab('add');
-  }, [setEditBook, setActiveTab]);
+    handleTabChange('add'); // 🟢 Switched to handleTabChange
+  }, [setEditBook, handleTabChange]);
 
   const handleLibrarianBorrow = useCallback(async (userId, bookId, dueDate) => {
     try {
       await borrowBookByLibrarian(userId, bookId, dueDate);
       displayMessage('Book assigned successfully!');
-      setActiveTab('borrowed');
+      handleTabChange('borrowed'); // 🟢 Switched to handleTabChange
     } catch (error) {
       console.error('Error assigning book:', error);
       displayMessage(error.message || 'Failed to assign book.');
     }
-  }, [displayMessage, setActiveTab]);
+  }, [displayMessage, handleTabChange]);
 
   const handleBorrow = useCallback(async (bookId) => {
     try {
@@ -743,7 +749,6 @@ const Library = ({ userRole }) => {
   });
 
   return (
-    // ✅ SHIFTED UP: Reduced top padding (pt-1 sm:pt-2) to push content closer to the Institute Header
     <div className="flex flex-col items-center h-full w-full max-w-[100vw] overflow-x-hidden pb-20 sm:pb-2 pt-1 sm:pt-2">
       
       {showMessage && (
@@ -752,7 +757,6 @@ const Library = ({ userRole }) => {
         </div>
       )}
 
-      {/* ✅ REDUCED GAP: Gap between Header, Tabs, and Content reduced from gap-6 to gap-3 */}
       <div className="flex flex-col w-[94%] sm:w-full max-w-4xl mx-auto h-full min-h-0 gap-2 sm:gap-3">
         
         <div className="flex-shrink-0 flex items-center justify-between bg-white p-3 sm:p-6 rounded-[1.25rem] sm:rounded-[2rem] shadow-sm border border-gray-100 w-full">
@@ -776,7 +780,7 @@ const Library = ({ userRole }) => {
         {userRole === 'librarian' ? (
           <LibrarianDashboard
             books={sortedBooks} borrowedBooks={borrowedBooks} returnedBooks={returnedBooks}
-            allUsers={allUsers} activeTab={activeTab} setActiveTab={setActiveTab}
+            allUsers={allUsers} activeTab={activeTab} handleTabChange={handleTabChange}
             handleSubmit={handleSubmit} handleEdit={handleEdit} handleDelete={handleDelete}
             handleReturn={handleReturn} handleLibrarianBorrow={handleLibrarianBorrow}
             formRef={formRef} buttonStyle={buttonStyle} gradientButton={gradientButton}
@@ -786,7 +790,7 @@ const Library = ({ userRole }) => {
         ) : (
           <UserDashboard
             books={sortedBooks} borrowedBooks={borrowedBooks} returnedBooks={returnedBooks}
-            activeTab={activeTab} setActiveTab={setActiveTab} handleBorrow={handleBorrow}
+            activeTab={activeTab} handleTabChange={handleTabChange} handleBorrow={handleBorrow}
             handleReturn={handleReturn} gradientButton={gradientButton} borderButton={borderButton}
             searchTerm={searchTerm} setSearchTerm={setSearchTerm}
           />

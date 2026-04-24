@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback, memo, useMemo, useRef } from 'react';
 import Papa from 'papaparse';
+// 🟢 1. Imported useSearchParams from react-router-dom
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getMyResults, getAllResultsForAdmin, publishResult, updateResult, deleteResult, getAdminUsers, saveCourseBlueprint, getCourseBlueprint, getClassResultsForStudents, publishBatchResults, bulkUploadResults, getInstituteDepartments } from '../api';
 import { GraduationCap, Award, Plus, Trash2, Calculator, Settings, CheckCircle2, Pencil, Lock, Unlock, Search, ArrowUpDown, ChevronDown, ChevronUp, Users, UploadCloud, EyeOff, Eye, FileSpreadsheet, CalendarClock, Loader2, FileArchive, ListChecks } from 'lucide-react';
@@ -185,11 +187,19 @@ const StudentClassView = memo(({ results, users, currentPage, totalPages, setCur
 // 🛠️ ADMIN DASHBOARD
 // ==========================================
 const AdminDashboard = memo(({ results, users, departments, handleUpload, handleDelete, fetchAdminData, displayMessage, currentPage, totalPages, setCurrentPage }) => {
-  const [activeAdminTab, setActiveAdminTab] = useState('upload');
+  
+  // 🟢 2. Replaced useState with useSearchParams
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeAdminTab = searchParams.get('tab') || 'upload';
+
+  // 🟢 3. Create the handleTabChange function
+  const handleTabChange = (tabId) => {
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
+
   const semesters = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
   const batches = ['2021-2025', '2022-2026', '2023-2027', '2024-2028', '2025-2029', '2026-2030'];
   
-  // ✅ FIXED: Extract the Abbreviation for the dropdown, fallback to name if abbreviation is missing
   const branches = useMemo(() => departments.map(d => ({
       value: d.abbreviation || d.name,
       label: d.abbreviation ? `${d.name} (${d.abbreviation})` : d.name
@@ -302,7 +312,7 @@ const AdminDashboard = memo(({ results, users, departments, handleUpload, handle
   const fetchBlueprint = async (sem, batch, branch) => {
     try {
       const data = await getCourseBlueprint(batch, branch, sem); setBlueprintSubjects(data.subjects || []);
-    } catch (error) { setBlueprintSubjects([]); }
+    } catch { setBlueprintSubjects([]); }
   };
 
   useEffect(() => {
@@ -342,7 +352,7 @@ const AdminDashboard = memo(({ results, users, departments, handleUpload, handle
       await saveCourseBlueprint({ semester: targetSemester, batch: targetBatch, branch: targetBranch, subjects: blueprintSubjects });
       displayMessage(`Set saved successfully!`);
       setHasJustSavedBlueprint(true);
-    } catch (err) {
+    } catch {
       displayMessage("Error saving Set");
     } finally {
       setIsBlueprintSaving(false);
@@ -370,6 +380,7 @@ const AdminDashboard = memo(({ results, users, departments, handleUpload, handle
       }
       setStudentMarks(initialMarks);
       recalculateAllTotals(initialMarks, data);
+    // eslint-disable-next-line no-unused-vars
     } catch (error) { alert(`No Blueprint found for this class.`); setActiveBlueprint(null); }
   };
 
@@ -385,8 +396,12 @@ const AdminDashboard = memo(({ results, users, departments, handleUpload, handle
         const exSub = result.subjects.find(s => s.subjectCode === sub.subjectCode);
         initialMarks[sub.subjectCode] = { finExt: exSub ? exSub.finExt : '', terInt: exSub ? exSub.terInt : '' };
       });
-      setStudentMarks(initialMarks); setExistingResultId(result._id); setIsEditMode(true); setActiveAdminTab('upload'); setEntryMethod('manual');
+      setStudentMarks(initialMarks); setExistingResultId(result._id); setIsEditMode(true); 
+      
+      handleTabChange('upload'); // 🟢 4. Updated programmatic tab change
+      setEntryMethod('manual');
       recalculateAllTotals(initialMarks, data);
+    // eslint-disable-next-line no-unused-vars
     } catch (e) { alert("Error loading blueprint."); }
   };
 
@@ -503,7 +518,7 @@ const AdminDashboard = memo(({ results, users, departments, handleUpload, handle
             displayMessage(response.message || `Uploaded ${bulkPayload.length} drafts!`);
             await fetchAdminData();
 
-            setActiveAdminTab('publish');
+            handleTabChange('publish'); // 🟢 5. Updated programmatic tab change
             setPublishBatch(uploadBatch);
             setPublishBranch(uploadBranch);
             setPublishSemester(uploadSemester);
@@ -550,7 +565,8 @@ const AdminDashboard = memo(({ results, users, departments, handleUpload, handle
         displayMessage(data.message);
         await fetchAdminData();
         setScheduleDate('');
-        setActiveAdminTab('manage');
+        handleTabChange('manage'); // 🟢 6. Updated programmatic tab change
+      // eslint-disable-next-line no-unused-vars
       } catch (error) {
         displayMessage("Failed to publish/schedule batch.");
       } finally {
@@ -563,10 +579,10 @@ const AdminDashboard = memo(({ results, users, departments, handleUpload, handle
     <div className="w-full flex flex-col gap-4">
       <div className="w-full overflow-hidden bg-white p-1.5 rounded-xl shadow-sm border border-slate-200">
         <div className="flex gap-1 justify-start sm:justify-center overflow-x-auto custom-scrollbar snap-x snap-mandatory pb-1 sm:pb-0">
-          <button onClick={() => { setActiveAdminTab('blueprint'); setActiveBlueprint(null); }} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'blueprint' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>1. Define Set</button>
-          <button onClick={() => setActiveAdminTab('upload')} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'upload' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>2. Enter Marks</button>
-          <button onClick={() => { setActiveAdminTab('publish'); setActiveBlueprint(null); }} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'publish' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>3. Review & Publish</button>
-          <button onClick={() => { setActiveAdminTab('manage'); setActiveBlueprint(null); }} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'manage' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>4. Manage Records</button>
+          <button onClick={() => { handleTabChange('blueprint'); setActiveBlueprint(null); }} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'blueprint' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>1. Define Set</button>
+          <button onClick={() => handleTabChange('upload')} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'upload' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>2. Enter Marks</button>
+          <button onClick={() => { handleTabChange('publish'); setActiveBlueprint(null); }} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'publish' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>3. Review & Publish</button>
+          <button onClick={() => { handleTabChange('manage'); setActiveBlueprint(null); }} className={`snap-start px-3 sm:px-4 py-2 rounded-lg font-bold text-xs transition-all whitespace-nowrap flex-shrink-0 ${activeAdminTab === 'manage' ? 'bg-indigo-600 text-white shadow-md' : 'text-slate-600 hover:bg-slate-100'}`}>4. Manage Records</button>
         </div>
       </div>
 
@@ -1129,6 +1145,7 @@ const Result = () => {
         displayMessage("Draft saved successfully!");
       }
       fetchData(currentPage); 
+    // eslint-disable-next-line no-unused-vars
     } catch (error) {
       displayMessage("Failed to save draft.");
     }
@@ -1140,6 +1157,7 @@ const Result = () => {
         await deleteResult(id);
         displayMessage("Record deleted.");
         fetchData(currentPage);
+      // eslint-disable-next-line no-unused-vars
       } catch (error) {
         displayMessage("Failed to delete.");
       }

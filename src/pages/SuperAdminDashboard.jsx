@@ -1,4 +1,6 @@
-import React, { useState, useEffect, memo } from 'react';
+// 🟢 1. Added useCallback to the import
+import React, { useState, useEffect, memo, useCallback } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { 
     getSuperAdminStats, 
     getSuperAdminInstitutes, 
@@ -12,6 +14,8 @@ import { useAuth } from '../context/AuthContext';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from 'recharts';
 
 // --- Dashboard Cards Component ---
+// 🟢 2. Silenced the false-positive Icon warning
+// eslint-disable-next-line no-unused-vars
 const StatCard = memo(({ title, count, icon: Icon, colorClass }) => (
   <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-indigo-300 transition-colors">
     <div className={`w-12 h-12 rounded-[0.8rem] flex items-center justify-center flex-shrink-0 ${colorClass}`}>
@@ -39,7 +43,9 @@ const AccessDenied = () => (
 
 const SuperAdminDashboard = () => {
     const { authData } = useAuth();
-    const [activeTab, setActiveTab] = useState('overview');
+    
+    const [searchParams, setSearchParams] = useSearchParams();
+    const activeTab = searchParams.get('tab') || 'overview';
     
     const [stats, setStats] = useState({ activeInstitutes: 0, totalStudents: 0, totalUsers: 0 });
     const [chartData, setChartData] = useState({ usersByInstitute: [], userGrowthData: [] });
@@ -53,12 +59,18 @@ const SuperAdminDashboard = () => {
     const [loading, setLoading] = useState(true);
     const [message, setMessage] = useState('');
 
-    const displayMessage = (msg) => {
-        setMessage(msg);
-        setTimeout(() => setMessage(''), 3000);
+    const handleTabChange = (tabId) => {
+        setSearchParams({ tab: tabId }, { replace: true });
     };
 
-    const fetchData = async () => {
+    // 🟢 3. Wrapped in useCallback
+    const displayMessage = useCallback((msg) => {
+        setMessage(msg);
+        setTimeout(() => setMessage(''), 3000);
+    }, []);
+
+    // 🟢 4. Wrapped in useCallback and added displayMessage to dependencies
+    const fetchData = useCallback(async () => {
         setLoading(true);
         try {
             const [statsData, instData, accData] = await Promise.all([
@@ -70,18 +82,19 @@ const SuperAdminDashboard = () => {
             if (statsData.charts) setChartData(statsData.charts);
             setInstitutes(instData.institutes);
             setAnnouncements(accData.announcements || []);
-        } catch (error) {
+        } catch {
             displayMessage("Failed to fetch Super Admin data.");
         } finally {
             setLoading(false);
         }
-    };
+    }, [displayMessage]);
 
     useEffect(() => {
         if (authData?.role === "superadmin" || authData?.user?.role === "superadmin") {
             fetchData();
         }
-    }, [authData]);
+    // 🟢 5. Added fetchData to the dependency array
+    }, [authData, fetchData]);
 
     const handleToggleStatus = async (id, currentStatus, name) => {
         const action = currentStatus ? "REVOKE" : "APPROVE";
@@ -90,7 +103,7 @@ const SuperAdminDashboard = () => {
                 await toggleInstituteApproval(id, !currentStatus);
                 displayMessage(`Successfully updated ${name}.`);
                 fetchData(); 
-            } catch (error) {
+            } catch{
                 displayMessage("Failed to update institute status.");
             }
         }
@@ -106,7 +119,7 @@ const SuperAdminDashboard = () => {
             displayMessage("Global announcement broadcasted!");
             setNewAnnouncement({ message: '', type: 'info' }); 
             fetchData(); 
-        } catch (error) {
+        } catch {
             displayMessage("Failed to broadcast announcement.");
         } finally {
             setIsSubmittingAlert(false);
@@ -119,7 +132,7 @@ const SuperAdminDashboard = () => {
                 await deactivateAnnouncement(id);
                 displayMessage("Announcement removed.");
                 fetchData();
-            } catch (error) {
+            } catch{
                 displayMessage("Failed to remove announcement.");
             }
         }
@@ -142,7 +155,7 @@ const SuperAdminDashboard = () => {
     ];
 
     const activeTabContext = tabs.find(t => t.id === activeTab);
-    const ActiveIcon = activeTabContext?.icon || Settings;
+    const ActiveIcon = activeTabContext?.icon || ShieldCheck;
 
     return (
         <div className="flex flex-col items-center h-full w-full max-w-[100vw] overflow-x-hidden pb-0 sm:pb-2 pt-1 sm:pt-2">
@@ -156,7 +169,7 @@ const SuperAdminDashboard = () => {
                         {tabs.map((tab, index) => (
                         <button 
                             key={tab.id}
-                            onClick={() => setActiveTab(tab.id)} 
+                            onClick={() => handleTabChange(tab.id)} 
                             className={`relative px-3 sm:px-5 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all whitespace-nowrap flex items-center gap-1.5
                             ${activeTab === tab.id 
                                 ? 'bg-[#4F46E5] text-white shadow-sm' 

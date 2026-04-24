@@ -17,10 +17,11 @@ import {
   UserCheck,
   Clock,
   FileText, 
-  Monitor, // 🟢 Added for dropdown
-  Printer  // 🟢 Added for dropdown
+  Monitor, 
+  Printer  
 } from "lucide-react";
-import { useParams, Link, useNavigate } from "react-router-dom"; // 🟢 Added useNavigate
+// 🟢 1. Added useSearchParams to the existing import
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"; 
 import PostCard from "../components/PostCard";
 import EditProfile from "../components/EditProfile";
 import { useFriends } from "../context/FriendContext";
@@ -145,7 +146,6 @@ const FriendListTab = ({ friends }) => {
         {friends.map((friend) => (
           <div
             key={friend._id}
-            // 🟢 CHANGED: Swapped bg-gray-50 to bg-white, added shadow-sm, hover:shadow-md, and hover:-translate-y-0.5
             className="flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
           >
             <Link to={`/profile/${friend._id}`}>
@@ -176,8 +176,8 @@ const ProfileMainContent = ({
   friends,
   isCurrentUser,
   instituteLogo,
-  resumeViewMode,    // 🟢 Receive state
-  setResumeViewMode  // 🟢 Receive state
+  resumeViewMode,
+  setResumeViewMode
 }) => {
   return (
     <div className="space-y-4">
@@ -206,7 +206,6 @@ const ProfileMainContent = ({
           />
         )}
 
-        {/* 🟢 Pass state down to ResumeTab */}
         {activeTab === "resume" && (
           <ResumeTab 
             user={user} 
@@ -225,13 +224,13 @@ const ProfileMainContent = ({
 // ==========================================
 const DesktopProfileHeader = ({
   activeTab,
-  setActiveTab,
+  handleTabChange, // 🟢 2. Changed from setActiveTab
   isCurrentUser,
   setShowEdit,
   resumeViewMode,
   setResumeViewMode
 }) => {
-  const navigate = useNavigate(); // 🟢 Use navigate for the Edit button inside dropdown
+  const navigate = useNavigate(); 
 
   const navItems = [
     { name: "Post", icon: Star, tab: "posts" },
@@ -247,12 +246,11 @@ const DesktopProfileHeader = ({
         <div className="flex space-x-1">
           {navItems.map((item) => {
             
-            // 🟢 IF IT IS THE RESUME TAB, RENDER THE HOVER DROPDOWN!
             if (item.tab === "resume") {
               return (
                 <div key={item.name} className="relative group">
                   <button
-                    onClick={() => setActiveTab(item.tab)}
+                    onClick={() => handleTabChange(item.tab)} // 🟢 Use new handler
                     className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
                   >
                     <item.icon className="w-4 h-4" /> {item.name}
@@ -263,14 +261,14 @@ const DesktopProfileHeader = ({
                     <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden flex flex-col py-1">
                       
                       <button 
-                        onClick={() => { setActiveTab("resume"); setResumeViewMode("web"); }}
+                        onClick={() => { handleTabChange("resume"); setResumeViewMode("web"); }} // 🟢 Use new handler
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "web" && activeTab === "resume" ? "text-purple-700 bg-purple-50" : "text-gray-700 hover:bg-gray-50"}`}
                       >
                         <Monitor className="w-4 h-4" /> Web View
                       </button>
                       
                       <button 
-                        onClick={() => { setActiveTab("resume"); setResumeViewMode("a4"); }}
+                        onClick={() => { handleTabChange("resume"); setResumeViewMode("a4"); }} // 🟢 Use new handler
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "a4" && activeTab === "resume" ? "text-teal-700 bg-teal-50" : "text-gray-700 hover:bg-gray-50"}`}
                       >
                         <Printer className="w-4 h-4" /> A4 Document
@@ -297,7 +295,7 @@ const DesktopProfileHeader = ({
             return (
               <button
                 key={item.name}
-                onClick={() => setActiveTab(item.tab)}
+                onClick={() => handleTabChange(item.tab)} // 🟢 Use new handler
                 className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
               >
                 <item.icon className="w-4 h-4" /> {item.name}
@@ -329,7 +327,7 @@ const DesktopProfileSidebar = ({
     msOverflowStyle: "none",
     scrollbarWidth: "none",
   };
-  const InfoRow = ({ Icon, text, link, linkText }) => {
+  const InfoRow = ({ text, link, linkText }) => {
     if (!text || text.includes("undefined")) return null;
     return (
       <div className="flex items-center text-sm text-gray-700">
@@ -368,7 +366,7 @@ const DesktopProfileSidebar = ({
       </div>
       <div className="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-16 z-10 bg-white">
         <img
-          src={getAvatar(user)} // 🟢 UPDATED: Using the smart avatar helper!
+          src={getAvatar(user)}
           alt={`Profile`}
           className="w-full h-full object-cover"
         />
@@ -439,7 +437,7 @@ const DesktopProfileSidebar = ({
 // ==========================================
 const MobileTabBar = ({
   activeTab,
-  setActiveTab,
+  handleTabChange, // 🟢 3. Changed from setActiveTab
   isCurrentUser,
   setShowEdit,
 }) => {
@@ -456,7 +454,7 @@ const MobileTabBar = ({
           {navItems.map((item) => (
             <button
               key={item.name}
-              onClick={() => setActiveTab(item.tab)}
+              onClick={() => handleTabChange(item.tab)} // 🟢 Use new handler
               className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
                 activeTab === item.tab
                   ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-md transform scale-110"
@@ -493,7 +491,7 @@ const MobileProfileSidebar = ({
   friendshipStatus,
   onFriendAction,
 }) => {
-  const InfoRow = ({ Icon, text, link, linkText }) => {
+  const InfoRow = ({text, link, linkText }) => {
     if (!text || text.includes("undefined")) return null;
     return (
       <div className="flex items-center text-sm text-gray-700">
@@ -622,6 +620,10 @@ const Profile = ({posts: allPosts }) => {
   const { authData, instituteData } = useAuth(); 
   const isCurrentUser = !ProfileId || ProfileId === authData?._id;
 
+  // 🟢 4. Setup useSearchParams
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'posts';
+
   const {
     friends,
     requests,
@@ -635,14 +637,16 @@ const Profile = ({posts: allPosts }) => {
   const [user, setUser] = useState(null);
   const [posts, setPosts] = useState([]);
   const [showEdit, setShowEdit] = useState(false);
-  const [activeTab, setActiveTab] = useState("posts");
   const [friendshipStatus, setFriendshipStatus] = useState("not_friends");
   const [friendList, setFriendList] = useState([]);
 
-  // 🟢 Added state for the resume view mode
   const [resumeViewMode, setResumeViewMode] = useState("web");
-
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
+
+  // 🟢 5. Create the handleTabChange function
+  const handleTabChange = (tabId) => {
+    setSearchParams({ tab: tabId }, { replace: true });
+  };
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -689,8 +693,11 @@ const Profile = ({posts: allPosts }) => {
     }
     if (isCurrentUser) setFriendList(friends);
     else setFriendList([]);
-    setActiveTab("posts");
+    
+    // We remove the setActiveTab("posts") from here so it doesn't force a reset 
+    // to 'posts' if someone visits a direct URL like /profile?tab=resume
   }, [ProfileId, friends, requests, suggestions, isCurrentUser, authData]);
+  
   if (!user) return <Loading />;
 
   // 📱 MOBILE RENDER
@@ -723,7 +730,7 @@ const Profile = ({posts: allPosts }) => {
 
         <MobileTabBar
           activeTab={activeTab}
-          setActiveTab={setActiveTab}
+          handleTabChange={handleTabChange} // 🟢 Pass handler
           isCurrentUser={isCurrentUser}
           setShowEdit={setShowEdit}
         />
@@ -762,7 +769,7 @@ const Profile = ({posts: allPosts }) => {
         <div className="flex-1 min-w-[400px] flex flex-col h-full">
           <DesktopProfileHeader
             activeTab={activeTab}
-            setActiveTab={setActiveTab}
+            handleTabChange={handleTabChange} // 🟢 Pass handler
             isCurrentUser={isCurrentUser}
             setShowEdit={setShowEdit}
             resumeViewMode={resumeViewMode} 

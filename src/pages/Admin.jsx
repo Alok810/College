@@ -1,5 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
+// 🟢 1. Imported useSearchParams
+import { useSearchParams } from 'react-router-dom'; 
 import { getAdminStats, getAdminUsers, getPendingInstituteUsers, verifyInstituteUser, fetchCampusClubs, deleteClub } from '../api'; 
 import { 
   ShieldAlert, ShieldCheck, Users, BarChart3, GraduationCap, Building2, 
@@ -11,6 +13,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import CampusManagement from '../components/CampusManagement';
 import DepartmentManagement from '../components/DepartmentManagement';
 
+// eslint-disable-next-line no-unused-vars
 const StatCard = memo(({ title, count, icon: Icon, colorClass }) => (
   <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-indigo-300 transition-colors">
     <div className={`w-12 h-12 rounded-[0.8rem] flex items-center justify-center flex-shrink-0 ${colorClass}`}>
@@ -46,7 +49,10 @@ const Admin = () => {
   const { authData, loading } = useAuth();
   const isInstituteAdmin = authData?.userType === 'Institute' || authData?.role === 'admin';
 
-  const [activeTab, setActiveTab] = useState('overview');
+  // 🟢 2. Replaced useState with useSearchParams
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeTab = searchParams.get('tab') || 'overview';
+
   const [stats, setStats] = useState(null);
   const [chartData, setChartData] = useState({ sgpaByBranch: [], passFailRate: [] });
   const [users, setUsers] = useState([]);
@@ -91,7 +97,7 @@ const Admin = () => {
     try {
       await verifyInstituteUser(userId, action);
       fetchAdminData();
-    } catch (error) {
+    } catch {
       alert("Failed to process request.");
     }
   };
@@ -110,6 +116,12 @@ const Admin = () => {
       } else if (confirmText !== null) {
           alert("Club name did not match. Deletion cancelled.");
       }
+  };
+
+  // 🟢 3. Helper function to handle tab changes using replace: true
+  const handleTabChange = (tabId) => {
+    setSearchParams({ tab: tabId }, { replace: true });
+    setSearchTerm(''); // Keep your original logic to clear searches on tab switch
   };
 
   if (loading) return null; 
@@ -139,7 +151,8 @@ const Admin = () => {
             {tabs.map((tab, index) => (
               <button 
                 key={tab.id}
-                onClick={() => { setActiveTab(tab.id); setSearchTerm(''); }} 
+                // 🟢 4. Updated onClick to use handleTabChange
+                onClick={() => handleTabChange(tab.id)} 
                 className={`relative px-3 sm:px-5 py-2.5 rounded-lg font-bold text-xs sm:text-sm transition-all whitespace-nowrap flex items-center gap-1.5
                   ${activeTab === tab.id ? 'bg-[#4F46E5] text-white shadow-sm' : 'text-slate-600 hover:bg-slate-100'}`}
               >
@@ -177,7 +190,6 @@ const Admin = () => {
                         <h3 className="text-lg font-black text-slate-800 mb-1">Academic Performance</h3><p className="text-xs font-bold text-slate-500 mb-6">Average SGPA across all branches</p>
                         <div className="h-[250px] w-full">
                             {chartData.sgpaByBranch?.length > 0 ? (
-                                // 🟢 THE FIX: Hardcoded height={250} silences the warning
                                 <ResponsiveContainer width="100%" height={250}>
                                     <BarChart data={chartData.sgpaByBranch} margin={{ top: 10, right: 10, left: -25, bottom: 0 }}>
                                         <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E2E8F0" />
@@ -194,7 +206,6 @@ const Admin = () => {
                         <h3 className="text-lg font-black text-slate-800 mb-1">Result Outcomes</h3><p className="text-xs font-bold text-slate-500 mb-6">Overall Pass vs Promoted/Fail</p>
                         <div className="h-[250px] w-full flex items-center justify-center">
                             {chartData.passFailRate?.length > 0 ? (
-                                // 🟢 THE FIX: Hardcoded height={250} silences the warning
                                 <ResponsiveContainer width="100%" height={250}>
                                     <PieChart>
                                         <Pie data={chartData.passFailRate} cx="50%" cy="45%" innerRadius={60} outerRadius={80} paddingAngle={5} dataKey="value" stroke="none">
@@ -211,7 +222,6 @@ const Admin = () => {
               </div>
             )}
 
-            {/* 🟢 PREMIUM VERIFICATION DESK */}
             {activeTab === 'verification' && (
               <div className="flex flex-col h-full w-full">
                 <p className="text-sm text-slate-500 font-medium mb-6">Review and verify students before granting them network access to your institute.</p>
@@ -264,7 +274,6 @@ const Admin = () => {
               </div>
             )}
 
-            {/* 🟢 PREMIUM USER DIRECTORY */}
             {activeTab === 'users' && (
               <div className="flex flex-col h-full w-full" onClick={() => setOpenMenuId(null)}>
                 <div className="flex items-center justify-between mb-6">
@@ -313,7 +322,8 @@ const Admin = () => {
                               <button onClick={(e) => { e.stopPropagation(); setOpenMenuId(openMenuId === user._id ? null : user._id); }} className="p-2 hover:bg-slate-100 rounded-full text-slate-400 hover:text-slate-800 transition-colors"><MoreVertical size={20} /></button>
                               {openMenuId === user._id && (
                                   <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-slate-200 rounded-xl shadow-xl py-1.5 z-10 animate-in fade-in zoom-in-95 duration-100">
-                                      <button className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={(e) => { e.stopPropagation(); setActiveTab('management'); setOpenMenuId(null); }}><Briefcase size={16} /> Manage Roles</button>
+                                      {/* 🟢 5. Updated this inner button to use handleTabChange instead of setActiveTab */}
+                                      <button className="w-full flex items-center gap-2 text-left px-4 py-2.5 text-sm font-bold text-indigo-600 hover:bg-indigo-50 transition-colors" onClick={(e) => { e.stopPropagation(); handleTabChange('management'); setOpenMenuId(null); }}><Briefcase size={16} /> Manage Roles</button>
                                       <div className="h-px bg-slate-100 my-1"></div>
                                       <button className="w-full text-left px-4 py-2.5 text-sm font-bold text-rose-600 hover:bg-rose-50 transition-colors" onClick={(e) => { e.stopPropagation(); alert(`Suspend account - Coming soon`); setOpenMenuId(null); }}>Suspend Account</button>
                                   </div>
@@ -327,7 +337,6 @@ const Admin = () => {
               </div>
             )}
 
-            {/* 🟢 NEW DEPARTMENT MANAGEMENT TAB */}
             {activeTab === 'departments' && (
                 <DepartmentManagement users={users} />
             )}
@@ -340,7 +349,6 @@ const Admin = () => {
                 />
             )}
 
-            {/* 🟢 NEW SETTINGS VIEW (Active Club Management) */}
             {activeTab === 'settings' && (
                 <div className="flex flex-col h-full w-full animate-in fade-in duration-300">
                    
@@ -365,7 +373,7 @@ const Admin = () => {
                    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden flex-1 flex flex-col">
                       
                       {/* Header Row */}
-                      <div className="grid grid-cols-12 gap-4 p-4 border-b border-slate-100 bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:grid">
+                      <div className="grid-cols-12 gap-4 p-4 border-b border-slate-100 bg-slate-50 text-[10px] font-black text-slate-400 uppercase tracking-widest hidden md:grid">
                           <div className="col-span-5 pl-2">Organization</div>
                           <div className="col-span-3 text-center">Category / Type</div>
                           <div className="col-span-2 text-center">Members</div>

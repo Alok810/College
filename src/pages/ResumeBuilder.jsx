@@ -118,6 +118,7 @@ const WordEditor = ({ value, onChange, minHeight = "45px", placeholder }) => {
   );
 };
 
+// eslint-disable-next-line no-unused-vars
 const EditorSection = ({ title, icon: Icon, children, defaultOpen = false }) => {
   const [isOpen, setIsOpen] = useState(defaultOpen);
   return (
@@ -242,7 +243,7 @@ const handleSave = async () => {
           setIsEditing(true);
           alert("Resume data successfully imported!");
         } else { alert("Invalid resume backup file. Missing layout parameters."); }
-      } catch (error) { alert("Error parsing the JSON file."); }
+      } catch { alert("Error parsing the JSON file."); }
     };
     reader.readAsText(file);
     event.target.value = null;
@@ -927,7 +928,8 @@ const handleSave = async () => {
                         <div key={sectionKey} className={`flex items-center justify-between p-3 bg-gray-50 border border-gray-200 rounded-md hover:bg-gray-100 transition-colors ${resumeData.hiddenSections?.includes(sectionKey) ? 'opacity-50 grayscale' : ''}`}>
                           
                           <span className="text-[13px] font-bold text-gray-700 uppercase tracking-wide">
-                            {getSectionLabel(sectionKey)} {resumeData.hiddenSections?.includes(sectionKey) && <span className="text-red-500 lowercase normal-case italic ml-1 font-normal">(Hidden)</span>}
+                            {getSectionLabel(sectionKey)} {resumeData.hiddenSections?.includes(sectionKey) && <span className="text-red-500 normal-case italic ml-1 font-normal">(Hidden)</span>}
+                            
                           </span>
                           
                           <div className="flex items-center gap-2">

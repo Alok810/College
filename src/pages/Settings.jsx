@@ -15,7 +15,7 @@ const ToggleSwitch = ({ checked, onChange }) => (
 );
 
 export default function Settings() {
-  const { authData, logout } = useAuth(); // Grabs the logged-in user!
+  const { authData } = useAuth(); // Grabs the logged-in user!
   const [message, setMessage] = useState("");
   
   const [settings, setSettings] = useState({
@@ -55,7 +55,7 @@ export default function Settings() {
       try {
         await updateUserSettings({ publicResults: newValue });
         showMessage("Privacy settings successfully updated!");
-      } catch (error) {
+      } catch  {
         // If the API fails, revert the toggle back to its previous state
         setSettings(prev => ({ ...prev, [key]: !newValue }));
         showMessage("Error: Failed to save setting.");

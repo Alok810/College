@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Shield, Award, Briefcase, Mail, Phone, BookOpen, Loader2, LayoutDashboard, CheckCircle, XCircle, Clock } from 'lucide-react';
 import { updateDepartment, getCourseBlueprint, saveCourseBlueprint, updateUserDesignation, getDepartmentTeachers } from '../api';
 
 const batches = ['2021-2025', '2022-2026', '2023-2027', '2024-2028', '2025-2029', '2026-2030'];
 const semesters = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
 
-// 🟢 EXACT Day Labels from your screenshot
 const DAYS_OF_WEEK = [
     { id: 'Mon', label: 'M' },
     { id: 'Tue', label: 'T' },
@@ -34,7 +34,14 @@ const getInitials = (name) => {
 };
 
 export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
-  const [activeAdminTab, setActiveAdminTab] = useState('approvals');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeAdminTab = searchParams.get('adminTab') || 'approvals';
+
+  const handleTabChange = (tabId) => {
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('adminTab', tabId);
+      setSearchParams(newParams, { replace: true });
+  };
 
   const [pendingFaculty, setPendingFaculty] = useState([]);
   const [isFetchingPending, setIsFetchingPending] = useState(false);
@@ -62,7 +69,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
       setPendingFaculty(pending);
       
       if (pending.length === 0 && activeAdminTab === 'approvals') {
-          setActiveAdminTab('subjects');
+          handleTabChange('subjects');
       }
     } catch (error) {
       console.error("Failed to fetch pending faculty:", error);
@@ -73,6 +80,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
 
   useEffect(() => {
     fetchPendingFaculty();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeDept]);
 
   useEffect(() => {
@@ -103,7 +111,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
           });
 
           setAllocationBlueprint(subjectsWithParsedTimings);
-        } catch (e) {
+        } catch {
           setAllocationBlueprint([]);
         } finally {
           setAllocationLoading(false);
@@ -127,7 +135,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
           setNewDesignation("");
           fetchPendingFaculty();
           onRefresh();
-      } catch (error) {
+      } catch {
           alert("Failed to approve and assign faculty.");
       } finally {
           setIsSubmittingAssign(false);
@@ -139,6 +147,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
       setPendingFaculty(prev => prev.filter(f => f._id !== teacher._id));
   };
 
+  // ✨ 🟢 THE FIX IS HERE: We strip objects and arrays before sending to Mongoose!
   const saveBlueprintToDB = async (updatedSubjects) => {
       setIsSubmittingAllocation(true);
       try {
@@ -153,7 +162,17 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
               else if (daysStr) formattedTiming = daysStr;
               else if (timeStr) formattedTiming = timeStr;
 
-              return { ...sub, timing: formattedTiming };
+              // Extract safe ID so MongoDB doesn't throw CastError
+              const safeAssignedTo = sub.assignedTo?._id || sub.assignedTo || null;
+
+              // Remove temporary arrays so Mongoose doesn't drop them
+              const { scheduleDays, scheduleTime, ...cleanSubject } = sub;
+
+              return { 
+                  ...cleanSubject, 
+                  timing: formattedTiming,
+                  assignedTo: safeAssignedTo 
+              };
           });
 
           await saveCourseBlueprint({
@@ -163,7 +182,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
               subjects: subjectsToSave
           });
       } catch (error) {
-          alert("Failed to save changes.");
+          console.error("Save error:", error);
       } finally {
           setIsSubmittingAllocation(false);
       }
@@ -212,54 +231,58 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
 
   return (
     <div className="w-full flex flex-col gap-6 animate-in fade-in duration-300">
-      
-      <div className="flex items-center justify-between border-b border-slate-100 pb-3 mb-2">
-        <h3 className="text-xs font-black text-slate-400 uppercase tracking-widest">Department Leadership</h3>
-      </div>
 
       {activeDept.hod ? (
-        <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-sm border border-slate-200 flex flex-col md:flex-row items-center md:items-start gap-6 relative overflow-hidden flex-shrink-0">
-            <Shield className="absolute -right-10 -bottom-10 w-48 h-48 text-indigo-50 opacity-30 pointer-events-none" />
+        /* HOD PROFILE INFO CARD */
+        <div className="bg-white rounded-[2rem] px-6 py-5 sm:px-8 sm:py-6 shadow-sm border border-slate-200 mb-2 flex flex-col lg:flex-row items-center justify-between gap-5 flex-shrink-0 mt-2">
             
-            <div className="w-24 h-24 sm:w-32 sm:h-32 rounded-full bg-slate-100 flex items-center justify-center border-4 border-indigo-50 shadow-md flex-shrink-0 z-10 overflow-hidden">
-                {activeDept.hod.profilePicture ? (
-                    <img src={activeDept.hod.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
-                ) : (
-                    <span className="text-slate-400 font-black text-5xl">{activeDept.hod.name?.charAt(0)}</span>
-                )}
-            </div>
-
-            <div className="flex-1 flex flex-col items-center md:items-start text-center md:text-left z-10 w-full">
-                <h2 className="text-2xl sm:text-3xl font-black text-slate-900 leading-tight uppercase tracking-wide">{activeDept.hod.name}</h2>
-                <div className="flex flex-wrap gap-2 mt-2 mb-5">
-                    <span className="bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5">
-                       <Award size={12}/> Head of Department
-                    </span>
-                    <span className="bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest flex items-center gap-1.5">
-                       <Briefcase size={12}/> {activeDept.hod.designation || 'Faculty Member'}
-                    </span>
+            <div className="flex flex-col sm:flex-row items-center gap-5 w-full lg:w-auto flex-1 min-w-0">
+                <div className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-indigo-50 flex items-center justify-center border-4 border-indigo-100 shadow-sm flex-shrink-0 overflow-hidden">
+                    {activeDept.hod.profilePicture ? (
+                        <img src={activeDept.hod.profilePicture} alt="Avatar" className="w-full h-full object-cover" />
+                    ) : (
+                        <span className="text-indigo-400 font-black text-4xl">{activeDept.hod.name?.charAt(0) || 'H'}</span>
+                    )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 w-full max-w-2xl">
-                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 p-3 rounded-xl flex-1">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center flex-shrink-0"><Mail size={14}/></div>
-                        <div className="min-w-0">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Email Address</p>
-                            <a href={`mailto:${activeDept.hod.email}`} className="text-sm font-bold text-slate-700 hover:text-indigo-600 truncate block">{activeDept.hod.email}</a>
-                        </div>
+                <div className="flex flex-col items-center sm:items-start text-center sm:text-left min-w-0 flex-1">
+                    <h2 className="text-2xl sm:text-[28px] font-black text-slate-900 leading-tight tracking-wide truncate w-full">
+                        {activeDept.hod.name}
+                    </h2>
+                    
+                    <div className="flex flex-wrap justify-center sm:justify-start gap-2 mt-2">
+                        <span className="bg-indigo-50 text-indigo-700 border border-indigo-100 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest flex items-center gap-1.5">
+                            <Award size={12}/> Head of Department
+                        </span>
+                        <span className="bg-slate-50 text-slate-600 border border-slate-200 text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-widest flex items-center gap-1.5">
+                            <Briefcase size={12}/> {activeDept.hod.designation || 'Faculty Member'}
+                        </span>
                     </div>
-                    <div className="flex items-center gap-3 bg-slate-50 border border-slate-100 p-3 rounded-xl flex-1">
-                        <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center flex-shrink-0"><Phone size={14}/></div>
-                        <div className="min-w-0 w-full">
-                            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest">Phone Number</p>
-                            <p className="text-sm font-bold text-slate-700 block truncate mt-0.5">{activeDept.hod.phoneNumber || 'Not provided'}</p>
-                        </div>
+                </div>
+            </div>
+
+            <div className="flex flex-col items-center md:items-end gap-2 w-full lg:w-[280px] flex-shrink-0 mt-3 lg:mt-0">
+                <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3 w-full border border-slate-100">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center flex-shrink-0"><Mail size={14}/></div>
+                    <div className="min-w-0">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Email Address</p>
+                        <a href={`mailto:${activeDept.hod.email}`} className="text-xs font-bold text-slate-800 hover:text-indigo-600 truncate block">
+                            {activeDept.hod.email}
+                        </a>
+                    </div>
+                </div>
+                
+                <div className="bg-slate-50 rounded-xl p-3 flex items-center gap-3 w-full border border-slate-100">
+                    <div className="w-8 h-8 rounded-lg bg-indigo-100 text-indigo-500 flex items-center justify-center flex-shrink-0"><Phone size={14}/></div>
+                    <div className="min-w-0 w-full">
+                        <p className="text-[9px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">Phone Number</p>
+                        <span className="text-xs font-bold text-slate-800 block truncate">{activeDept.hod.phoneNumber || 'Not provided'}</span>
                     </div>
                 </div>
             </div>
         </div>
       ) : (
-        <div className="text-center py-16 border border-dashed border-slate-200 rounded-[2rem] bg-slate-50 flex-shrink-0">
+        <div className="text-center py-16 border border-dashed border-slate-200 rounded-[2rem] bg-slate-50 flex-shrink-0 mt-2">
           <Shield size={48} className="mx-auto text-slate-300 mb-4" />
           <h3 className="text-lg font-black text-slate-800 mb-1">No HOD Assigned</h3>
           <p className="text-sm text-slate-500 font-medium mb-4">The Institute Admin needs to appoint an HOD for this department via the Admin Management Tab.</p>
@@ -269,62 +292,74 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
       {canEdit && (
           <div className="flex flex-col flex-1 animate-in fade-in duration-500 mt-2">
               
-              <div className="flex gap-3 overflow-x-auto custom-scrollbar border-b border-slate-100 pb-4 mb-4 flex-shrink-0">
-                  <button 
-                      onClick={() => setActiveAdminTab('approvals')} 
-                      className={`px-4 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 shadow-sm border ${activeAdminTab === 'approvals' ? 'bg-amber-500 text-white border-amber-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                  >
-                      <Shield size={14}/> Approvals 
-                      {pendingFaculty.length > 0 && (
-                          <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black ${activeAdminTab === 'approvals' ? 'bg-white text-amber-600' : 'bg-amber-100 text-amber-700'}`}>{pendingFaculty.length}</span>
-                      )}
-                  </button>
-                  <button 
-                      onClick={() => setActiveAdminTab('subjects')} 
-                      className={`px-4 py-2 rounded-lg font-bold text-xs transition-all flex items-center gap-2 shadow-sm border ${activeAdminTab === 'subjects' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
-                  >
-                      <BookOpen size={14}/> Subject Allocation
-                  </button>
+              <div className="sticky top-0 z-30 flex flex-col xl:flex-row xl:items-center justify-between gap-4 py-3 bg-white/95 backdrop-blur-md transition-all duration-300 border-b border-slate-100 flex-shrink-0 mb-4">
+                  
+                  {/* Left Side: Tabs */}
+                  <div className="flex items-center gap-3 overflow-x-auto custom-scrollbar flex-1 pb-1 xl:pb-0">
+                      <button 
+                          onClick={() => handleTabChange('approvals')} 
+                          className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all flex items-center gap-2 shadow-sm border whitespace-nowrap ${activeAdminTab === 'approvals' ? 'bg-amber-500 text-white border-amber-500' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                      >
+                          <Shield size={16}/> Approvals 
+                          {pendingFaculty.length > 0 && (
+                              <span className={`px-2 py-0.5 rounded-full text-[10px] font-black ${activeAdminTab === 'approvals' ? 'bg-white text-amber-600' : 'bg-amber-100 text-amber-700'}`}>{pendingFaculty.length}</span>
+                          )}
+                      </button>
+                      <button 
+                          onClick={() => handleTabChange('subjects')} 
+                          className={`px-5 py-2.5 rounded-full font-bold text-sm transition-all flex items-center gap-2 shadow-sm border whitespace-nowrap ${activeAdminTab === 'subjects' ? 'bg-emerald-600 text-white border-emerald-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50'}`}
+                      >
+                          <BookOpen size={16}/> Subject Allocation
+                      </button>
+                  </div>
+
+                  {/* Right Side: Selectors (Only visible on Subjects Tab) */}
+                  {activeAdminTab === 'subjects' && (
+                      <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-inner w-full xl:w-auto flex-shrink-0">
+                          <select className="flex-1 xl:flex-none px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none shadow-sm cursor-pointer hover:text-emerald-700 transition-colors" value={allocationBatch} onChange={e => setAllocationBatch(e.target.value)}>
+                              <option value="">Select Batch</option>{batches.map(b => <option key={b}>{b}</option>)}
+                          </select>
+                          <select className="flex-1 xl:flex-none px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none shadow-sm cursor-pointer hover:text-emerald-700 transition-colors" value={allocationSemester} onChange={e => setAllocationSemester(e.target.value)}>
+                              <option value="">Select Sem</option>{semesters.map(s => <option key={s}>{s}</option>)}
+                          </select>
+                      </div>
+                  )}
               </div>
 
+              {/* TABS CONTENT */}
               <div className="bg-white rounded-[2rem] p-6 sm:p-8 shadow-sm border border-slate-200 mb-6 flex-1 min-h-[400px] flex flex-col overflow-hidden">
                   
                   {activeAdminTab === 'approvals' && (
                       <div className="w-full animate-in fade-in duration-300 flex flex-col h-full">
-                          <div className="mb-6 flex-shrink-0">
-                              <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><Shield className="text-amber-500 w-5 h-5"/> Pending Verifications</h3>
-                              <p className="text-xs font-medium text-slate-500 mt-1">Review and approve teachers requesting to join the {activeDept.abbreviation} department.</p>
-                          </div>
-
                           <div className="flex-1 overflow-y-auto custom-scrollbar -mr-6 sm:-mr-8 pr-6 sm:pr-8 pb-4 space-y-3">
                               {isFetchingPending ? (
                                   <div className="text-center py-12 text-amber-500"><Loader2 className="w-8 h-8 animate-spin mx-auto"/></div>
                               ) : pendingFaculty.length > 0 ? (
-                                  <div className="flex flex-col border-t border-slate-100">
+                                  <div className="flex flex-col">
                                       {pendingFaculty.map(user => (
-                                          <div key={user._id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-6 sm:px-8 border-b border-slate-100 hover:bg-slate-50 transition-all group">
+                                          <div key={user._id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-6 sm:px-8 border-b border-slate-100 hover:bg-slate-50 transition-all group last:border-b-0">
                                               <div className="flex items-center gap-4 w-full md:w-1/3">
-                                                <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-lg flex-shrink-0 border border-indigo-100 overflow-hidden">
-                                                  {user.profilePicture ? <img src={user.profilePicture} className="w-full h-full object-cover"/> : getInitials(user.name)}
-                                                </div>
-                                                <div className="flex flex-col justify-center min-w-0">
-                                                  <h3 className="text-[15px] font-black text-slate-900 uppercase tracking-wide truncate">{user.name}</h3>
-                                                  <p className="text-[11px] text-slate-500 font-medium truncate">{user.email}</p>
-                                                </div>
+                                                  <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-lg flex-shrink-0 border border-indigo-100 overflow-hidden">
+                                                    {user.profilePicture ? <img src={user.profilePicture} className="w-full h-full object-cover"/> : getInitials(user.name)}
+                                                  </div>
+                                                  <div className="flex flex-col justify-center min-w-0">
+                                                    <h3 className="text-[15px] font-black text-slate-900 uppercase tracking-wide truncate">{user.name}</h3>
+                                                    <p className="text-[11px] text-slate-500 font-medium truncate">{user.email}</p>
+                                                  </div>
                                               </div>
                                               <div className="flex flex-col md:items-center justify-center w-full md:w-1/4 mt-2 md:mt-0 border-t md:border-t-0 border-slate-100 pt-3 md:pt-0">
-                                                <span className="px-3 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border w-max mb-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm">TEACHER</span>
-                                                <p className="text-[10px] font-bold text-slate-500">Reg No: <span className="text-slate-900">{user.registrationNo || 'N/A'}</span></p>
+                                                  <span className="px-3 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border w-max mb-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm">TEACHER</span>
+                                                  <p className="text-[10px] font-bold text-slate-500">Reg No: <span className="text-slate-900">{user.registrationNo || 'N/A'}</span></p>
                                               </div>
                                               <div className="flex items-center gap-3 w-full md:w-auto md:justify-end flex-shrink-0 mt-3 md:mt-0">
-                                                <button onClick={() => handleRejectTeacher(user)} className="flex-1 md:flex-none px-4 py-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"><XCircle size={16} /> Reject</button>
-                                                <button onClick={() => setSelectedTeacherForApproval(user)} className="flex-1 md:flex-none px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"><CheckCircle size={16} /> Approve</button>
+                                                  <button onClick={() => handleRejectTeacher(user)} className="flex-1 md:flex-none px-4 py-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"><XCircle size={16} /> Reject</button>
+                                                  <button onClick={() => setSelectedTeacherForApproval(user)} className="flex-1 md:flex-none px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"><CheckCircle size={16} /> Approve</button>
                                               </div>
                                           </div>
                                       ))}
                                   </div>
                               ) : (
-                                  <div className="text-center py-16 text-slate-400 font-medium bg-slate-50 border-y border-dashed border-slate-200">
+                                  <div className="text-center py-16 text-slate-400 font-medium bg-slate-50 border border-dashed border-slate-200 rounded-2xl">
                                       <Shield className="w-10 h-10 mx-auto text-emerald-400 mb-3 opacity-50" />
                                       <p className="text-slate-600 font-bold mb-1">All Caught Up!</p>
                                       <p className="text-xs">No pending teachers require verification.</p>
@@ -337,22 +372,6 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
                   {activeAdminTab === 'subjects' && (
                       <div className="w-full animate-in fade-in duration-300 flex flex-col h-full">
                           
-                          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-6 gap-4 flex-shrink-0">
-                              <div>
-                                  <h3 className="text-lg font-black text-slate-900 flex items-center gap-2"><BookOpen className="text-emerald-600 w-5 h-5"/> Subject Allocation & Scheduling</h3>
-                                  <p className="text-xs font-medium text-slate-500 mt-1">Assign faculty and select teaching days & times.</p>
-                              </div>
-                              
-                              <div className="flex items-center gap-3 bg-slate-50 p-1.5 rounded-xl border border-slate-200 shadow-inner w-full sm:w-auto">
-                                  <select className="flex-1 sm:flex-none px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none shadow-sm cursor-pointer hover:text-emerald-700 transition-colors" value={allocationBatch} onChange={e => setAllocationBatch(e.target.value)}>
-                                      <option value="">Select Batch</option>{batches.map(b => <option key={b}>{b}</option>)}
-                                  </select>
-                                  <select className="flex-1 sm:flex-none px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-bold text-slate-700 outline-none shadow-sm cursor-pointer hover:text-emerald-700 transition-colors" value={allocationSemester} onChange={e => setAllocationSemester(e.target.value)}>
-                                      <option value="">Select Sem</option>{semesters.map(s => <option key={s}>{s}</option>)}
-                                  </select>
-                              </div>
-                          </div>
-
                           <div className="flex-1 overflow-y-auto custom-scrollbar -mr-6 sm:-mr-8 pr-6 sm:pr-8 pb-4">
                               {(!allocationBatch || !allocationSemester) ? (
                                   <div className="text-center py-16 text-slate-400 border border-dashed border-slate-200 rounded-2xl bg-slate-50">
@@ -369,7 +388,6 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
                                           return (
                                           <div key={subject.subjectCode} className={`flex flex-col xl:flex-row xl:items-center justify-between gap-5 p-5 bg-white rounded-2xl shadow-sm transition-all group border ${isAssigned ? 'border-emerald-400' : 'border-slate-200'}`}>
                                               
-                                              {/* ✨ EXACT SCREENSHOT MATCH: LEFT SIDE */}
                                               <div className="flex flex-col min-w-0 flex-1 gap-2">
                                                   <div className="flex items-center gap-2">
                                                       <span className="font-black text-slate-900 text-lg whitespace-nowrap">{subject.subjectCode}</span>
@@ -377,7 +395,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
                                                       <span className="font-bold text-slate-700 text-[15px] leading-snug truncate">{subject.subjectName}</span>
                                                   </div>
                                                   <div className="flex items-center gap-3 mt-0.5">
-                                                      <span className={`px-2.5 py-1 rounded-md text-[9px] font-black uppercase tracking-widest flex-shrink-0 border ${subject.type === 'Theory' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
+                                                      <span className={`px-2.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-widest flex-shrink-0 border ${subject.type === 'Theory' ? 'bg-blue-50 text-blue-600 border-blue-100' : 'bg-amber-50 text-amber-600 border-amber-100'}`}>
                                                           {subject.type || 'THEORY'}
                                                       </span>
                                                       <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest">
@@ -386,7 +404,6 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
                                                   </div>
                                               </div>
 
-                                              {/* ✨ EXACT SCREENSHOT MATCH: MIDDLE & RIGHT SIDE */}
                                               <div className="flex flex-col md:flex-row items-start md:items-center gap-6 w-full xl:w-auto flex-shrink-0 border-t xl:border-t-0 border-slate-100 pt-4 xl:pt-0 mt-1 xl:mt-0">
                                                   
                                                   <div className="w-full md:w-56 flex-shrink-0">
@@ -467,6 +484,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
           </div>
       )}
 
+      {/* Designation Modal */}
       {selectedTeacherForApproval && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 animate-in fade-in duration-200">
           <div className="bg-white rounded-3xl w-full max-w-md p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200">

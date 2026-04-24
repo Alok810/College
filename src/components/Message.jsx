@@ -55,7 +55,7 @@ const MessageSidebar = ({ onClose }) => {
       setIsExpanded(true);
       navigate(location.pathname, { replace: true });
     }
-  }, [location.search, navigate, openChat]); 
+  }, [location.search, location.pathname, navigate, openChat]);
 
   const toggleSidebar = () => {
     if (activeChat) {

@@ -1,4 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+// 🟢 1. Imported useSearchParams
+import { useSearchParams } from 'react-router-dom';
 import { FileText, Loader2, Clock, Download, Lock, AlertTriangle } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { getMyResults, getUserResults, getUserById } from '../api';
@@ -215,7 +217,10 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
     const [fetchedTargetUser, setFetchedTargetUser] = useState(null); 
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(""); 
-    const [selectedSemester, setSelectedSemester] = useState('Semester 1');
+
+    // 🟢 2. Swapped useState for useSearchParams
+    const [searchParams, setSearchParams] = useSearchParams();
+    const selectedSemester = searchParams.get('semester') || 'Semester 1';
 
     const currentUserData = authData?.user || authData || {};
     const displayData = isCurrentUser ? currentUserData : (fetchedTargetUser || currentUserData);
@@ -223,6 +228,13 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
     // ✅ CHECK ROLES & VERIFICATION
     const isOfficial = authData?.userType === "Institute" || authData?.role === "admin" || authData?.role === "superadmin";
     const isVerified = authData?.isVerifiedByInstitute === true;
+
+// 🟢 3. Custom handler wrapped in useCallback
+    const handleSemesterChange = useCallback((sem) => {
+        const newParams = new URLSearchParams(searchParams);
+        newParams.set('semester', sem);
+        setSearchParams(newParams, { replace: true });
+    }, [searchParams, setSearchParams]);
 
     useEffect(() => {
         const fetchData = async () => {
@@ -256,9 +268,10 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
                     }
                 }
                 
-                if (actualResults.length > 0) {
+                // 🟢 4. Auto-select the latest semester ONLY if one isn't currently in the URL
+                if (actualResults.length > 0 && !searchParams.get('semester')) {
                     const sortedResults = [...actualResults].sort((a, b) => a.semester.localeCompare(b.semester));
-                    setSelectedSemester(sortedResults[sortedResults.length - 1].semester);
+                    handleSemesterChange(sortedResults[sortedResults.length - 1].semester);
                 }
                 
             } catch (error) {
@@ -271,7 +284,7 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
         };
 
         if (userId) fetchData();
-    }, [userId, isCurrentUser, isResultsPublic, isOfficial, isVerified]);
+    }, [userId, isCurrentUser, isResultsPublic, isOfficial, isVerified, searchParams, handleSemesterChange]);
 
     if (loading) {
         return (
@@ -344,7 +357,8 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
                     return (
                         <button
                             key={sem}
-                            onClick={() => setSelectedSemester(sem)}
+                            // 🟢 5. Updated onClick to use handleSemesterChange
+                            onClick={() => handleSemesterChange(sem)}
                             className={`px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-extrabold rounded-xl whitespace-nowrap transition-all duration-200 flex-1 min-w-[70px] ${
                                 selectedSemester === sem
                                 ? 'bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-md transform scale-[1.02]'

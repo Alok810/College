@@ -70,6 +70,7 @@ const NotificationSidebar = ({ onClose }) => {
           <button onClick={async (e) => { 
             e.preventDefault(); e.stopPropagation(); 
             setDeletedIds([...deletedIds, n._id]); 
+            // eslint-disable-next-line no-unused-vars
             try { await deleteNotification(n._id); } catch(err) { setDeletedIds(deletedIds.filter(id => id !== n._id)); }
           }} className="text-gray-400 hover:text-red-500 opacity-0 group-hover:opacity-100 p-1.5 rounded-full hover:bg-white/80"><X size={16} /></button>
         </div>

@@ -41,8 +41,10 @@ const AppContent = () => {
   const location = useLocation();
   const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password" || location.pathname === "/resume-builder";
   
-  // 🟢 1. Detect if we are currently on the Profile page
+  // 🟢 1. Detect if we are currently on a page that needs outer scroll locking
   const isProfilePage = location.pathname.startsWith("/profile");
+  const isClubPage = location.pathname.startsWith("/club");
+  const isDeptPage = location.pathname.startsWith("/department");
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -148,8 +150,8 @@ const AppContent = () => {
   const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
   const maskCutoffLine = hideSidebar ? "0px" : `calc(${contentPaddingTop} - 0.40rem)`; 
 
-  // 🟢 2. Intelligent Scroll Lock: Lock outer scroll ONLY on desktop profiles
-  const lockOuterScroll = isProfilePage && !isMobile;
+// 🟢 2. Intelligent Scroll Lock: Lock outer scroll ONLY on specific desktop pages
+  const lockOuterScroll = (isProfilePage || isClubPage || isDeptPage) && !isMobile;
 
   if (loading) {
     return (
