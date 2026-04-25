@@ -1,9 +1,14 @@
 import axios from "axios";
 
-// If in production, use the deployed backend URL. If local, use your PC's IP.
+// --- MAIN RIGYA BACKEND ---
 const BACKEND_URL = import.meta.env.MODE === "production" 
   ? "https://api.rigya.in" 
   : "http://localhost:4000";
+
+// 🟢 THE FIX: ADD THIS AISHE MICROSERVICE URL!
+export const AISHE_BACKEND_URL = import.meta.env.MODE === "production" 
+  ? "https://aishe-api.onrender.com" 
+  : "http://localhost:8000";
 
 export const api = axios.create({
   baseURL: `${BACKEND_URL}/api/v1`,
@@ -47,6 +52,16 @@ export const checkBackendConnection = async () => {
       success: false,
       message: "❌ Frontend failed to connect to the backend.",
     };
+  }
+};
+
+// Make sure "export" is right here at the start!
+export const searchAisheInstitutes = async (searchQuery) => {
+  try {
+    const response = await axios.get(`${AISHE_BACKEND_URL}/api/v1/institutes/search?q=${encodeURIComponent(searchQuery)}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to search directory.");
   }
 };
 

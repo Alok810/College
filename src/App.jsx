@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, Suspense } from "react";
 import { Routes, Route, useLocation } from "react-router-dom";
 
 import Sidebar from "./components/Sidebar";
@@ -37,9 +37,16 @@ import InstallPrompt from './components/InstallPrompt';
 import AnnouncementBanner from "./components/AnnouncementBanner";
 import ResumeBuilder from './pages/ResumeBuilder';
 
+// ✨ 1. We removed the standard import and replaced it with React.lazy!
+const HelpDesk = React.lazy(() => import('./pages/HelpDesk'));
+
 const AppContent = () => {
   const location = useLocation();
-  const hideSidebar = location.pathname === "/auth" || location.pathname === "/reset-password" || location.pathname === "/resume-builder";
+  const hideSidebar = 
+    location.pathname === "/auth" || 
+    location.pathname === "/reset-password" || 
+    location.pathname === "/resume-builder" || 
+    location.pathname === "/helpdesk"; // ✨ 2. Updated this to match the new URL!
   
   // 🟢 1. Detect if we are currently on a page that needs outer scroll locking
   const isProfilePage = location.pathname.startsWith("/profile");
@@ -114,11 +121,24 @@ const AppContent = () => {
   const headerOffset = isHomePage ? HEADER_SHIFT_LEFT : 0;
   const contentOffset = isHomePage ? CONTENT_SHIFT_RIGHT : 0;
 
-  useEffect(() => {
-    if (headerRef.current) {
-      setHeaderHeight(`${headerRef.current.offsetHeight}px`);
-    }
-  }, [isSidebarOpen, instituteData]);
+useEffect(() => {
+    const updateHeaderHeight = () => {
+      if (headerRef.current) {
+        setHeaderHeight(`${headerRef.current.offsetHeight}px`);
+      }
+    };
+
+    // 1. Measure immediately
+    updateHeaderHeight();
+
+    // 2. Measure again 150ms later to allow logos and fonts to finish painting on the screen
+    const timeoutId = setTimeout(updateHeaderHeight, 150);
+
+    // Cleanup the timer
+    return () => clearTimeout(timeoutId);
+    
+  // 🟢 THE FIX: Added location.pathname so it always recalculates when leaving the Auth page!
+  }, [isSidebarOpen, instituteData, location.pathname]);
 
   useEffect(() => {
     const testConnection = async () => {
@@ -200,8 +220,9 @@ const AppContent = () => {
           )}
 
           {/* 🟢 3. Apply the scroll lock dynamically to this container */}
+{/* 🟢 THE FIX: We grouped the padding classes into full strings so Tailwind doesn't delete them! */}
           <div
-            className={`px-0 ${hideSidebar ? "pb-0" : "pb-32"} md:px-6 md:${hideSidebar ? "pb-0" : "pb-6"} ${lockOuterScroll ? "overflow-hidden" : "overflow-y-auto"} overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+            className={`px-0 md:px-6 ${hideSidebar ? "pb-0 md:pb-0" : "pb-32 md:pb-4"} ${lockOuterScroll ? "overflow-hidden" : "overflow-y-auto"} overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
             onScroll={handleScroll}
             style={{
               paddingTop: contentPaddingTop,
@@ -257,6 +278,20 @@ const AppContent = () => {
               {/* Public Routes */}
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              
+              {/* ✨ 3. Wrapped the new route in Suspense so React knows what to show while it downloads the file */}
+              <Route 
+                path="/helpdesk" 
+                element={
+                  <Suspense fallback={
+                    <div className="flex h-screen items-center justify-center">
+                      <div className="w-10 h-10 border-4 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+                    </div>
+                  }>
+                    <HelpDesk />
+                  </Suspense>
+                } 
+              />
             </Routes>
           </div>
         </div>

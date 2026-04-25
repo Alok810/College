@@ -14,19 +14,17 @@ const Home = ({ posts, contentOffset = 0 }) => {
 
   return (
     <div
-      // ✅ BULLETPROOF MOBILE FIX: 'fixed inset-0' perfectly anchors the feed.
-      // It handles its own scrolling, will NEVER squeeze, and will NEVER cut off the edges!
       className={`transition-transform duration-500 ${
-        isMobile ? "fixed inset-0 pt-20 overflow-y-auto z-10" : "w-full pt-4"
+        isMobile ? "fixed inset-0 pt-20 overflow-y-auto z-10" : "w-full pt-0"
       }`}
       style={{ 
         transform: isMobile ? "none" : `translateX(${contentOffset}px)` 
       }}
     >
-      {/* ✅ Standard centered layout, safely padded 12px (px-3) from both screen edges */}
       <div className="flex justify-center px-3 md:px-4 w-full">
         
-        <div className="w-full max-w-2xl mx-auto pb-24">
+        {/* 🟢 THE FIX: Added md:pb-4 to remove the giant empty gap on laptops/desktops! */}
+        <div className="w-full max-w-2xl mx-auto pb-24 md:pb-4">
           <div className="space-y-3 md:space-y-4">
             {posts.map((post) => (
               <PostCard post={post} key={post._id} />

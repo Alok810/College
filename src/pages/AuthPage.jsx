@@ -1,10 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
+import { Building2, Search, Loader2, Info, HelpCircle } from "lucide-react"; 
 import EyeIcon from "../assets/eye.png";
 import HiddenIcon from "../assets/hidden.png";
 import RigyaIcon from "../assets/rigya.png";
-import { registerUser, loginUser, sendOtp, verifyOtp, sendPasswordResetLink, getPublicDepartments } from "../api.js";
+import { registerUser, loginUser, sendOtp, verifyOtp, sendPasswordResetLink, getPublicDepartments, searchAisheInstitutes } from "../api.js";
 import { useAuth } from '../context/AuthContext';
 
 function generateCaptcha() {
@@ -14,10 +15,11 @@ function generateCaptcha() {
 }
 
 export default function AuthPage() {
-  const { setIsAuthenticated } = useAuth();
+  const { setIsAuthenticated, fetchAuthData } = useAuth();
+  
   const [formData, setFormData] = useState({
     email: "", password: "", confirmPassword: "", captcha: "", name: "",
-    registrationNo: "", batch: "", branch: "", instituteName: "", // ✅ branch is used for both Student & Teacher
+    registrationNo: "", batch: "", branch: "", instituteName: "", 
     instituteType: "", affiliationNumber: "", instituteEmail: "", logo: null,
     designation: "", instituteRegistrationNumber: "",
     adminEmail: "", adminPhone: "", alternateContact: "",
@@ -32,10 +34,12 @@ export default function AuthPage() {
   const [otp, setOtp] = useState("");
   const [isOtpVerified, setIsOtpVerified] = useState(false);
   const [otpStatus, setOtpStatus] = useState("idle");
+
   const [showInstituteOtpInput, setShowInstituteOtpInput] = useState(false);
   const [instituteOtp, setInstituteOtp] = useState("");
   const [isInstituteOtpVerified, setIsInstituteOtpVerified] = useState(false);
   const [instituteOtpStatus, setInstituteOtpStatus] = useState("idle");
+
   const [showAdminOtpInput, setShowAdminOtpInput] = useState(false);
   const [adminOtp, setAdminOtp] = useState("");
   const [isAdminOtpVerified, setIsAdminOtpVerified] = useState(false);
@@ -43,14 +47,49 @@ export default function AuthPage() {
   
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
-  const [forgotPasswordInstituteRegNum, setForgotPasswordInstituteRegNum] = useState("");
   const [forgotPasswordStatus, setForgotPasswordStatus] = useState("idle");
   
   const navigate = useNavigate();
 
-  // 🟢 DYNAMIC BRANCH STATE
   const [availableBranches, setAvailableBranches] = useState([]);
   const [fetchingBranches, setFetchingBranches] = useState(false);
+
+  const [instSearchQuery, setInstSearchQuery] = useState("");
+  const [instSearchResults, setInstSearchResults] = useState([]);
+  const [isInstSearching, setIsInstSearching] = useState(false);
+  const [showInstDropdown, setShowInstDropdown] = useState(false);
+  const instDropdownRef = useRef(null);
+
+  useEffect(() => {
+      const handleClickOutside = (event) => {
+          if (instDropdownRef.current && !instDropdownRef.current.contains(event.target)) {
+              setShowInstDropdown(false);
+          }
+      };
+      document.addEventListener("mousedown", handleClickOutside);
+      return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+useEffect(() => {
+      const fetchInst = async () => {
+          if (instSearchQuery.trim().length < 3) {
+              setInstSearchResults([]);
+              return;
+          }
+          setIsInstSearching(true);
+          try {
+              // 🟢 THE FIX: Using the centralized API call!
+              const data = await searchAisheInstitutes(instSearchQuery.trim());
+              if (data.success) setInstSearchResults(data.results);
+          } catch (error) {
+              console.error(error);
+          } finally {
+              setIsInstSearching(false);
+          }
+      };
+      const delayDebounceFn = setTimeout(() => { fetchInst(); }, 400);
+      return () => clearTimeout(delayDebounceFn);
+  }, [instSearchQuery]);
 
   const resetForm = () => {
     setFormData({
@@ -61,16 +100,20 @@ export default function AuthPage() {
       adminEmail: "", adminPhone: "", alternateContact: "",
     });
     setMathQuestion(generateCaptcha());
+    
     setShowOtpInput(false); setOtp(""); setIsOtpVerified(false); setOtpStatus("idle");
     setShowInstituteOtpInput(false); setInstituteOtp(""); setIsInstituteOtpVerified(false); setInstituteOtpStatus("idle");
     setShowAdminOtpInput(false); setAdminOtp(""); setIsAdminOtpVerified(false); setAdminOtpStatus("idle");
-    setForgotPasswordEmail(""); setForgotPasswordInstituteRegNum(""); setForgotPasswordStatus("idle");
+    
+    setForgotPasswordEmail(""); setForgotPasswordStatus("idle");
     setAvailableBranches([]);
+    setInstSearchQuery(""); 
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
     if (name === "email" && showOtpInput) {
       setShowOtpInput(false); setIsOtpVerified(false); setOtpStatus("idle");
     }
@@ -82,7 +125,11 @@ export default function AuthPage() {
     }
   };
 
-// 🟢 DYNAMIC BRANCH FETCHING LOGIC (With Failsafe Parsing)
+  const handleLogoUpload = (e) => {
+    const file = e.target.files[0];
+    setFormData({ ...formData, logo: file });
+  };
+
   useEffect(() => {
     const fetchBranches = async () => {
       if ((userType !== 'Student' && userType !== 'Teacher') || !formData.instituteRegistrationNumber || formData.instituteRegistrationNumber.trim().length === 0) {
@@ -92,19 +139,10 @@ export default function AuthPage() {
       setFetchingBranches(true);
       try {
         const res = await getPublicDepartments(formData.instituteRegistrationNumber.trim());
-        
-        // 🛠️ Debugging log: You can check your browser console to see exactly what the backend sent!
-        console.log("Backend response for Departments:", res);
-        
-        // ✅ The Fix: Failsafe logic to handle any backend response structure
         let fetchedBranches = [];
-        if (Array.isArray(res)) {
-            fetchedBranches = res; // If backend sent a raw array
-        } else if (res.departments && Array.isArray(res.departments)) {
-            fetchedBranches = res.departments; // If wrapped in { departments: [...] }
-        } else if (res.data && Array.isArray(res.data)) {
-            fetchedBranches = res.data; // If wrapped in { data: [...] }
-        }
+        if (Array.isArray(res)) fetchedBranches = res;
+        else if (res.departments && Array.isArray(res.departments)) fetchedBranches = res.departments;
+        else if (res.data && Array.isArray(res.data)) fetchedBranches = res.data;
         
         setAvailableBranches(fetchedBranches);
       } catch (error) {
@@ -114,18 +152,9 @@ export default function AuthPage() {
         setFetchingBranches(false);
       }
     };
-
-    const delayDebounceFn = setTimeout(() => {
-      fetchBranches();
-    }, 500); 
-
+    const delayDebounceFn = setTimeout(() => { fetchBranches(); }, 500); 
     return () => clearTimeout(delayDebounceFn);
   }, [formData.instituteRegistrationNumber, userType]);
-
-  const handleLogoUpload = (e) => {
-    const file = e.target.files[0];
-    setFormData({ ...formData, logo: file });
-  };
 
   const handleSendOtp = async (emailType, email) => {
     if (!email) return alert(`Please enter the ${emailType} email first.`);
@@ -167,11 +196,8 @@ export default function AuthPage() {
   const handleForgotPasswordSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (!forgotPasswordEmail || !forgotPasswordInstituteRegNum) {
-        alert("Please provide both your email and institute registration number.");
-        return;
-      }
-      const response = await sendPasswordResetLink({ email: forgotPasswordEmail, instituteRegistrationNumber: forgotPasswordInstituteRegNum });
+      if (!forgotPasswordEmail || !formData.instituteRegistrationNumber) return alert("Please provide both your email and select your institute.");
+      const response = await sendPasswordResetLink({ email: forgotPasswordEmail, instituteRegistrationNumber: formData.instituteRegistrationNumber });
       if (response.success) {
         alert(response.message);
         setForgotPasswordStatus("link_sent");
@@ -200,7 +226,6 @@ export default function AuthPage() {
         if (!isOtpVerified || formData.password !== formData.confirmPassword) {
           return alert("Please fill out all required fields, verify your email, and solve the captcha correctly.");
         }
-        // ✅ Add protection to ensure Teachers select a branch
         if (userType === "Teacher" && !formData.branch) {
           return alert("Please select a Primary Department.");
         }
@@ -240,7 +265,11 @@ export default function AuthPage() {
           email: formData.email, password: formData.password, 
           instituteRegistrationNumber: formData.instituteRegistrationNumber, userType
         });
+        
         if (response.success) {
+          // 🟢 THE FIX: Force Context to download the profile and institute data right now!
+          await fetchAuthData(); 
+          
           setIsAuthenticated(true);
           navigate("/");
         } else {
@@ -251,6 +280,69 @@ export default function AuthPage() {
       }
     }
   };
+
+  const renderInstituteSearchBox = () => (
+    <div className="relative w-full" ref={instDropdownRef}>
+      <div className="relative flex items-center">
+        <input
+          type="text"
+          placeholder="Search Institute Name or AISHE ID..."
+          className="w-full px-4 py-2 border rounded-lg pr-16 focus:ring-2 focus:ring-purple-200 outline-none transition-all"
+          value={instSearchQuery}
+          onChange={(e) => {
+              setInstSearchQuery(e.target.value);
+              setFormData(prev => ({ ...prev, instituteRegistrationNumber: e.target.value })); 
+              setShowInstDropdown(true);
+          }}
+          onFocus={() => { if(instSearchQuery.length > 2) setShowInstDropdown(true); }}
+          required
+        />
+        {isInstSearching ? (
+           <Loader2 size={16} className="absolute right-9 text-purple-400 animate-spin" />
+        ) : (
+           <Search size={16} className="absolute right-9 text-gray-400" />
+        )}
+        <button
+          type="button"
+          title="Can't find your Institute? Click to search the registry."
+          onClick={() => navigate('/helpdesk')} 
+          className="absolute right-2 p-1 text-teal-600 hover:text-teal-800 hover:bg-teal-50 rounded-full transition-all"
+        >
+          <Info size={20} />
+        </button>
+      </div>
+
+      {showInstDropdown && instSearchResults.length > 0 && (
+        <div className="absolute z-50 w-full mt-1 bg-white border border-gray-200 shadow-2xl rounded-lg max-h-56 overflow-y-auto custom-scrollbar flex flex-col py-1">
+          {instSearchResults.map((inst, idx) => (
+            <button
+              key={idx}
+              type="button"
+              onClick={() => {
+                setFormData(prev => ({ 
+                    ...prev, 
+                    instituteRegistrationNumber: inst.aisheCode,
+                    ...(userType === 'Institute' ? { 
+                        instituteName: inst.name,
+                        instituteType: inst.instituteType 
+                    } : {}) 
+                }));
+                setInstSearchQuery(inst.aisheCode);
+                setShowInstDropdown(false);
+              }}
+              className="w-full text-left px-4 py-2.5 hover:bg-purple-50 border-b border-gray-50 last:border-0 transition-colors flex flex-col gap-1"
+            >
+              <span className="font-bold text-gray-800 text-[11px] leading-tight">{inst.name}</span>
+              <div className="flex items-center gap-2">
+                <span className="text-[9px] font-bold bg-purple-100 text-purple-700 px-1.5 py-0.5 rounded uppercase">{inst.aisheCode}</span>
+                <span className="text-[9px] font-medium text-gray-500">{inst.district}, {inst.state}</span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
 
   const renderForgotPasswordForm = () => {
     return (
@@ -266,138 +358,13 @@ export default function AuthPage() {
             <>
               <p className="text-sm text-gray-500 text-center mb-4">Enter your credentials below and we'll send you a link to reset your password.</p>
               <input name="forgotPasswordEmail" type="email" value={forgotPasswordEmail} placeholder="Enter your email" onChange={(e) => setForgotPasswordEmail(e.target.value)} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="forgotPasswordInstituteRegNum" type="text" value={forgotPasswordInstituteRegNum} placeholder="Institute Registration Number" onChange={(e) => setForgotPasswordInstituteRegNum(e.target.value)} className="w-full px-4 py-2 border rounded-lg" required />
+              {renderInstituteSearchBox()}
               <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-teal-600 text-white py-2 rounded-lg shadow-md hover:opacity-90 mt-2">Send Reset Link</button>
             </>
           )}
           <p className="text-center text-sm text-gray-500 cursor-pointer hover:text-purple-600 mt-auto pt-2" onClick={() => { setShowForgotPassword(false); resetForm(); }}>Back to Login</p>
         </form>
       </motion.div>
-    );
-  };
-
-  const renderSingleStepRegistration = () => {
-    const otpInputClasses = `w-1/4 px-4 py-2 border rounded-lg transition-colors duration-300 ${otpStatus === "success" ? "border-green-500 ring-2 ring-green-200" : otpStatus === "error" ? "border-red-500 ring-2 ring-red-200" : ""}`;
-    const userSpecificFields = () => {
-      switch (userType) {
-        case "Student":
-          return (
-            <>
-              <input name="name" type="text" value={formData.name} placeholder="Student Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Registration / Roll No." onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <div className="flex gap-2">
-                <select name="batch" value={formData.batch || ""} onChange={handleChange} className="flex-1 px-4 py-2 border rounded-lg bg-white" required>
-                  <option value="" disabled>Select Batch</option>
-                  <option value="2026-2030">2026-2030</option>
-                  <option value="2025-2029">2025-2029</option>
-                  <option value="2024-2028">2024-2028</option>
-                  <option value="2023-2027">2023-2027</option>
-                  <option value="2022-2026">2022-2026</option>
-                  <option value="2021-2025">2021-2025</option>
-                </select>
-                <div className="flex-1 relative">
-                    <select name="branch" value={formData.branch || ""} onChange={handleChange} className={`w-full px-4 py-2 border rounded-lg bg-white ${fetchingBranches ? 'opacity-50' : ''}`} required disabled={fetchingBranches || availableBranches.length === 0}>
-                    <option value="" disabled>
-                        {fetchingBranches ? "Searching..." : (formData.instituteRegistrationNumber ? (availableBranches.length > 0 ? "Select Branch" : "No Branches Found") : "Enter Inst. ID")}
-                    </option>
-                    {availableBranches.map(dept => (
-                        <option key={dept._id} value={dept.abbreviation}>{dept.name} ({dept.abbreviation})</option>
-                    ))}
-                    </select>
-                    {availableBranches.length === 0 && formData.instituteRegistrationNumber.trim().length > 0 && !fetchingBranches && (
-                        <p className="text-[10px] text-rose-500 absolute -bottom-5 left-1 w-full">No branches found for this ID.</p>
-                    )}
-                </div>
-              </div>
-            </>
-          );
-        case "Teacher":
-          return (
-            <>
-              <input name="name" type="text" value={formData.name} placeholder="Teacher Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Teacher ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              
-              {/* ✅ FIX: Name changed to 'branch' so it saves properly! */}
-              <div className="relative w-full">
-                  <select name="branch" value={formData.branch || ""} onChange={handleChange} className={`w-full px-4 py-2 border rounded-lg bg-white ${fetchingBranches ? 'opacity-50' : ''}`} required disabled={fetchingBranches || availableBranches.length === 0}>
-                  <option value="" disabled>
-                      {fetchingBranches ? "Searching Departments..." : (formData.instituteRegistrationNumber ? (availableBranches.length > 0 ? "Select Primary Department" : "No Departments Found") : "Enter Inst. ID first")}
-                  </option>
-                  {availableBranches.map(dept => (
-                      <option key={dept._id} value={dept.abbreviation}>{dept.name} ({dept.abbreviation})</option>
-                  ))}
-                  </select>
-                  {availableBranches.length === 0 && formData.instituteRegistrationNumber.trim().length > 0 && !fetchingBranches && (
-                      <p className="text-[10px] text-rose-500 absolute -bottom-5 left-1 w-full">No departments found for this ID.</p>
-                  )}
-              </div>
-            </>
-          );
-        case "Official":
-          return (
-            <>
-              <input name="name" type="text" value={formData.name} placeholder="Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Employee / Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <select name="designation" value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required>
-                <option value="">Select Designation</option>
-                <option value="Director">Director</option>
-                <option value="Dean">Dean</option>
-                <option value="HOD">HOD</option>
-                <option value="Registrar">Registrar</option>
-                <option value="Faculty Member">Faculty Member</option>
-              </select>
-            </>
-          );
-        case "Other":
-          return (
-            <>
-              <input name="name" type="text" value={formData.name} placeholder="Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-            </>
-          );
-        default:
-          return null;
-      }
-    };
-
-    return (
-      <>
-        {userSpecificFields()}
-        
-        <div>
-            {showOtpInput && !isOtpVerified ? (
-            <div className="flex items-center gap-2">
-                <input name="email" type="email" value={formData.email} placeholder="Enter Email" onChange={handleChange} className="w-3/4 px-4 py-2 border rounded-lg" required disabled={true} />
-                <input name="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="OTP" className={otpInputClasses} required />
-                <button type="button" onClick={() => handleVerifyOtp("user", otp)} className="w-1/4 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm">Verify</button>
-            </div>
-            ) : (
-            <div className="flex items-center gap-2">
-                <input name="email" type="email" value={formData.email} placeholder="Enter Email" onChange={handleChange} className="w-3/4 px-4 py-2 border rounded-lg" required disabled={isOtpVerified} />
-                {isSignUp && !isOtpVerified && (<button type="button" onClick={() => handleSendOtp("user", formData.email)} className="w-1/4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">Send OTP</button>)}
-                {isSignUp && isOtpVerified && (<span className="text-green-600 font-bold ml-2">✓ Verified</span>)}
-            </div>
-            )}
-        </div>
-
-        <div className="relative">
-          <input name="password" type={showPassword ? "text" : "password"} value={formData.password} placeholder="Enter Password" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-          <img src={showPassword ? HiddenIcon : EyeIcon} alt="toggle" onClick={() => setShowPassword(!showPassword)} className="w-5 h-5 absolute right-3 top-2.5 cursor-pointer" />
-        </div>
-        {isSignUp && (<input name="confirmPassword" type={showPassword ? "text" : "password"} value={formData.confirmPassword} placeholder="Confirm Password" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />)}
-        <div>
-          <label className="block text-sm text-gray-600 mb-1">Solve: <span className="font-bold">{mathQuestion.question}</span></label>
-          <div className="flex gap-2">
-            <input name="captcha" value={formData.captcha} placeholder="Enter Captcha" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-            <button type="button" onClick={() => setMathQuestion(generateCaptcha())} className="px-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600">↻</button>
-          </div>
-        </div>
-        <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-teal-600 text-white py-2 rounded-lg shadow-md hover:opacity-90">REGISTER</button>
-      </>
     );
   };
 
@@ -408,15 +375,18 @@ export default function AuthPage() {
     return (
       <>
         <h2 className="text-lg font-semibold text-gray-700">Institute Details</h2>
-        <input name="instituteName" type="text" value={formData.instituteName} placeholder="Institute Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-        <select name="instituteType" value={formData.instituteType} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required>
-          <option value="">Select Type</option>
-          <option value="College">College</option>
+        
+        {renderInstituteSearchBox()}
+
+        <input name="instituteName" type="text" value={formData.instituteName} placeholder="Institute Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white" required />
+        
+        <select name="instituteType" value={formData.instituteType} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white" required>
+          <option value="" disabled>Select Type</option>
           <option value="University">University</option>
-          <option value="School">School</option>
+          <option value="College">College</option>
+          <option value="Standalone">Standalone</option>
           <option value="Other">Other</option>
         </select>
-        <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
         
         <div>
           {showInstituteOtpInput && !isInstituteOtpVerified ? (
@@ -495,9 +465,134 @@ export default function AuthPage() {
     );
   };
 
+  const renderSingleStepRegistration = () => {
+    const otpInputClasses = `w-1/4 px-4 py-2 border rounded-lg transition-colors duration-300 ${otpStatus === "success" ? "border-green-500 ring-2 ring-green-200" : otpStatus === "error" ? "border-red-500 ring-2 ring-red-200" : ""}`;
+    
+    const userSpecificFields = () => {
+      switch (userType) {
+        case "Student":
+          return (
+            <>
+              <input name="name" type="text" value={formData.name} placeholder="Student Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Registration / Roll No." onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              
+              {renderInstituteSearchBox()}
+
+              <div className="flex gap-2">
+                <select name="batch" value={formData.batch || ""} onChange={handleChange} className="flex-1 px-4 py-2 border rounded-lg bg-white" required>
+                  <option value="" disabled>Select Batch</option>
+                  <option value="2026-2030">2026-2030</option>
+                  <option value="2025-2029">2025-2029</option>
+                  <option value="2024-2028">2024-2028</option>
+                  <option value="2023-2027">2023-2027</option>
+                  <option value="2022-2026">2022-2026</option>
+                  <option value="2021-2025">2021-2025</option>
+                </select>
+                <div className="flex-1 relative">
+                    <select name="branch" value={formData.branch || ""} onChange={handleChange} className={`w-full px-4 py-2 border rounded-lg bg-white ${fetchingBranches ? 'opacity-50' : ''}`} required disabled={fetchingBranches || availableBranches.length === 0}>
+                    <option value="" disabled>
+                        {availableBranches.length > 0 ? "Select Branch" : "No branches found for this ID."}
+                    </option>
+                    {availableBranches.map(dept => (
+                        <option key={dept._id} value={dept.abbreviation}>{dept.name} ({dept.abbreviation})</option>
+                    ))}
+                    </select>
+                </div>
+              </div>
+            </>
+          );
+        case "Teacher":
+          return (
+            <>
+              <input name="name" type="text" value={formData.name} placeholder="Teacher Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Teacher ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              
+              {renderInstituteSearchBox()}
+
+              <div className="relative w-full">
+                  <select name="branch" value={formData.branch || ""} onChange={handleChange} className={`w-full px-4 py-2 border rounded-lg bg-white ${fetchingBranches ? 'opacity-50' : ''}`} required disabled={fetchingBranches || availableBranches.length === 0}>
+                  <option value="" disabled>
+                      {availableBranches.length > 0 ? "Select Branch" : "No branches found for this ID."}
+                  </option>
+                  {availableBranches.map(dept => (
+                      <option key={dept._id} value={dept.abbreviation}>{dept.name} ({dept.abbreviation})</option>
+                  ))}
+                  </select>
+              </div>
+            </>
+          );
+        case "Official":
+          return (
+            <>
+              <input name="name" type="text" value={formData.name} placeholder="Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Employee / Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              
+              {renderInstituteSearchBox()}
+
+              <select name="designation" value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required>
+                <option value="">Select Designation</option>
+                <option value="Director">Director</option>
+                <option value="Dean">Dean</option>
+                <option value="HOD">HOD</option>
+                <option value="Registrar">Registrar</option>
+                <option value="Faculty Member">Faculty Member</option>
+              </select>
+            </>
+          );
+        case "Other":
+          return (
+            <>
+              <input name="name" type="text" value={formData.name} placeholder="Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              
+              {renderInstituteSearchBox()}
+            </>
+          );
+        default:
+          return null;
+      }
+    };
+
+    return (
+      <>
+        {userSpecificFields()}
+        
+        <div>
+            {showOtpInput && !isOtpVerified ? (
+            <div className="flex items-center gap-2">
+                <input name="email" type="email" value={formData.email} placeholder="Enter Email" onChange={handleChange} className="w-3/4 px-4 py-2 border rounded-lg" required disabled={true} />
+                <input name="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="OTP" className={otpInputClasses} required />
+                <button type="button" onClick={() => handleVerifyOtp("user", otp)} className="w-1/4 px-4 py-2 bg-teal-500 text-white rounded-lg hover:bg-teal-600 text-sm">Verify</button>
+            </div>
+            ) : (
+            <div className="flex items-center gap-2">
+                <input name="email" type="email" value={formData.email} placeholder="Enter Email" onChange={handleChange} className="w-3/4 px-4 py-2 border rounded-lg" required disabled={isOtpVerified} />
+                {isSignUp && !isOtpVerified && (<button type="button" onClick={() => handleSendOtp("user", formData.email)} className="w-1/4 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 text-sm">Send OTP</button>)}
+                {isSignUp && isOtpVerified && (<span className="text-green-600 font-bold ml-2">✓ Verified</span>)}
+            </div>
+            )}
+        </div>
+
+        <div className="relative">
+          <input name="password" type={showPassword ? "text" : "password"} value={formData.password} placeholder="Enter Password" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+          <img src={showPassword ? HiddenIcon : EyeIcon} alt="toggle" onClick={() => setShowPassword(!showPassword)} className="w-5 h-5 absolute right-3 top-2.5 cursor-pointer" />
+        </div>
+        {isSignUp && (<input name="confirmPassword" type={showPassword ? "text" : "password"} value={formData.confirmPassword} placeholder="Confirm Password" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />)}
+        <div>
+          <label className="block text-sm text-gray-600 mb-1">Solve: <span className="font-bold">{mathQuestion.question}</span></label>
+          <div className="flex gap-2">
+            <input name="captcha" value={formData.captcha} placeholder="Enter Captcha" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+            <button type="button" onClick={() => setMathQuestion(generateCaptcha())} className="px-3 bg-teal-500 text-white rounded-lg hover:bg-teal-600">↻</button>
+          </div>
+        </div>
+        <button type="submit" className="w-full bg-gradient-to-r from-purple-600 to-teal-600 text-white py-2 rounded-lg shadow-md hover:opacity-90">REGISTER</button>
+      </>
+    );
+  };
+
   const renderLoginFields = () => (
     <>
-      <input name="instituteRegistrationNumber" type="text" value={formData.instituteRegistrationNumber} placeholder="Institute Registration Number" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+      {renderInstituteSearchBox()}
       <input name="email" type="email" value={formData.email} placeholder="Email" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
       <div className="relative">
         <input name="password" type={showPassword ? "text" : "password"} value={formData.password} placeholder="Enter Password" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
@@ -516,7 +611,7 @@ export default function AuthPage() {
   );
 
   return (
-    <div className="fixed inset-0 flex overflow-hidden" style={{ background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", backgroundAttachment: "fixed", }}>
+    <div className="fixed inset-0 flex overflow-hidden" style={{ background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", backgroundAttachment: "fixed" }}>
       <motion.div className="flex w-full" animate={{ flexDirection: isSignUp ? "row-reverse" : "row" }} transition={{ duration: 0.7, ease: "easeInOut" }} >
         <div className="hidden md:flex flex-col justify-center items-center w-1/2 p-10">
           <img src={RigyaIcon} alt="Rigya Logo" className="w-72 mb-6" />
@@ -561,6 +656,22 @@ export default function AuthPage() {
           )}
         </div>
       </motion.div>
+
+      <motion.button
+        key={isSignUp ? "help-register" : "help-login"}
+        className={`absolute bottom-8 z-[9999] p-4 bg-gradient-to-r from-purple-600 to-teal-600 text-white rounded-full shadow-2xl hover:shadow-lg hover:scale-105 flex items-center justify-center ${isSignUp ? "right-8" : "left-8"}`}
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ 
+          opacity: showForgotPassword ? 0 : 1,
+          y: 0,
+        }}
+        transition={{ duration: 0.6 }}
+        style={{ pointerEvents: showForgotPassword ? "none" : "auto" }}
+        onClick={() => navigate('/helpdesk')} 
+        title="Help Desk & Directory"
+      >
+        <HelpCircle size={28} />
+      </motion.button>
     </div>
   );
 }
