@@ -7,7 +7,7 @@ const BACKEND_URL = import.meta.env.MODE === "production"
 
 // 🟢 THE FIX: ADD THIS AISHE MICROSERVICE URL!
 export const AISHE_BACKEND_URL = import.meta.env.MODE === "production" 
-  ? "https://aishe-api.onrender.com" 
+  ? "https://aishe.rigya.in"
   : "http://localhost:8000";
 
 export const api = axios.create({
@@ -34,7 +34,7 @@ api.interceptors.response.use(
 
 export const checkBackendConnection = async () => {
   try {
-    const response = await api.get("/status/check");
+    await api.get("/status/check");
     return {
       success: true,
       message:
@@ -507,7 +507,8 @@ export const markMessagesAsRead = async (chatId) => {
     const response = await api.put(`/chat/message/read`, { chatId });
     return response.data;
   } catch (error) {
-    console.error("Failed to mark messages as read");
+    // ✅ Fixed! Now we are actually using the 'error' variable by logging it.
+    console.error("Failed to mark messages as read:", error); 
   }
 };
 
