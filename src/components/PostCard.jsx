@@ -27,7 +27,6 @@ const PostImageGrid = ({ images }) => {
   const count = images.length;
   const borderClass = "border border-gray-100"; 
 
-  // ✅ Responsive Image Heights: max-h-[300px] on phones, max-h-[500px] on laptops
   if (count === 1) {
     return (
       <div className="mt-2">
@@ -45,7 +44,6 @@ const PostImageGrid = ({ images }) => {
   }
   if (count === 3) {
     return (
-      // ✅ Changed fixed h-96 to h-64 on mobile, scaling up to h-96 on md: screens
       <div className={`mt-2 grid grid-cols-2 grid-rows-2 gap-1 h-64 sm:h-80 md:h-96 rounded-lg overflow-hidden ${borderClass}`}>
         <div className="row-span-2">
           <img src={images[0]} alt="post content 1" className="w-full h-full object-cover" />
@@ -61,7 +59,6 @@ const PostImageGrid = ({ images }) => {
   }
   const remaining = count - 4;
   return (
-    // ✅ Changed fixed h-96 to h-64 on mobile, scaling up to h-96 on md: screens
     <div className={`mt-2 grid grid-cols-2 grid-rows-2 gap-1 h-64 sm:h-80 md:h-96 rounded-lg overflow-hidden ${borderClass}`}>
       <img src={images[0]} alt="post content 1" className="w-full h-full object-cover" />
       <img src={images[1]} alt="post content 2" className="w-full h-full object-cover" />
@@ -80,9 +77,15 @@ const PostImageGrid = ({ images }) => {
 
 const PostCard = ({ post }) => {
   const { authData: currentUser } = useAuth();
-  const userId = currentUser?._id;
+  
+  // 🛑 GUARD CLAUSE 1: Wait for current user to load
+  if (!currentUser) return null;
 
-  const isOwner = currentUser && post.user && currentUser._id === post.user._id;
+  // 🛑 GUARD CLAUSE 2: If the user who made this post was deleted, hide the post!
+  if (!post || !post.user) return null;
+
+  const userId = currentUser._id;
+  const isOwner = currentUser._id === post.user._id;
 
   const initialIsLiked = post.likes ? post.likes.includes(userId) : false;
   const [isLiked, setIsLiked] = useState(initialIsLiked);
@@ -128,7 +131,7 @@ const PostCard = ({ post }) => {
   
   const handlePostComment = async (e) => {
     e.preventDefault();
-    if (newComment.trim() === "" || !currentUser) return;
+    if (newComment.trim() === "") return;
     setIsSubmittingComment(true);
 
     try {
@@ -201,7 +204,6 @@ const PostCard = ({ post }) => {
   if (isDeleted) return null;
 
   return (
-    // ✅ Reduced padding on mobile (p-3 md:p-4)
     <div className='bg-white rounded-xl shadow p-3 md:p-4 space-y-3 md:space-y-4 w-full border border-gray-100/50'>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2 md:gap-3 flex-1 min-w-0'>
@@ -213,7 +215,6 @@ const PostCard = ({ post }) => {
             />
             <div className='flex flex-col min-w-0 flex-1'>
               <div className='flex items-center space-x-1'>
-                {/* ✅ Added truncate to prevent long names from pushing the 3-dot menu off screen */}
                 <span className="font-bold cursor-pointer hover:underline text-sm md:text-base truncate block max-w-full">
                   {post.user.name || post.user.full_name || "Unknown User"}
                 </span>
@@ -338,7 +339,11 @@ const PostCard = ({ post }) => {
           <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar"> 
             {comments.length > 0 ? (
               comments.map((comment) => {
-                const canDelete = currentUser && (currentUser._id === comment.user._id || currentUser._id === post.user._id);
+                
+                // 🛑 GUARD CLAUSE 3: If the user who left this comment was deleted, hide the comment!
+                if (!comment || !comment.user) return null;
+
+                const canDelete = currentUser._id === comment.user._id || currentUser._id === post.user._id;
 
                 return (
                   <div key={comment._id} className="flex items-start gap-2">

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Building2, Plus, Trash2, Search, X, Loader2, Shield, Users } from 'lucide-react';
-import { getInstituteDepartments, createDepartment, deleteDepartment } from '../api';
+import { Building2, Plus, Trash2, Search, X, Loader2, Shield, Users, Info, ChevronRight, ArrowRightLeft } from 'lucide-react';
+import { getInstituteDepartments, createDepartment, deleteDepartment, updateDepartment, getAllUsersForAdmin } from '../api';
 
 export default function DepartmentManagement({ users }) {
     const [departments, setDepartments] = useState([]);
@@ -9,7 +9,12 @@ export default function DepartmentManagement({ users }) {
     const [isModalOpen, setIsModalOpen] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    // ✅ ADDED abbreviation to form state
+    // HOD Transfer Modal State
+    const [transferModal, setTransferModal] = useState({ isOpen: false, targetDept: null });
+    const [eligibleHods, setEligibleHods] = useState([]);
+    const [selectedNewHod, setSelectedNewHod] = useState("");
+    const [loadingHods, setLoadingHods] = useState(false);
+
     const [formData, setFormData] = useState({
         name: '',
         abbreviation: '', 
@@ -17,10 +22,8 @@ export default function DepartmentManagement({ users }) {
         hodId: ''
     });
 
-    // Filter users to only show potential Faculty/Officials (exclude Students)
-    const eligibleFaculty = users.filter(u => 
-        u.userType === 'Teacher' || u.userType === 'Official' || (u.userType !== 'Student' && u.userType !== 'Institute')
-    );
+    // 🟢 UPDATED: Strictly filter users to ONLY show verified HODs for the New Department form
+    const eligibleHodsForNewDept = users.filter(u => u.designation === 'HOD');
 
     const loadDepartments = async () => {
         try {
@@ -44,7 +47,7 @@ export default function DepartmentManagement({ users }) {
         try {
             await createDepartment({
                 name: formData.name,
-                abbreviation: formData.abbreviation, // ✅ Added abbreviation to payload
+                abbreviation: formData.abbreviation,
                 about: formData.about,
                 hod: formData.hodId || null 
             });
@@ -67,6 +70,41 @@ export default function DepartmentManagement({ users }) {
             } catch (error) {
                 alert(error.message || "Failed to delete department.");
             }
+        }
+    };
+
+    // Functions to handle HOD Transfer
+    const handleOpenHodModal = async (department) => {
+        setTransferModal({ isOpen: true, targetDept: department });
+        setLoadingHods(true);
+        setSelectedNewHod("");
+        
+        try {
+            const allUsers = await getAllUsersForAdmin();
+            // Strict Filter: Only allow verified users whose designation is exactly "HOD"
+            const verifiedHods = allUsers.filter(u => u.designation === "HOD");
+            setEligibleHods(verifiedHods);
+        } catch (err) {
+            console.error("Failed to fetch eligible HODs", err);
+        } finally {
+            setLoadingHods(false);
+        }
+    };
+
+    const handleAssignHod = async (e) => {
+        e.preventDefault();
+        if (!selectedNewHod) return alert("Please select an HOD from the list.");
+        setIsSubmitting(true);
+        try {
+            await updateDepartment(transferModal.targetDept._id, { hod: selectedNewHod });
+            alert(`HOD Power for ${transferModal.targetDept.name} has been transferred!`);
+            setTransferModal({ isOpen: false, targetDept: null });
+            loadDepartments(); 
+        } catch (error) {
+            console.error("Failed to transfer HOD power.", error);
+            alert("Failed to transfer HOD power.");
+        } finally {
+            setIsSubmitting(false);
         }
     };
 
@@ -145,19 +183,29 @@ export default function DepartmentManagement({ users }) {
                                     </button>
                                 </div>
                                 
-                                <div className="mt-2 pt-3 border-t border-slate-100 flex-1 flex flex-col justify-center">
-                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned HOD</p>
-                                    {hodUser ? (
-                                        <div className="flex items-center gap-2">
-                                            <Shield className="w-4 h-4 text-emerald-500 flex-shrink-0"/>
-                                            <span className="text-sm font-bold text-slate-700 truncate">{hodUser.name}</span>
-                                        </div>
-                                    ) : (
-                                        <div className="flex items-center gap-2">
-                                            <Users className="w-4 h-4 text-amber-500 flex-shrink-0"/>
-                                            <span className="text-sm font-bold text-amber-600">Pending Assignment</span>
-                                        </div>
-                                    )}
+                                <div className="mt-2 pt-3 border-t border-slate-100 flex-1 flex items-center justify-between">
+                                    <div className="flex flex-col justify-center">
+                                        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Assigned HOD</p>
+                                        {hodUser ? (
+                                            <div className="flex items-center gap-2">
+                                                <Shield className="w-4 h-4 text-emerald-500 flex-shrink-0"/>
+                                                <span className="text-sm font-bold text-slate-700 truncate">{hodUser.name}</span>
+                                            </div>
+                                        ) : (
+                                            <div className="flex items-center gap-2">
+                                                <Users className="w-4 h-4 text-amber-500 flex-shrink-0"/>
+                                                <span className="text-sm font-bold text-amber-600">Pending Assignment</span>
+                                            </div>
+                                        )}
+                                    </div>
+                                    
+                                    <button 
+                                        onClick={() => handleOpenHodModal(dept)}
+                                        className="p-2 bg-slate-50 hover:bg-indigo-50 text-slate-400 hover:text-indigo-600 rounded-lg transition-colors border border-slate-100 hover:border-indigo-200"
+                                        title="Transfer HOD Power"
+                                    >
+                                        <ArrowRightLeft size={16} />
+                                    </button>
                                 </div>
                             </div>
                         );
@@ -178,7 +226,6 @@ export default function DepartmentManagement({ users }) {
                         </div>
 
                         <form onSubmit={handleCreateDepartment} className="space-y-4">
-                            {/* ✅ Updated layout for Name and Abbreviation side-by-side */}
                             <div className="grid grid-cols-3 gap-3">
                                 <div className="col-span-2">
                                     <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Department Name</label>
@@ -192,14 +239,16 @@ export default function DepartmentManagement({ users }) {
                             
                             <div>
                                 <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Appoint HOD (Optional)</label>
+                                {/* 🟢 UPDATED: Only maps through users who have the 'HOD' designation */}
                                 <select value={formData.hodId} onChange={e => setFormData({...formData, hodId: e.target.value})} className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-bold text-slate-700 cursor-pointer">
-                                    <option value="">-- Select Faculty Member --</option>
-                                    {eligibleFaculty.map(f => (
-                                        <option key={f._id} value={f._id}>{f.name} ({f.userType})</option>
+                                    <option value="">-- Select Verified HOD --</option>
+                                    {eligibleHodsForNewDept.map(f => (
+                                        <option key={f._id} value={f._id}>{f.name} ({f.registrationNo})</option>
                                     ))}
                                 </select>
-                                {eligibleFaculty.length === 0 && (
-                                    <p className="text-[10px] text-rose-500 font-bold mt-1.5">No teachers or officials found in directory.</p>
+                                {/* 🟢 UPDATED: Clearer warning message */}
+                                {eligibleHodsForNewDept.length === 0 && (
+                                    <p className="text-[10px] text-rose-500 font-bold mt-1.5">No verified HODs found. Please verify an HOD via the Admin Portal first.</p>
                                 )}
                             </div>
 
@@ -211,6 +260,74 @@ export default function DepartmentManagement({ users }) {
                             <button type="submit" disabled={isSubmitting} className="w-full py-3.5 bg-indigo-600 text-white font-extrabold rounded-xl hover:bg-indigo-700 shadow-md transition-colors mt-4 disabled:opacity-50 flex items-center justify-center gap-2">
                                 {isSubmitting ? <Loader2 size={18} className="animate-spin"/> : <Building2 size={18}/>} 
                                 Establish Department
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Transfer HOD Power Modal */}
+            {transferModal.isOpen && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[200] flex items-center justify-center p-4 animate-in fade-in duration-200">
+                    <div className="bg-white rounded-3xl w-full max-w-2xl p-6 sm:p-8 shadow-2xl animate-in zoom-in-95 duration-200">
+                        <div className="flex justify-between items-start mb-6">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900 leading-tight">
+                                    Transfer Department Power
+                                </h2>
+                                <p className="text-xs font-bold text-slate-500 mt-1">
+                                    {transferModal.targetDept?.name}
+                                </p>
+                            </div>
+                            <button onClick={() => setTransferModal({ isOpen: false, targetDept: null })} className="p-2 bg-slate-100 hover:bg-rose-100 text-slate-500 hover:text-rose-600 rounded-xl transition-colors"><X size={18} /></button>
+                        </div>
+
+                        <form onSubmit={handleAssignHod} className="space-y-4">
+                            <div className="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex items-start gap-3 mb-4">
+                                <Info className="w-5 h-5 text-indigo-500 flex-shrink-0 mt-0.5" />
+                                <p className="text-xs font-medium text-indigo-800 leading-relaxed">
+                                    You are about to transfer the administrative power of the <strong>{transferModal.targetDept?.name}</strong> department. 
+                                    Only users who have been verified by the Institute Admin with the exact designation of <strong>"HOD"</strong> appear in this list.
+                                </p>
+                            </div>
+
+                            <div>
+                                <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-2">Select New HOD</label>
+                                {loadingHods ? (
+                                    <div className="p-4 text-center text-slate-500 text-xs font-bold flex items-center justify-center gap-2 border border-slate-200 rounded-xl bg-slate-50">
+                                        <Loader2 className="w-4 h-4 animate-spin" /> Fetching verified HODs...
+                                    </div>
+                                ) : eligibleHods.length === 0 ? (
+                                    <div className="p-4 text-center text-rose-500 text-xs font-bold border border-rose-200 rounded-xl bg-rose-50">
+                                        No verified HODs found in the institute directory. Please verify an HOD via the Admin Portal first.
+                                    </div>
+                                ) : (
+                                    <div className="relative">
+                                        <select
+                                            required
+                                            className="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl outline-none focus:border-indigo-500 font-bold text-slate-700 cursor-pointer appearance-none"
+                                            value={selectedNewHod}
+                                            onChange={e => setSelectedNewHod(e.target.value)}
+                                        >
+                                            <option value="">-- Choose an HOD --</option>
+                                            {eligibleHods.map(hod => (
+                                                <option key={hod._id} value={hod._id}>
+                                                    {hod.name} ({hod.registrationNo || 'No ID'})
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <ChevronRight className="absolute right-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 rotate-90 pointer-events-none" />
+                                    </div>
+                                )}
+                            </div>
+
+                            <button 
+                                type="submit" 
+                                disabled={isSubmitting || eligibleHods.length === 0} 
+                                className="w-full py-3.5 bg-indigo-600 text-white font-extrabold rounded-xl hover:bg-indigo-700 shadow-md transition-colors mt-6 flex justify-center items-center gap-2 disabled:opacity-50 active:scale-95"
+                            >
+                                {isSubmitting ? <Loader2 size={16} className="animate-spin"/> : <Shield size={16}/>} 
+                                Confirm Transfer of Power
                             </button>
                         </form>
                     </div>

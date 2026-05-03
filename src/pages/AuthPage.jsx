@@ -70,7 +70,7 @@ export default function AuthPage() {
       return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-useEffect(() => {
+  useEffect(() => {
       const fetchInst = async () => {
           if (instSearchQuery.trim().length < 3) {
               setInstSearchResults([]);
@@ -78,7 +78,6 @@ useEffect(() => {
           }
           setIsInstSearching(true);
           try {
-              // 🟢 THE FIX: Using the centralized API call!
               const data = await searchAisheInstitutes(instSearchQuery.trim());
               if (data.success) setInstSearchResults(data.results);
           } catch (error) {
@@ -267,9 +266,7 @@ useEffect(() => {
         });
         
         if (response.success) {
-          // 🟢 THE FIX: Force Context to download the profile and institute data right now!
           await fetchAuthData(); 
-          
           setIsAuthenticated(true);
           navigate("/");
         } else {
@@ -546,6 +543,17 @@ useEffect(() => {
               <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Staff ID" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
               
               {renderInstituteSearchBox()}
+
+              {/* 🟢 NEW: Ask "Other" staff for their specific role! */}
+              <select name="designation" value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white" required>
+                <option value="">Select Staff Role</option>
+                <option value="Librarian">Librarian</option>
+                <option value="Accountant">Accountant</option>
+                <option value="System Admin">IT / System Admin</option>
+                <option value="Lab Assistant">Lab Assistant</option>
+                <option value="Clerk">Clerk</option>
+                <option value="Support Staff">Support Staff</option>
+              </select>
             </>
           );
         default:

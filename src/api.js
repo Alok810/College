@@ -196,9 +196,13 @@ export const getAllBooks = async () => {
   }
 };
 
-export const addBook = async (bookData) => {
+export const addBook = async (formData) => {
   try {
-    const response = await api.post("/books/admin/add", bookData);
+    const response = await api.post("/books/admin/add", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data.book;
   } catch (error) {
     const errorMessage = error.response?.data?.message || "Failed to add book.";
@@ -206,9 +210,13 @@ export const addBook = async (bookData) => {
   }
 };
 
-export const updateBook = async (id, bookData) => {
+export const updateBook = async (id, formData) => {
   try {
-    const response = await api.put(`/books/admin/update/${id}`, bookData);
+    const response = await api.put(`/books/admin/update/${id}`, formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
     return response.data.book;
   } catch (error) {
     const errorMessage =
@@ -250,20 +258,69 @@ export const getBorrowedBooksForAdmin = async () => {
   }
 };
 
+// 🟢 UPDATED: Student requests a book (no longer sends dueDate)
 export const borrowBook = async (id) => {
   try {
     const response = await api.post(`/borrows/borrow/${id}`);
     return response.data;
   } catch (error) {
     const errorMessage =
-      error.response?.data?.message || "Failed to borrow book.";
+      error.response?.data?.message || "Failed to request book.";
     throw new Error(errorMessage);
   }
 };
 
-export const returnBookByAdmin = async (id) => {
+// ==========================================
+// 🟢 NEW: REQUEST & APPROVAL ENDPOINTS
+// ==========================================
+
+export const getPendingBorrowRequests = async () => {
   try {
-    const response = await api.put(`/borrows/admin/return/${id}`);
+    const response = await api.get("/borrows/admin/requests/pending");
+    return response.data.pendingRequests;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch pending requests.";
+    throw new Error(errorMessage);
+  }
+};
+
+// 🟢 NEW: Fetch pending requests for the Student
+export const getMyPendingRequests = async () => {
+  try {
+    const response = await api.get("/borrows/my-requests/pending");
+    return response.data.pendingRequests;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to fetch your requests.");
+  }
+};
+
+export const approveRequest = async (requestId, dueDate) => {
+  try {
+    const response = await api.put(`/borrows/admin/requests/${requestId}/approve`, { dueDate });
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to approve request.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const rejectRequest = async (requestId) => {
+  try {
+    const response = await api.delete(`/borrows/admin/requests/${requestId}/reject`);
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to reject request.";
+    throw new Error(errorMessage);
+  }
+};
+
+// ==========================================
+// EXISTING RETURN & ADMIN ENDPOINTS
+// ==========================================
+
+export const returnBookByAdmin = async (id, fineAmount = 0) => {
+  try {
+    const response = await api.put(`/borrows/admin/return/${id}`, { fineAmount });
     return response.data;
   } catch (error) {
     const errorMessage =
@@ -327,6 +384,48 @@ export const borrowBookByLibrarian = async (userId, bookId, dueDate) => {
   } catch (error) {
     const errorMessage =
       error.response?.data?.message || "Failed to assign book.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const addBookReview = async (id, reviewData) => {
+  try {
+    const response = await api.post(`/books/${id}/reviews`, reviewData); 
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to submit review.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const getFineLedger = async () => {
+  try {
+    const response = await api.get("/fines/ledger"); 
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch fine ledger.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const bulkImportBooks = async (formData) => {
+  try {
+    // 🟢 REMOVED the manual Content-Type header so Axios can generate the proper file boundaries!
+    const response = await api.post("/books/admin/import", formData);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to import books via CSV.");
+  }
+};
+
+export const exportFineLedger = async () => {
+  try {
+    const response = await api.get("/fines/ledger/export", {
+      responseType: 'blob', 
+    });
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to export ledger.";
     throw new Error(errorMessage);
   }
 };
@@ -683,6 +782,16 @@ export const resolveRevaluation = async (resultId, status, remarks) => {
 
 // ------------------- COURSE BLUEPRINT ENDPOINTS -------------------
 
+// 🟢 NEW: Add this right here!
+export const getDepartmentSubjectCounts = async (branch) => {
+    try {
+        const response = await api.get(`/courses/department/${encodeURIComponent(branch)}/subject-counts`);
+        return response.data;
+    } catch (error) {
+        throw error.response?.data || error.message;
+    }
+};
+
 export const saveCourseBlueprint = async (courseData) => {
   try {
     const res = await api.post('/courses', courseData);
@@ -1018,3 +1127,4 @@ export const enhanceTextWithAI = async (text) => {
     throw error;
   }
 };
+

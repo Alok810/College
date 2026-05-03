@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Shield, Award, Briefcase, Mail, Phone, BookOpen, Loader2, LayoutDashboard, CheckCircle, XCircle, Clock } from 'lucide-react';
-import { updateDepartment, getCourseBlueprint, saveCourseBlueprint, updateUserDesignation, getDepartmentTeachers } from '../api';
+import { Shield, Award, Briefcase, Mail, Phone, BookOpen, Loader2, LayoutDashboard, CheckCircle, XCircle, Clock, Lock } from 'lucide-react';
+import { updateDepartment, getCourseBlueprint, saveCourseBlueprint, updateUserDesignation, getDepartmentTeachers } from '../../api';
+import { useAuth } from '../../context/AuthContext'; // 🟢 Added Auth Context
 
 const batches = ['2021-2025', '2022-2026', '2023-2027', '2024-2028', '2025-2029', '2026-2030'];
 const semesters = ['Semester 1', 'Semester 2', 'Semester 3', 'Semester 4', 'Semester 5', 'Semester 6', 'Semester 7', 'Semester 8'];
@@ -33,9 +34,13 @@ const getInitials = (name) => {
     return name.substring(0, 2).toUpperCase();
 };
 
-export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
+export default function HodAdministration({ activeDept, onRefresh }) {
+  const { authData } = useAuth(); // 🟢 Extract Logged-in User
   const [searchParams, setSearchParams] = useSearchParams();
   const activeAdminTab = searchParams.get('adminTab') || 'approvals';
+
+  // 🟢 STRICT SECURITY CHECK: Is the logged-in user the ACTUAL HOD of this specific department?
+  const isCurrentHod = authData?._id && activeDept?.hod && (authData._id === activeDept.hod._id || authData._id === activeDept.hod);
 
   const handleTabChange = (tabId) => {
       const newParams = new URLSearchParams(searchParams);
@@ -56,7 +61,8 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
   const [isSubmittingAllocation, setIsSubmittingAllocation] = useState(false);
 
   const fetchPendingFaculty = async () => {
-    if (!activeDept) return;
+    // 🟢 OPTIMIZATION: Don't waste API calls if they aren't the HOD
+    if (!activeDept || !isCurrentHod) return; 
     setIsFetchingPending(true);
     try {
       const targetBranch = activeDept.abbreviation || activeDept.name;
@@ -81,11 +87,12 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
   useEffect(() => {
     fetchPendingFaculty();
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeDept]);
+  }, [activeDept, isCurrentHod]);
 
   useEffect(() => {
     const fetchAllocBlueprint = async () => {
-      if (allocationBatch && allocationSemester && activeDept) {
+      // 🟢 OPTIMIZATION: Only fetch if they are the HOD
+      if (allocationBatch && allocationSemester && activeDept && isCurrentHod) {
         try {
           setAllocationLoading(true);
           const targetBranch = activeDept.abbreviation || activeDept.name;
@@ -121,7 +128,7 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
       }
     };
     fetchAllocBlueprint();
-  }, [allocationBatch, allocationSemester, activeDept]);
+  }, [allocationBatch, allocationSemester, activeDept, isCurrentHod]);
 
   const handleApproveTeacher = async () => {
       if (!newDesignation) return alert("Please select a designation for this faculty member.");
@@ -147,7 +154,6 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
       setPendingFaculty(prev => prev.filter(f => f._id !== teacher._id));
   };
 
-  // ✨ 🟢 THE FIX IS HERE: We strip objects and arrays before sending to Mongoose!
   const saveBlueprintToDB = async (updatedSubjects) => {
       setIsSubmittingAllocation(true);
       try {
@@ -162,11 +168,8 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
               else if (daysStr) formattedTiming = daysStr;
               else if (timeStr) formattedTiming = timeStr;
 
-              // Extract safe ID so MongoDB doesn't throw CastError
               const safeAssignedTo = sub.assignedTo?._id || sub.assignedTo || null;
-
-              // Remove temporary arrays so Mongoose doesn't drop them
-              const { scheduleDays, scheduleTime, ...cleanSubject } = sub;
+              const { scheduleDays: _scheduleDays, scheduleTime: _scheduleTime, ...cleanSubject } = sub;
 
               return { 
                   ...cleanSubject, 
@@ -289,7 +292,8 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
         </div>
       )}
 
-      {canEdit && (
+      {/* 🟢 STRICT SECURITY RENDER: Only the exact logged-in HOD sees the controls */}
+      {isCurrentHod ? (
           <div className="flex flex-col flex-1 animate-in fade-in duration-500 mt-2">
               
               <div className="sticky top-0 z-30 flex flex-col xl:flex-row xl:items-center justify-between gap-4 py-3 bg-white/95 backdrop-blur-md transition-all duration-300 border-b border-slate-100 flex-shrink-0 mb-4">
@@ -335,26 +339,53 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
                               {isFetchingPending ? (
                                   <div className="text-center py-12 text-amber-500"><Loader2 className="w-8 h-8 animate-spin mx-auto"/></div>
                               ) : pendingFaculty.length > 0 ? (
-                                  <div className="flex flex-col">
+                                  <div className="flex flex-col gap-3">
                                       {pendingFaculty.map(user => (
-                                          <div key={user._id} className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-4 px-6 sm:px-8 border-b border-slate-100 hover:bg-slate-50 transition-all group last:border-b-0">
-                                              <div className="flex items-center gap-4 w-full md:w-1/3">
+                                          
+                                          <div key={user._id} className="p-4 bg-white rounded-xl border border-slate-200 flex flex-col lg:flex-row lg:items-center justify-between gap-4 shadow-sm hover:border-indigo-100 transition-all">
+
+                                              {/* Avatar & Name */}
+                                              <div className="flex items-center gap-4 w-full lg:w-1/3">
                                                   <div className="w-12 h-12 rounded-full bg-indigo-50 flex items-center justify-center text-indigo-600 font-bold text-lg flex-shrink-0 border border-indigo-100 overflow-hidden">
-                                                    {user.profilePicture ? <img src={user.profilePicture} className="w-full h-full object-cover"/> : getInitials(user.name)}
+                                                      {user.profilePicture ? <img src={user.profilePicture} className="w-full h-full object-cover"/> : getInitials(user.name)}
                                                   </div>
                                                   <div className="flex flex-col justify-center min-w-0">
-                                                    <h3 className="text-[15px] font-black text-slate-900 uppercase tracking-wide truncate">{user.name}</h3>
-                                                    <p className="text-[11px] text-slate-500 font-medium truncate">{user.email}</p>
+                                                      <h3 className="text-[15px] font-black text-slate-900 uppercase tracking-wide truncate">{user.name}</h3>
+                                                      <p className="text-[13px] text-slate-500 font-medium truncate">{user.email}</p>
                                                   </div>
                                               </div>
-                                              <div className="flex flex-col md:items-center justify-center w-full md:w-1/4 mt-2 md:mt-0 border-t md:border-t-0 border-slate-100 pt-3 md:pt-0">
-                                                  <span className="px-3 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border w-max mb-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm">TEACHER</span>
-                                                  <p className="text-[10px] font-bold text-slate-500">Reg No: <span className="text-slate-900">{user.registrationNo || 'N/A'}</span></p>
+
+                                              {/* Badge & Registration */}
+                                              <div className="flex flex-col lg:items-center justify-center w-full lg:w-1/5 pt-2 lg:pt-0">
+                                                  <span className="px-3 py-0.5 rounded-md text-[10px] font-black uppercase tracking-widest border w-max mb-1.5 bg-emerald-50 text-emerald-700 border-emerald-200 shadow-sm">
+                                                      TEACHER
+                                                  </span>
+                                                  <p className="text-[11px] font-bold text-slate-500 uppercase">Reg No: <span className="text-slate-900 font-black">{user.registrationNo || 'N/A'}</span></p>
                                               </div>
-                                              <div className="flex items-center gap-3 w-full md:w-auto md:justify-end flex-shrink-0 mt-3 md:mt-0">
-                                                  <button onClick={() => handleRejectTeacher(user)} className="flex-1 md:flex-none px-4 py-2 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm"><XCircle size={16} /> Reject</button>
-                                                  <button onClick={() => setSelectedTeacherForApproval(user)} className="flex-1 md:flex-none px-4 py-2 bg-[#10B981] hover:bg-[#059669] text-white rounded-full text-xs font-bold flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"><CheckCircle size={16} /> Approve</button>
+
+                                              {/* Branch Information */}
+                                              <div className="flex items-center lg:justify-center w-full lg:w-[15%] pt-1 lg:pt-0">
+                                                  <p className="text-[11px] font-bold text-slate-500 uppercase tracking-wide">
+                                                      BRANCH: <span className="text-indigo-600 ml-1 font-black">{user.branch || activeDept.abbreviation || 'N/A'}</span>
+                                                  </p>
                                               </div>
+
+                                              {/* Action Buttons */}
+                                              <div className="flex items-center justify-end gap-2 w-full lg:w-auto flex-shrink-0 mt-3 lg:mt-0">
+                                                  <button 
+                                                      onClick={() => handleRejectTeacher(user)} 
+                                                      className="px-5 py-2.5 bg-white border border-rose-200 hover:bg-rose-50 text-rose-600 rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+                                                  >
+                                                      <XCircle size={14} /> Reject
+                                                  </button>
+                                                  <button 
+                                                      onClick={() => setSelectedTeacherForApproval(user)} 
+                                                      className="px-5 py-2.5 bg-[#10B981] hover:bg-[#059669] border border-emerald-500 text-white rounded-xl text-[11px] font-black flex items-center justify-center gap-1.5 transition-colors shadow-sm active:scale-95"
+                                                  >
+                                                      <CheckCircle size={14} /> Approve User
+                                                  </button>
+                                              </div>
+                                              
                                           </div>
                                       ))}
                                   </div>
@@ -482,7 +513,18 @@ export default function HodAdministration({ activeDept, canEdit, onRefresh }) {
 
               </div>
           </div>
-      )}
+      ) : activeDept.hod ? (
+          /* 🟢 RESTRICTED ACCESS SCREEN FOR NON-HOD USERS (INCLUDING ADMIN) */
+          <div className="text-center py-20 border border-dashed border-slate-300 rounded-[2rem] bg-white flex-shrink-0 mt-4 shadow-sm animate-in fade-in duration-300">
+            <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-5 border border-slate-100 shadow-sm">
+                <Lock size={36} className="text-slate-400" />
+            </div>
+            <h3 className="text-xl font-black text-slate-900 mb-2">Restricted Access</h3>
+            <p className="text-[15px] text-slate-500 font-medium max-w-md mx-auto leading-relaxed">
+                Only the designated Head of Department can manage faculty approvals and subject allocations.
+            </p>
+          </div>
+      ) : null}
 
       {/* Designation Modal */}
       {selectedTeacherForApproval && (
