@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { Heart, MessageCircle, Repeat, MoreHorizontal, Trash2, Edit2, X, Check } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { togglePostLike, addPostComment, deleteSocialPost, updateSocialPost, deleteSocialComment } from '../api'; 
+import { togglePostLike, addPostComment, deleteSocialPost, updateSocialPost, deleteSocialComment } from '../api';
 
 const timeAgo = (dateString) => {
   if (!dateString) return "";
@@ -25,7 +25,7 @@ const timeAgo = (dateString) => {
 
 const PostImageGrid = ({ images }) => {
   const count = images.length;
-  const borderClass = "border border-gray-100"; 
+  const borderClass = "border border-gray-100";
 
   if (count === 1) {
     return (
@@ -77,32 +77,26 @@ const PostImageGrid = ({ images }) => {
 
 const PostCard = ({ post }) => {
   const { authData: currentUser } = useAuth();
+
+  // 🟢 ALL HOOKS MUST BE AT THE TOP!
+  // We use optional chaining (?.) to safely get values in case post or currentUser is null during the initial render.
+  const initialIsLiked = post?.likes?.includes(currentUser?._id) || false;
   
-  // 🛑 GUARD CLAUSE 1: Wait for current user to load
-  if (!currentUser) return null;
-
-  // 🛑 GUARD CLAUSE 2: If the user who made this post was deleted, hide the post!
-  if (!post || !post.user) return null;
-
-  const userId = currentUser._id;
-  const isOwner = currentUser._id === post.user._id;
-
-  const initialIsLiked = post.likes ? post.likes.includes(userId) : false;
   const [isLiked, setIsLiked] = useState(initialIsLiked);
-  const [likeCount, setLikeCount] = useState(post.likes ? post.likes.length : 0);
+  const [likeCount, setLikeCount] = useState(post?.likes?.length || 0);
 
   const [isCommentOpen, setIsCommentOpen] = useState(false);
-  const [comments, setComments] = useState(post.comments || []);
-  const [commentCount, setCommentCount] = useState(post.comments?.length || 0);
+  const [comments, setComments] = useState(post?.comments || []);
+  const [commentCount, setCommentCount] = useState(post?.comments?.length || 0);
   const [newComment, setNewComment] = useState("");
   const [isSubmittingComment, setIsSubmittingComment] = useState(false);
 
   const [isDeleted, setIsDeleted] = useState(false);
   const [showMenu, setShowMenu] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [postContent, setPostContent] = useState(post.content || "");
-  const [editContent, setEditContent] = useState(post.content || "");
-  
+  const [postContent, setPostContent] = useState(post?.content || "");
+  const [editContent, setEditContent] = useState(post?.content || "");
+
   const menuRef = useRef(null);
 
   useEffect(() => {
@@ -114,6 +108,14 @@ const PostCard = ({ post }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // 🛑 GUARD CLAUSES (EARLY RETURNS) GO HERE, AFTER ALL HOOKS!
+  if (!currentUser) return null;
+  if (!post || !post.user) return null;
+  if (isDeleted) return null;
+
+  const userId = currentUser._id;
+  const isOwner = userId === post.user._id;
 
   const handleLike = async () => {
     setIsLiked(!isLiked);
@@ -128,7 +130,7 @@ const PostCard = ({ post }) => {
   };
 
   const handleToggleComment = () => setIsCommentOpen(!isCommentOpen);
-  
+
   const handlePostComment = async (e) => {
     e.preventDefault();
     if (newComment.trim() === "") return;
@@ -164,7 +166,7 @@ const PostCard = ({ post }) => {
 
     try {
       await deleteSocialPost(post._id);
-      setIsDeleted(true); 
+      setIsDeleted(true);
     } catch (error) {
       console.error("Failed to delete:", error);
       alert("Failed to delete post.");
@@ -186,11 +188,11 @@ const PostCard = ({ post }) => {
 
   const handleSaveEdit = async () => {
     if (editContent.trim() === "") return alert("Post cannot be empty.");
-    
+
     try {
       await updateSocialPost(post._id, editContent);
-      setPostContent(editContent); 
-      setIsEditing(false); 
+      setPostContent(editContent);
+      setIsEditing(false);
     } catch (error) {
       console.error("Failed to edit:", error);
       alert("Failed to update post.");
@@ -201,17 +203,15 @@ const PostCard = ({ post }) => {
     ? postContent.replace(/#(\w+)/g, '<span class="text-blue-500 cursor-pointer hover:underline">#$1</span>')
     : "";
 
-  if (isDeleted) return null;
-
   return (
     <div className='bg-white rounded-xl shadow p-3 md:p-4 space-y-3 md:space-y-4 w-full border border-gray-100/50'>
       <div className='flex items-center justify-between'>
         <div className='flex items-center gap-2 md:gap-3 flex-1 min-w-0'>
           <Link to={`/profile/${post.user._id}`} className='flex items-center gap-2 md:gap-3 group flex-1 min-w-0'>
-            <img 
-              src={post.user.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5"} 
-              alt="user profile" 
-              className='w-9 h-9 md:w-10 md:h-10 rounded-full shadow object-cover cursor-pointer transition-transform group-hover:scale-105 shrink-0' 
+            <img
+              src={post.user.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5"}
+              alt="user profile"
+              className='w-9 h-9 md:w-10 md:h-10 rounded-full shadow object-cover cursor-pointer transition-transform group-hover:scale-105 shrink-0'
             />
             <div className='flex flex-col min-w-0 flex-1'>
               <div className='flex items-center space-x-1'>
@@ -228,7 +228,7 @@ const PostCard = ({ post }) => {
 
         {isOwner && (
           <div className="relative shrink-0 ml-2" ref={menuRef}>
-            <button 
+            <button
               onClick={() => setShowMenu(!showMenu)}
               className="p-1.5 md:p-2 rounded-full hover:bg-gray-100 transition-colors text-gray-500"
             >
@@ -237,13 +237,13 @@ const PostCard = ({ post }) => {
 
             {showMenu && (
               <div className="absolute right-0 mt-1 w-36 bg-white rounded-lg shadow-xl border border-gray-100 z-10 overflow-hidden">
-                <button 
+                <button
                   onClick={() => { setIsEditing(true); setShowMenu(false); }}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-gray-700 hover:bg-gray-50 transition-colors"
                 >
                   <Edit2 className="w-4 h-4" /> Edit
                 </button>
-                <button 
+                <button
                   onClick={handleDelete}
                   className="w-full flex items-center gap-2 px-4 py-2 text-sm text-red-600 hover:bg-red-50 transition-colors"
                 >
@@ -263,13 +263,13 @@ const PostCard = ({ post }) => {
             className="w-full p-3 border border-gray-200 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-400 min-h-[100px] text-sm resize-y"
           />
           <div className="flex justify-end gap-2">
-            <button 
+            <button
               onClick={() => { setIsEditing(false); setEditContent(postContent); }}
               className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-gray-600 hover:bg-gray-100 rounded-md transition-colors"
             >
               <X className="w-4 h-4" /> Cancel
             </button>
-            <button 
+            <button
               onClick={handleSaveEdit}
               className="flex items-center gap-1 px-3 py-1.5 text-sm font-medium text-white bg-blue-500 hover:bg-blue-600 rounded-md transition-colors"
             >
@@ -279,9 +279,9 @@ const PostCard = ({ post }) => {
         </div>
       ) : (
         postContent && (
-          <div 
+          <div
             className='text-gray-800 text-sm md:text-base whitespace-pre-wrap break-words'
-            dangerouslySetInnerHTML={{ __html: postWithHashtags }} 
+            dangerouslySetInnerHTML={{ __html: postWithHashtags }}
           />
         )
       )}
@@ -292,21 +292,21 @@ const PostCard = ({ post }) => {
 
       <div className='flex items-center justify-between text-gray-500 pt-1'>
         <div className='flex items-center gap-6'>
-          <button 
+          <button
             onClick={handleLike}
-            className={`flex items-center gap-1.5 cursor-pointer transition-colors hover:text-red-500 ${isLiked ? 'text-red-500' : ''}`} 
+            className={`flex items-center gap-1.5 cursor-pointer transition-colors hover:text-red-500 ${isLiked ? 'text-red-500' : ''}`}
           >
             <Heart className={`w-5 h-5 ${isLiked ? 'fill-red-500' : ''}`} />
             <span className="text-sm">{likeCount}</span>
           </button>
-          
+
           <button onClick={handleToggleComment} className='flex items-center gap-1.5 cursor-pointer hover:text-blue-500 transition-colors'>
-            <MessageCircle className="w-5 h-5" /> 
+            <MessageCircle className="w-5 h-5" />
             <span className="text-sm">{commentCount}</span>
           </button>
-          
+
           <button className='flex items-center gap-1.5 cursor-pointer hover:text-green-500 transition-colors'>
-            <Repeat className="w-5 h-5" /> 
+            <Repeat className="w-5 h-5" />
           </button>
         </div>
       </div>
@@ -314,12 +314,12 @@ const PostCard = ({ post }) => {
       {isCommentOpen && (
         <div className="mt-2 pt-3 border-t border-gray-100 space-y-3">
           <form onSubmit={handlePostComment} className="flex items-center gap-2">
-            <img 
-              src={currentUser?.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5"} 
-              alt="Your profile" 
-              className="w-8 h-8 rounded-full object-cover shrink-0" 
+            <img
+              src={currentUser?.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5"}
+              alt="Your profile"
+              className="w-8 h-8 rounded-full object-cover shrink-0"
             />
-            <input 
+            <input
               type="text"
               placeholder="Write a comment..."
               value={newComment}
@@ -327,7 +327,7 @@ const PostCard = ({ post }) => {
               disabled={isSubmittingComment}
               className="flex-1 min-w-0 rounded-full bg-gray-50 border border-gray-200 px-3 md:px-4 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-400 disabled:opacity-50"
             />
-            <button 
+            <button
               type="submit"
               disabled={isSubmittingComment || !newComment.trim()}
               className="shrink-0 rounded-full bg-blue-500 text-white px-3 md:px-4 py-1.5 text-sm font-medium hover:bg-blue-600 transition-colors disabled:opacity-50"
@@ -336,10 +336,10 @@ const PostCard = ({ post }) => {
             </button>
           </form>
 
-          <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar"> 
+          <div className="space-y-3 max-h-48 overflow-y-auto pr-1 custom-scrollbar">
             {comments.length > 0 ? (
               comments.map((comment) => {
-                
+
                 // 🛑 GUARD CLAUSE 3: If the user who left this comment was deleted, hide the comment!
                 if (!comment || !comment.user) return null;
 
@@ -348,38 +348,38 @@ const PostCard = ({ post }) => {
                 return (
                   <div key={comment._id} className="flex items-start gap-2">
                     <Link to={`/profile/${comment.user._id}`} className="shrink-0">
-                      <img 
-                        src={comment.user.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5"} 
-                        alt={comment.user.username} 
-                        className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover" 
+                      <img
+                        src={comment.user.profilePicture || "https://ui-avatars.com/api/?name=User&background=EBF4FF&color=4F46E5"}
+                        alt={comment.user.username}
+                        className="w-7 h-7 md:w-8 md:h-8 rounded-full object-cover"
                       />
                     </Link>
-                    
-                    <div className="flex-1 bg-gray-50 rounded-2xl rounded-tl-sm px-3 py-2 border border-gray-100"> 
+
+                    <div className="flex-1 bg-gray-50 rounded-2xl rounded-tl-sm px-3 py-2 border border-gray-100">
                       <div className="flex items-center justify-between gap-2">
                         <Link to={`/profile/${comment.user._id}`} className="min-w-0">
-                          <span className="font-semibold text-xs md:text-sm hover:underline truncate block"> 
+                          <span className="font-semibold text-xs md:text-sm hover:underline truncate block">
                             {comment.user.name || comment.user.full_name || "Unknown User"}
                           </span>
                         </Link>
-                        
+
                         <div className="flex items-center gap-2 shrink-0">
-                          <span className="text-[10px] md:text-xs text-gray-500"> 
+                          <span className="text-[10px] md:text-xs text-gray-500">
                             {timeAgo(comment.createdAt)}
                           </span>
-                          
+
                           {canDelete && (
-                            <button 
+                            <button
                               onClick={() => handleDeleteComment(comment._id)}
                               className="text-gray-400 hover:text-red-500 transition-colors"
                               aria-label="Delete comment"
                             >
-                              <Trash2 size={14} /> 
+                              <Trash2 size={14} />
                             </button>
                           )}
                         </div>
                       </div>
-                      <p className="text-xs md:text-sm text-gray-800 break-words mt-0.5">{comment.content}</p> 
+                      <p className="text-xs md:text-sm text-gray-800 break-words mt-0.5">{comment.content}</p>
                     </div>
                   </div>
                 );

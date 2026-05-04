@@ -1,3 +1,4 @@
+/* eslint-disable react-refresh/only-export-components */
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getUserProfile, getInstituteByRegNumber } from '../api';
 
@@ -7,7 +8,7 @@ export const AuthProvider = ({ children }) => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
   const [loading, setLoading] = useState(true);
   
-  // 🟢 THE FIX: Start these as 'null' instead of '{}' so our lazy-fetch 
+  // 🟢 Start these as 'null' instead of '{}' so our lazy-fetch 
   // checks in Chat/Friends know for a fact when the user is logged out.
   const [authData, setAuthData] = useState(null);
   const [instituteData, setInstituteData] = useState(null);
@@ -16,7 +17,9 @@ export const AuthProvider = ({ children }) => {
   const fetchAuthData = async () => {
     try {
       const userResponse = await getUserProfile();
-      if (userResponse.success) {
+      
+      // 🟢 THE FIX: Check if userResponse actually exists! (It will be null if they aren't logged in)
+      if (userResponse && userResponse.success) {
         setIsAuthenticated(true);
         const userData = userResponse.user;
         setAuthData(userData);
@@ -37,14 +40,18 @@ export const AuthProvider = ({ children }) => {
         } else {
           setInstituteData(null);
         }
+      } else {
+         // If userResponse is null (user is not logged in)
+         setIsAuthenticated(false);
+         setAuthData(null);
+         setInstituteData(null);
       }
     } catch (error) {
-      // 🟢 Normal expected behavior for logged-out users!
+      // We will only hit this catch block now if the server actually crashes (e.g. 500 error)
       setIsAuthenticated(false);
       setAuthData(null);      // Explicitly nullify
       setInstituteData(null); // Explicitly nullify
-      // We can console.log this, but it's safe to ignore when users are on the login screen.
-      console.log("Auth check failed (User is likely logged out):", error.message);
+      console.error("Auth check failed (Server error):", error.message);
     } finally {
       setLoading(false);
     }

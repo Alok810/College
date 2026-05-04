@@ -145,6 +145,9 @@ export const getUserProfile = async () => {
     const response = await api.get("/auth/me");
     return response.data;
   } catch (error) {
+    if (error.response && error.response.status === 401) {
+        return null; 
+    }
     const errorMessage =
       error.response?.data?.message || "Failed to fetch user profile.";
     throw new Error(errorMessage);

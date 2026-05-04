@@ -107,6 +107,9 @@ export default function AuthPage() {
     setForgotPasswordEmail(""); setForgotPasswordStatus("idle");
     setAvailableBranches([]);
     setInstSearchQuery(""); 
+    
+    // 🟢 NEW: Clear the validated code when the form is reset
+    sessionStorage.removeItem("validAisheCode"); 
   };
 
   const handleChange = (e) => {
@@ -214,6 +217,15 @@ export default function AuthPage() {
       alert("Captcha answer is incorrect.");
       setMathQuestion(generateCaptcha());
       return;
+    }
+
+    // 🟢 NEW: Verify the user selected a valid institute from the list (or is a dev using "18")
+    const enteredID = formData.instituteRegistrationNumber.trim();
+    const validID = sessionStorage.getItem("validAisheCode");
+
+    if (enteredID !== "18" && enteredID !== validID) {
+        alert("Invalid Institute. Please select a valid institute from the search dropdown.");
+        return;
     }
 
     if (isSignUp) {
@@ -326,6 +338,9 @@ export default function AuthPage() {
                 }));
                 setInstSearchQuery(inst.aisheCode);
                 setShowInstDropdown(false);
+                
+                // 🟢 NEW: Save the official code when they click it!
+                sessionStorage.setItem("validAisheCode", inst.aisheCode); 
               }}
               className="w-full text-left px-4 py-2.5 hover:bg-purple-50 border-b border-gray-50 last:border-0 transition-colors flex flex-col gap-1"
             >
@@ -544,7 +559,6 @@ export default function AuthPage() {
               
               {renderInstituteSearchBox()}
 
-              {/* 🟢 NEW: Ask "Other" staff for their specific role! */}
               <select name="designation" value={formData.designation} onChange={handleChange} className="w-full px-4 py-2 border rounded-lg bg-white" required>
                 <option value="">Select Staff Role</option>
                 <option value="Librarian">Librarian</option>
