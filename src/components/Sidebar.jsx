@@ -1,9 +1,8 @@
 // src/components/Sidebar.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { useAuth } from "../context/AuthContext";
-// ✅ IMPORT THE SHIELD ICON FOR THE SUPER ADMIN BUTTON
 import { ShieldCheck } from "lucide-react"; 
+import { useAuth } from "../context/AuthContext";
 
 import homeIcon from "../assets/house.png";
 import leftArrow from "../assets/left.png";
@@ -29,13 +28,19 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const menuRef = useRef(null);
   const navigate = useNavigate();
 
-  // ✅ CHECK USER ROLES
   const userRole = authData?.role || authData?.user?.role;
   const isSuperAdmin = userRole === "superadmin";
   const isInstituteAdmin = authData?.userType === "Institute" || userRole === "admin";
 
-  const linkClass =
-    "group flex items-center gap-3 py-2 px-4 rounded hover:bg-white/40 active:bg-white/60 active:scale-[0.98] transition-all duration-200";
+  // 🟢 THE FIX: Applied your Emerald theme to the active state!
+  const getNavLinkClass = ({ isActive }) => 
+    `group flex items-center gap-3 py-2 px-4 rounded-xl transition-all duration-200 ${
+      !isOpen ? "justify-center" : "justify-start"
+    } ${
+      isActive 
+        ? "bg-emerald-50/80 border border-emerald-300 font-bold text-emerald-800 shadow-sm" 
+        : "border border-transparent hover:bg-white/40 active:bg-white/60 active:scale-[0.98] text-gray-800"
+    }`;
 
   const iconClass = "w-6 h-6 min-w-[24px] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-md group-active:scale-95";
 
@@ -121,66 +126,64 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
           {/* Navigation */}
           <nav className="space-y-2 flex-1 overflow-y-auto pr-2 pb-4 scrollbar-hide">
-            <NavLink to="/" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/" className={getNavLinkClass}>
               <img src={homeIcon} alt="Home" className={iconClass} />
               {isOpen && "Home"}
             </NavLink>
 
-            <NavLink to="/friends" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/friends" className={getNavLinkClass}>
               <img src={friendIcon} alt="Friends" className={iconClass} />
               {isOpen && "Friends"}
             </NavLink>
 
-            <NavLink to="/result" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/result" className={getNavLinkClass}>
               <img src={resultIcon} alt="Result" className={iconClass} />
               {isOpen && "Result"}
             </NavLink>
 
-            <NavLink to="/voice" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/voice" className={getNavLinkClass}>
               <img src={voiceIcon} alt="TalkHive" className={iconClass} />
               {isOpen && "TalkHive"}
             </NavLink>
 
-            <NavLink to="/department" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/department" className={getNavLinkClass}>
               <img src={departmentIcon} alt="Department" className={iconClass} />
               {isOpen && "Department"}
             </NavLink>
 
-            <NavLink to="/library" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/library" className={getNavLinkClass}>
               <img src={libraryIcon} alt="Library" className={iconClass} />
               {isOpen && "Library"}
             </NavLink>
 
-            <NavLink to="/hostel" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/hostel" className={getNavLinkClass}>
               <img src={hostelIcon} alt="Hostel" className={iconClass} />
               {isOpen && "Hostel"}
             </NavLink>
 
-            <NavLink to="/club" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/club" className={getNavLinkClass}>
               <img src={clubIcon} alt="Club" className={iconClass} />
               {isOpen && "Club"}
             </NavLink>
 
-            <NavLink to="/interaction" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+            <NavLink to="/interaction" className={getNavLinkClass}>
               <img src={interactionIcon} alt="Interaction" className={iconClass} />
               {isOpen && "Interaction"}
             </NavLink>
 
-            {/* ✅ THE INSTITUTE ADMIN BUTTON (Conditionally Rendered) */}
             {isInstituteAdmin && (
-              <NavLink to="/admin" className={`${linkClass} ${!isOpen ? "justify-center" : "justify-start"}`}>
+              <NavLink to="/admin" className={getNavLinkClass}>
                 <img src={adminIcon} alt="Admin" className={iconClass} />
                 {isOpen && "Admin"}
               </NavLink>
             )}
 
-            {/* ✅ THE SUPER ADMIN BUTTON (Conditionally Rendered) */}
             {isSuperAdmin && (
               <>
                 <div className="border-t border-white/50 my-2 pt-2"></div>
                 <NavLink 
                     to="/superadmin" 
-                    className={`group flex items-center gap-3 py-2.5 px-4 rounded-lg bg-indigo-50/60 hover:bg-indigo-100/80 active:bg-indigo-200 border border-indigo-200/50 shadow-sm active:scale-[0.98] transition-all duration-200 ${!isOpen ? "justify-center" : "justify-start"}`}
+                    className={({ isActive }) => `group flex items-center gap-3 py-2.5 px-4 rounded-xl border transition-all duration-200 ${!isOpen ? "justify-center" : "justify-start"} ${isActive ? "bg-indigo-100 border-indigo-300 shadow-sm" : "bg-indigo-50/60 hover:bg-indigo-100/80 active:bg-indigo-200 border-indigo-200/50 shadow-sm active:scale-[0.98]"}`}
                 >
                   <ShieldCheck className={`w-6 h-6 min-w-[24px] text-indigo-600 transition-transform duration-300 group-hover:scale-110 group-active:scale-95`} />
                   {isOpen && <span className="font-extrabold text-indigo-800 tracking-wide text-sm uppercase">Super Admin</span>}
@@ -195,7 +198,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         <div className="relative shrink-0 mt-4" ref={menuRef}>
           <div
             onClick={() => setMenuOpen(!menuOpen)}
-            className={`group flex items-center gap-3 bg-white/50 p-3 rounded-lg shadow-sm cursor-pointer hover:bg-white/80 active:bg-white/90 active:scale-[0.98] transition-all ${
+            className={`group flex items-center gap-3 bg-white/50 p-3 rounded-xl border border-transparent shadow-sm cursor-pointer hover:bg-white/80 active:bg-white/90 active:scale-[0.98] transition-all ${
               !isOpen ? "justify-center" : ""
             }`}
           >
@@ -209,14 +212,13 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 <p className="font-semibold text-gray-800 truncate">
                   {authData?.name || authData?.full_name || "Unknown User"}
                 </p>
-                {/* Optional: Show their role if they are superadmin */}
                 {isSuperAdmin && <span className="text-[9px] font-black text-indigo-600 uppercase tracking-wider">Super Admin</span>}
               </div>
             )}
           </div>
 
           {menuOpen && (
-            <div className="absolute bottom-16 left-0 w-48 bg-white border border-gray-200 rounded-lg shadow-xl overflow-hidden z-50">
+            <div className="absolute bottom-16 left-0 w-48 bg-white border border-gray-200 rounded-xl shadow-xl overflow-hidden z-50">
               <button
                 className="group flex items-center gap-3 px-4 py-3 hover:bg-gray-100 active:bg-gray-200 active:scale-[0.98] w-full text-left text-gray-700 transition-all"
                 onClick={() => { navigate("/profile"); setMenuOpen(false); }}

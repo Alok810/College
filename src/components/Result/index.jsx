@@ -1,11 +1,20 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '../context/AuthContext';
-import { getMyResults, getAllResultsForAdmin, publishResult, updateResult, deleteResult, getAdminUsers, getClassResultsForStudents, getInstituteDepartments } from '../api';
+import { useAuth } from '../../context/AuthContext';
+import { 
+  getMyResults, 
+  getAllResultsForAdmin, 
+  publishResult, 
+  updateResult, 
+  deleteResult, 
+  getAdminUsers, 
+  getClassResultsForStudents, 
+  getInstituteDepartments 
+} from '../../api'; // Make sure this path points to your actual api file
 import { Lock } from 'lucide-react';
 
-// Import our new modular components!
-import { AdminDashboard } from '../components/Result/AdminDashboard';
-import StudentCGPAList from '../components/Result/StudentCGPAList';
+// Import your newly split components
+import { AdminDashboard } from './AdminDashboard';
+import StudentCGPAList from './StudentCGPAList'; // 🟢 Updated to use the unified component!
 
 const Result = () => {
   const { authData, loading } = useAuth();
@@ -26,6 +35,7 @@ const Result = () => {
   }, []);
 
   const fetchData = useCallback(async (page = 1) => {
+    // Hard block! If there is no user logged in, stop immediately.
     if (!authData) return; 
 
     try {
@@ -63,6 +73,7 @@ const Result = () => {
   }, [isOfficial, authData]);
 
   useEffect(() => { 
+    // Don't let this hook run if there is no user data!
     if (!authData) return;
 
     if (!loading && (isOfficial || isVerified)) {
@@ -80,8 +91,7 @@ const Result = () => {
         displayMessage("Draft saved successfully!");
       }
       fetchData(currentPage); 
-    } catch (error) {
-      console.error("Save Draft Error:", error);
+    } catch {
       displayMessage("Failed to save draft.");
     }
   };
@@ -92,13 +102,13 @@ const Result = () => {
         await deleteResult(id);
         displayMessage("Record deleted.");
         fetchData(currentPage);
-      } catch (error) {
-        console.error("Delete Error:", error);
+      } catch  {
         displayMessage("Failed to delete.");
       }
     }
   };
 
+  // 1. Check if the user is unverified and lock them out
   if (!loading && !isOfficial && !isVerified) {
     return (
       <div className="flex flex-col items-center justify-center h-full w-full p-6">
@@ -115,9 +125,14 @@ const Result = () => {
     );
   }
 
+  // 2. Render the main interface
   return (
     <div className="flex flex-col flex-1 items-center h-[calc(100dvh-60px)] sm:h-[calc(100vh-80px)] w-full max-w-[100vw] overflow-hidden -mt-4 sm:pt-4 pb-20 sm:pb-4">
-      {message && <div className="fixed top-20 sm:top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-lg bg-slate-900 text-white font-bold text-sm animate-in slide-in-from-top-4 fade-in w-[90%] sm:w-auto text-center">{message}</div>}
+      {message && (
+        <div className="fixed top-20 sm:top-8 left-1/2 -translate-x-1/2 z-[100] px-6 py-3 rounded-2xl shadow-lg bg-slate-900 text-white font-bold text-sm animate-in slide-in-from-top-4 fade-in w-[90%] sm:w-auto text-center">
+          {message}
+        </div>
+      )}
       
       <div className="flex flex-col flex-1 w-[94%] sm:w-full max-w-6xl mx-auto h-full min-h-0 gap-3 sm:gap-4 relative">
         {isOfficial ? (

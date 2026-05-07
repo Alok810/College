@@ -54,6 +54,7 @@ const AppContent = () => {
   const isDeptPage = location.pathname.startsWith("/department");
   const isResultPage = location.pathname.startsWith("/result");
   const isLibraryPage = location.pathname.startsWith("/library");
+  const isInteractionPage = location.pathname.startsWith("/interaction")
   
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
@@ -173,7 +174,7 @@ useEffect(() => {
   const maskCutoffLine = hideSidebar ? "0px" : `calc(${contentPaddingTop} - 0.40rem)`; 
 
 // 🟢 2. Intelligent Scroll Lock: Lock outer scroll ONLY on specific desktop pages
-  const lockOuterScroll = (isProfilePage || isClubPage || isDeptPage || isResultPage || isLibraryPage) && !isMobile;
+  const lockOuterScroll = (isProfilePage || isClubPage || isDeptPage || isResultPage || isLibraryPage || isInteractionPage) && !isMobile;
 
   if (loading) {
     return (

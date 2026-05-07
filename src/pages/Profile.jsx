@@ -20,7 +20,6 @@ import {
   Monitor, 
   Printer  
 } from "lucide-react";
-// 🟢 1. Added useSearchParams to the existing import
 import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"; 
 import PostCard from "../components/PostCard";
 import EditProfile from "../components/EditProfile";
@@ -224,7 +223,7 @@ const ProfileMainContent = ({
 // ==========================================
 const DesktopProfileHeader = ({
   activeTab,
-  handleTabChange, // 🟢 2. Changed from setActiveTab
+  handleTabChange, 
   isCurrentUser,
   setShowEdit,
   resumeViewMode,
@@ -250,7 +249,7 @@ const DesktopProfileHeader = ({
               return (
                 <div key={item.name} className="relative group">
                   <button
-                    onClick={() => handleTabChange(item.tab)} // 🟢 Use new handler
+                    onClick={() => handleTabChange(item.tab)} 
                     className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
                   >
                     <item.icon className="w-4 h-4" /> {item.name}
@@ -261,14 +260,14 @@ const DesktopProfileHeader = ({
                     <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden flex flex-col py-1">
                       
                       <button 
-                        onClick={() => { handleTabChange("resume"); setResumeViewMode("web"); }} // 🟢 Use new handler
+                        onClick={() => { handleTabChange("resume"); setResumeViewMode("web"); }} 
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "web" && activeTab === "resume" ? "text-purple-700 bg-purple-50" : "text-gray-700 hover:bg-gray-50"}`}
                       >
                         <Monitor className="w-4 h-4" /> Web View
                       </button>
                       
                       <button 
-                        onClick={() => { handleTabChange("resume"); setResumeViewMode("a4"); }} // 🟢 Use new handler
+                        onClick={() => { handleTabChange("resume"); setResumeViewMode("a4"); }} 
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "a4" && activeTab === "resume" ? "text-teal-700 bg-teal-50" : "text-gray-700 hover:bg-gray-50"}`}
                       >
                         <Printer className="w-4 h-4" /> A4 Document
@@ -295,7 +294,7 @@ const DesktopProfileHeader = ({
             return (
               <button
                 key={item.name}
-                onClick={() => handleTabChange(item.tab)} // 🟢 Use new handler
+                onClick={() => handleTabChange(item.tab)} 
                 className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
               >
                 <item.icon className="w-4 h-4" /> {item.name}
@@ -327,11 +326,13 @@ const DesktopProfileSidebar = ({
     msOverflowStyle: "none",
     scrollbarWidth: "none",
   };
-  const InfoRow = ({ text, link, linkText }) => {
-    if (!text || text.includes("undefined")) return null;
+  
+  // 🟢 THE FIX: Safely destructure Icon and cast text to String
+  const InfoRow = ({ Icon, text, link, linkText }) => {
+    if (!text || String(text).includes("undefined") || String(text).includes("null")) return null;
     return (
       <div className="flex items-center text-sm text-gray-700">
-        <Icon className="w-4 h-4 mr-3 text-gray-500 flex-shrink-0" />
+        {Icon && <Icon className="w-4 h-4 mr-3 text-gray-500 flex-shrink-0" />}
         {link ? (
           <a
             href={link}
@@ -342,7 +343,7 @@ const DesktopProfileSidebar = ({
             {linkText || text}
           </a>
         ) : (
-          <span className="font-medium text-gray-600">{text}</span>
+          <span className="font-medium text-gray-600">{String(text)}</span>
         )}
       </div>
     );
@@ -437,7 +438,7 @@ const DesktopProfileSidebar = ({
 // ==========================================
 const MobileTabBar = ({
   activeTab,
-  handleTabChange, // 🟢 3. Changed from setActiveTab
+  handleTabChange, 
   isCurrentUser,
   setShowEdit,
 }) => {
@@ -454,7 +455,7 @@ const MobileTabBar = ({
           {navItems.map((item) => (
             <button
               key={item.name}
-              onClick={() => handleTabChange(item.tab)} // 🟢 Use new handler
+              onClick={() => handleTabChange(item.tab)} 
               className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
                 activeTab === item.tab
                   ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-md transform scale-110"
@@ -491,11 +492,12 @@ const MobileProfileSidebar = ({
   friendshipStatus,
   onFriendAction,
 }) => {
-  const InfoRow = ({text, link, linkText }) => {
-    if (!text || text.includes("undefined")) return null;
+  // 🟢 THE FIX: Safely destructure Icon and cast text to String
+  const InfoRow = ({ Icon, text, link, linkText }) => {
+    if (!text || String(text).includes("undefined") || String(text).includes("null")) return null;
     return (
       <div className="flex items-center text-sm text-gray-700">
-        <Icon className="w-4 h-4 mr-3 text-gray-400 flex-shrink-0" />
+        {Icon && <Icon className="w-4 h-4 mr-3 text-gray-400 flex-shrink-0" />}
         {link ? (
           <a
             href={link}
@@ -506,7 +508,7 @@ const MobileProfileSidebar = ({
             {linkText || text}
           </a>
         ) : (
-          <span className="font-medium text-gray-600">{text}</span>
+          <span className="font-medium text-gray-600">{String(text)}</span>
         )}
       </div>
     );
@@ -620,7 +622,6 @@ const Profile = ({posts: allPosts }) => {
   const { authData, instituteData } = useAuth(); 
   const isCurrentUser = !ProfileId || ProfileId === authData?._id;
 
-  // 🟢 4. Setup useSearchParams
   const [searchParams, setSearchParams] = useSearchParams();
   const activeTab = searchParams.get('tab') || 'posts';
 
@@ -632,6 +633,7 @@ const Profile = ({posts: allPosts }) => {
     handleAddFriend,
     handleCancelRequest,
     handleUnfriend,
+    fetchSocialDataOnDemand,
   } = useFriends();
 
   const [user, setUser] = useState(null);
@@ -643,10 +645,14 @@ const Profile = ({posts: allPosts }) => {
   const [resumeViewMode, setResumeViewMode] = useState("web");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
-  // 🟢 5. Create the handleTabChange function
   const handleTabChange = (tabId) => {
     setSearchParams({ tab: tabId }, { replace: true });
   };
+
+  // 🟢 2. ADD THIS: Tell the context to load the friends list if it hasn't already!
+  useEffect(() => {
+    fetchSocialDataOnDemand();
+  }, [fetchSocialDataOnDemand]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 1024);
@@ -678,24 +684,23 @@ const Profile = ({posts: allPosts }) => {
     }
   }, [allPosts, user]);
 
+// 🟢 3. UPDATE THIS: Bulletproof friendship status checker
   useEffect(() => {
     if (ProfileId && ProfileId !== authData?._id) {
-      if (friends && friends.find((friend) => friend._id === ProfileId))
+      if (friends?.some((friend) => friend?._id === ProfileId)) {
         setFriendshipStatus("friends");
-      else if (requests && requests.find((req) => req._id === ProfileId))
+      } else if (requests?.some((req) => req?._id === ProfileId)) {
         setFriendshipStatus("request_received");
-      else if (
-        suggestions &&
-        suggestions.find((sug) => sug._id === ProfileId && sug.requestSent)
-      )
+      } else if (suggestions?.some((sug) => sug?._id === ProfileId && sug?.requestSent)) {
         setFriendshipStatus("request_sent");
-      else setFriendshipStatus("not_friends");
+      } else {
+        setFriendshipStatus("not_friends");
+      }
     }
+    
     if (isCurrentUser) setFriendList(friends);
     else setFriendList([]);
     
-    // We remove the setActiveTab("posts") from here so it doesn't force a reset 
-    // to 'posts' if someone visits a direct URL like /profile?tab=resume
   }, [ProfileId, friends, requests, suggestions, isCurrentUser, authData]);
   
   if (!user) return <Loading />;
@@ -730,7 +735,7 @@ const Profile = ({posts: allPosts }) => {
 
         <MobileTabBar
           activeTab={activeTab}
-          handleTabChange={handleTabChange} // 🟢 Pass handler
+          handleTabChange={handleTabChange} 
           isCurrentUser={isCurrentUser}
           setShowEdit={setShowEdit}
         />
@@ -769,7 +774,7 @@ const Profile = ({posts: allPosts }) => {
         <div className="flex-1 min-w-[400px] flex flex-col h-full">
           <DesktopProfileHeader
             activeTab={activeTab}
-            handleTabChange={handleTabChange} // 🟢 Pass handler
+            handleTabChange={handleTabChange} 
             isCurrentUser={isCurrentUser}
             setShowEdit={setShowEdit}
             resumeViewMode={resumeViewMode} 

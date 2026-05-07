@@ -486,7 +486,7 @@ export default function AuthPage() {
           return (
             <>
               <input name="name" type="text" value={formData.name} placeholder="Student Full Name" onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
-              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Registration / Roll No." onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
+              <input name="registrationNo" type="text" value={formData.registrationNo} placeholder="Registration:22053600000." onChange={handleChange} className="w-full px-4 py-2 border rounded-lg" required />
               
               {renderInstituteSearchBox()}
 

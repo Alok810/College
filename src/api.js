@@ -1131,3 +1131,53 @@ export const enhanceTextWithAI = async (text) => {
   }
 };
 
+// ==========================================
+// 💬 APP FEEDBACK / INTERACTION ENDPOINTS
+// ==========================================
+
+export const submitAppFeedback = async (feedbackData) => {
+  try {
+    const response = await api.post("/feedback/submit", feedbackData);
+    return response.data;
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to submit feedback.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const getAppFeedbacks = async () => {
+  try {
+    const response = await api.get("/feedback/all");
+    return response.data.feedbacks; // Returns the array of feedbacks
+  } catch (error) {
+    const errorMessage = error.response?.data?.message || "Failed to fetch feedbacks.";
+    throw new Error(errorMessage);
+  }
+};
+
+export const upvoteAppFeedback = async (id) => {
+  try {
+    const response = await api.put(`/feedback/${id}/upvote`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to upvote.");
+  }
+};
+
+export const downvoteAppFeedback = async (id) => {
+  try {
+    const response = await api.put(`/feedback/${id}/downvote`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to downvote.");
+  }
+};
+
+export const deleteAppFeedback = async (id) => {
+  try {
+    const response = await api.delete(`/feedback/${id}`);
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to delete feedback.");
+  }
+};

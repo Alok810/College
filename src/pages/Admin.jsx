@@ -1,7 +1,7 @@
 import React, { useState, useEffect, memo } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useSearchParams } from 'react-router-dom';
-import { getAdminStats, getAdminUsers, getPendingInstituteUsers, verifyInstituteUser, fetchCampusClubs, deleteClub, updateUserDesignation } from '../api';
+import { getAdminStats, getAdminUsers, getPendingInstituteUsers, verifyInstituteUser, fetchCampusClubs, updateUserDesignation } from '../api';
 import {
   ShieldAlert, ShieldCheck, Users, BarChart3, GraduationCap, Building2,
   Search, Settings, CheckCircle, XCircle, UserPlus, MoreVertical, LayoutDashboard,
@@ -12,10 +12,11 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip,
 import CampusManagement from '../components/CampusManagement';
 import DepartmentManagement from '../components/DepartmentManagement';
 
-const StatCard = memo(({ title, count, icon: Icon, colorClass }) => (
+const StatCard = memo(({ title, count, icon: IconComponent, colorClass }) => (
   <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center gap-4 hover:border-indigo-300 transition-colors">
     <div className={`w-12 h-12 rounded-[0.8rem] flex items-center justify-center flex-shrink-0 ${colorClass}`}>
-      <Icon className="w-6 h-6 text-white" />
+      {/* Notice this is now <IconComponent /> instead of <Icon /> */}
+      <IconComponent className="w-6 h-6 text-white" />
     </div>
     <div>
       <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider">{title}</p>
@@ -106,6 +107,7 @@ const Admin = () => {
       await verifyInstituteUser(userId, action);
       fetchAdminData();
     } catch (error) {
+      console.error("Verification Error:", error);
       alert("Failed to process request.");
     }
   };
@@ -138,21 +140,22 @@ const Admin = () => {
       setRoleModal({ isOpen: false, targetUser: null, actionType: 'appoint' });
       fetchAdminData();
     } catch (error) {
+      console.error("Role Update Error:", error);
       alert("Failed to update user role.");
     } finally {
       setIsSubmitting(false);
     }
   };
 
-  const handleDeleteClub = async (clubId, clubName) => {
-    const confirmText = prompt(`WARNING: This will permanently delete the club "${clubName}" and all its associated data. Type the name of the club to confirm:`);
-    if (confirmText === clubName) {
-      try { await deleteClub(clubId); alert(`${clubName} has been successfully deleted.`); fetchAdminData(); }
-      catch (error) { alert(error.message || "Failed to delete the club."); }
-    } else if (confirmText !== null) {
-      alert("Club name did not match. Deletion cancelled.");
-    }
-  };
+  // const handleDeleteClub = async (clubId, clubName) => {
+  //   const confirmText = prompt(`WARNING: This will permanently delete the club "${clubName}" and all its associated data. Type the name of the club to confirm:`);
+  //   if (confirmText === clubName) {
+  //     try { await deleteClub(clubId); alert(`${clubName} has been successfully deleted.`); fetchAdminData(); }
+  //     catch (error) { alert(error.message || "Failed to delete the club."); }
+  //   } else if (confirmText !== null) {
+  //     alert("Club name did not match. Deletion cancelled.");
+  //   }
+  // };
 
   const handleTabChange = (tabId) => {
     setSearchParams({ tab: tabId }, { replace: true });
@@ -170,7 +173,6 @@ const Admin = () => {
     return 'Other';
   };
 
-  const filteredClubs = existingClubs.filter(club => club.name?.toLowerCase().includes(searchTerm.toLowerCase()));
   const filteredPendingUsers = pendingUsers.filter(user => {
     if (verificationFilter === 'All') return true;
     return getNormalizedType(user) === verificationFilter;
