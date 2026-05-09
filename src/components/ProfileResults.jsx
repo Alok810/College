@@ -1,5 +1,4 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-// 🟢 1. Imported useSearchParams
 import { useSearchParams } from 'react-router-dom';
 import { FileText, Loader2, Clock, Download, Lock, AlertTriangle } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
@@ -36,7 +35,8 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     return (
         <div 
             ref={contentRef} 
-            className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-0 print:m-0"
+            // 🟢 THE FIX: Changed print:p-0 to print:p-10 to give the PDF breathing room inside!
+            className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-10 print:m-0"
         >
             {/* WATERMARK */}
             {instituteLogo && (
@@ -218,7 +218,6 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
     const [loading, setLoading] = useState(true);
     const [errorMsg, setErrorMsg] = useState(""); 
 
-    // 🟢 2. Swapped useState for useSearchParams
     const [searchParams, setSearchParams] = useSearchParams();
     const selectedSemester = searchParams.get('semester') || 'Semester 1';
 
@@ -229,7 +228,6 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
     const isOfficial = authData?.userType === "Institute" || authData?.role === "admin" || authData?.role === "superadmin";
     const isVerified = authData?.isVerifiedByInstitute === true;
 
-// 🟢 3. Custom handler wrapped in useCallback
     const handleSemesterChange = useCallback((sem) => {
         const newParams = new URLSearchParams(searchParams);
         newParams.set('semester', sem);
@@ -268,7 +266,6 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
                     }
                 }
                 
-                // 🟢 4. Auto-select the latest semester ONLY if one isn't currently in the URL
                 if (actualResults.length > 0 && !searchParams.get('semester')) {
                     const sortedResults = [...actualResults].sort((a, b) => a.semester.localeCompare(b.semester));
                     handleSemesterChange(sortedResults[sortedResults.length - 1].semester);
@@ -342,7 +339,8 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
             <style>{`
                 @media print {
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
-                    @page { size: A4 portrait; margin: 10mm; }
+                    /* 🟢 THE FIX: Margin 0 completely hides the browser's default headers, dates, and URLs! */
+                    @page { size: A4 portrait; margin: 0mm; } 
                     .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
                     tr { break-inside: avoid; page-break-inside: avoid; }
                     .watermark-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 0; }
@@ -357,7 +355,6 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
                     return (
                         <button
                             key={sem}
-                            // 🟢 5. Updated onClick to use handleSemesterChange
                             onClick={() => handleSemesterChange(sem)}
                             className={`px-3 py-2 sm:px-4 sm:py-2.5 text-xs sm:text-sm font-extrabold rounded-xl whitespace-nowrap transition-all duration-200 flex-1 min-w-[70px] ${
                                 selectedSemester === sem

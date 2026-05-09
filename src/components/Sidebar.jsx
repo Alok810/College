@@ -18,7 +18,7 @@ import departmentIcon from "../assets/department.png";
 import adminIcon from "../assets/admin.png";
 import interactionIcon from "../assets/interaction.png";
 import libraryIcon from "../assets/Library.png";
-import hostelIcon from "../assets/hostel.png";
+// import hostelIcon from "../assets/hostel.png"; // Commented out Hostel Icon
 import clubIcon from "../assets/Club.png";
 
 export default function Sidebar({ isOpen, setIsOpen }) {
@@ -156,10 +156,10 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               {isOpen && "Library"}
             </NavLink>
 
-            <NavLink to="/hostel" className={getNavLinkClass}>
+            {/* <NavLink to="/hostel" className={getNavLinkClass}>
               <img src={hostelIcon} alt="Hostel" className={iconClass} />
               {isOpen && "Hostel"}
-            </NavLink>
+            </NavLink> */}
 
             <NavLink to="/club" className={getNavLinkClass}>
               <img src={clubIcon} alt="Club" className={iconClass} />
@@ -182,8 +182,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               <>
                 <div className="border-t border-white/50 my-2 pt-2"></div>
                 <NavLink 
-                    to="/superadmin" 
-                    className={({ isActive }) => `group flex items-center gap-3 py-2.5 px-4 rounded-xl border transition-all duration-200 ${!isOpen ? "justify-center" : "justify-start"} ${isActive ? "bg-indigo-100 border-indigo-300 shadow-sm" : "bg-indigo-50/60 hover:bg-indigo-100/80 active:bg-indigo-200 border-indigo-200/50 shadow-sm active:scale-[0.98]"}`}
+                  to="/superadmin" 
+                  className={({ isActive }) => `group flex items-center gap-3 py-2.5 px-4 rounded-xl border transition-all duration-200 ${!isOpen ? "justify-center" : "justify-start"} ${isActive ? "bg-indigo-100 border-indigo-300 shadow-sm" : "bg-indigo-50/60 hover:bg-indigo-100/80 active:bg-indigo-200 border-indigo-200/50 shadow-sm active:scale-[0.98]"}`}
                 >
                   <ShieldCheck className={`w-6 h-6 min-w-[24px] text-indigo-600 transition-transform duration-300 group-hover:scale-110 group-active:scale-95`} />
                   {isOpen && <span className="font-extrabold text-indigo-800 tracking-wide text-sm uppercase">Super Admin</span>}
