@@ -78,15 +78,15 @@ export default function Department() {
   const isHOD = authData && activeDept && (activeDept.hod?._id === authData._id || activeDept.hod === authData._id);
   const canEditAcademics = isAdmin || isHOD;
 
-// ==========================================
+  // ==========================================
   // 🛠️ FETCH STUDENTS 
   // ==========================================
   useEffect(() => {
     const fetchStudents = async () => {
       const targetBranch = activeDept?.abbreviation || activeDept?.name;
-      
+
       // 🟢 REMOVED: activeTab === 'students' check so it fetches data globally
-      if (targetBranch) { 
+      if (targetBranch) {
         try {
           setStudentsLoading(true);
           const res = await getDepartmentStudents(targetBranch);
@@ -358,9 +358,9 @@ export default function Department() {
                   TAB 1: OVERVIEW 
                   ========================================= */}
               {activeTab === 'overview' && activeDept && (
-                <OverviewTab 
-                   activeDept={activeDept} 
-                   studentCount={deptStudents.length} // 🟢 ADDED THIS PROP
+                <OverviewTab
+                  activeDept={activeDept}
+                  studentCount={deptStudents.length} // 🟢 ADDED THIS PROP
                 />
               )}
 
@@ -407,6 +407,12 @@ export default function Department() {
                       {deptStudents
                         .filter(s => studentBatchFilter === '' || s.batch === studentBatchFilter)
                         .filter(s => s.name?.toLowerCase().includes(searchQuery.toLowerCase()) || s.registrationNo?.toLowerCase().includes(searchQuery.toLowerCase()))
+                        // 🟢 ADDED: Sort ascending by registration number (Handles both numbers and alphanumeric strings properly)
+                        .sort((a, b) => {
+                          const regA = a.registrationNo ? String(a.registrationNo) : "";
+                          const regB = b.registrationNo ? String(b.registrationNo) : "";
+                          return regA.localeCompare(regB, undefined, { numeric: true });
+                        })
                         .map((student, idx) => (
                           <div key={idx} className="p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-300 hover:shadow-md transition-all">
 
