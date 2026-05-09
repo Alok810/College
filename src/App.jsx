@@ -196,7 +196,7 @@ useEffect(() => {
         backgroundSize: "cover",
       }}
     >
-      {!hideSidebar && authData && authData._id && <AnnouncementBanner />}
+       <AnnouncementBanner />
 
       <div className="flex h-[100dvh] transition-all duration-300">
         
