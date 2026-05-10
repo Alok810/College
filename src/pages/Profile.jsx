@@ -16,11 +16,11 @@ import {
   UserPlus,
   UserCheck,
   Clock,
-  FileText, 
-  Monitor, 
-  Printer  
+  FileText,
+  Monitor,
+  Printer
 } from "lucide-react";
-import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom"; 
+import { useParams, Link, useNavigate, useSearchParams } from "react-router-dom";
 import PostCard from "../components/PostCard";
 import EditProfile from "../components/EditProfile";
 import { useFriends } from "../context/FriendContext";
@@ -28,6 +28,7 @@ import { useAuth } from "../context/AuthContext";
 import { getUserById } from "../api";
 import ProfileResults from "../components/ProfileResults";
 import ResumeTab from "../components/ResumeTab";
+import ProfileFriendsTab from '../components/ProfileFriendsTab';
 
 // ==========================================
 // 🧩 HELPER FUNCTION
@@ -129,54 +130,16 @@ const FriendButton = ({ status, onAdd, onCancel, onAccept, onUnfriend }) => {
   }
 };
 
-const FriendListTab = ({ friends }) => {
-  if (!friends || friends.length === 0)
-    return (
-      <div className="p-10 rounded-xl text-center text-gray-500 w-full bg-white shadow-md border border-gray-100">
-        <p>No friends to display.</p>
-      </div>
-    );
-  return (
-    <div className="bg-white rounded-xl shadow-md border border-gray-100 p-4 w-full">
-      <h3 className="text-xl font-bold text-gray-800 mb-4">
-        Friends ({friends.length})
-      </h3>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-        {friends.map((friend) => (
-          <div
-            key={friend._id}
-            className="flex items-center gap-4 p-3 bg-white rounded-lg border border-gray-100 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all duration-300"
-          >
-            <Link to={`/profile/${friend._id}`}>
-              <img
-                src={getAvatar(friend)}
-                className="w-14 h-14 rounded-full object-cover shadow-sm bg-white"
-                alt="Friend"
-              />
-            </Link>
-            <div className="flex-grow overflow-hidden">
-              <Link to={`/profile/${friend._id}`}>
-                <h5 className="font-bold text-gray-800 truncate hover:text-purple-600 transition-colors">
-                  {friend.name || friend.full_name}
-                </h5>
-              </Link>
-            </div>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 const ProfileMainContent = ({
   user,
   posts,
   activeTab,
-  friends,
+  friendsList, 
   isCurrentUser,
   instituteLogo,
   resumeViewMode,
-  setResumeViewMode
+  setResumeViewMode,
+  friendshipStatus
 }) => {
   return (
     <div className="space-y-4">
@@ -193,24 +156,28 @@ const ProfileMainContent = ({
             )}
           </>
         )}
+        
         {activeTab === "media" && <MediaGallery posts={posts} />}
-        {activeTab === "friends" && <FriendListTab friends={friends} />}
+        
+        {activeTab === 'friends' && (
+          <ProfileFriendsTab friendsArray={friendsList} />
+        )}
 
         {activeTab === "results" && (
           <ProfileResults
             userId={user._id}
             isCurrentUser={isCurrentUser}
-            isResultsPublic={user.isResultsPublic !== false} 
-            instituteLogo={instituteLogo} 
+            instituteLogo={instituteLogo}
+            isFriend={friendshipStatus === 'friends'}
           />
         )}
 
         {activeTab === "resume" && (
-          <ResumeTab 
-            user={user} 
-            isCurrentUser={isCurrentUser} 
-            viewMode={resumeViewMode} 
-            setViewMode={setResumeViewMode} 
+          <ResumeTab
+            user={user}
+            isCurrentUser={isCurrentUser}
+            viewMode={resumeViewMode}
+            setViewMode={setResumeViewMode}
           />
         )}
       </div>
@@ -223,13 +190,13 @@ const ProfileMainContent = ({
 // ==========================================
 const DesktopProfileHeader = ({
   activeTab,
-  handleTabChange, 
+  handleTabChange,
   isCurrentUser,
   setShowEdit,
   resumeViewMode,
   setResumeViewMode
 }) => {
-  const navigate = useNavigate(); 
+  const navigate = useNavigate();
 
   const navItems = [
     { name: "Post", icon: Star, tab: "posts" },
@@ -244,39 +211,34 @@ const DesktopProfileHeader = ({
       <div className="flex justify-between items-center h-full px-2">
         <div className="flex space-x-1">
           {navItems.map((item) => {
-            
             if (item.tab === "resume") {
               return (
                 <div key={item.name} className="relative group">
                   <button
-                    onClick={() => handleTabChange(item.tab)} 
+                    onClick={() => handleTabChange(item.tab)}
                     className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
                   >
                     <item.icon className="w-4 h-4" /> {item.name}
                   </button>
-                  
-                  {/* Dropdown Box */}
+
                   <div className="absolute left-0 top-full pt-2 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200 z-50 w-48 origin-top-left">
                     <div className="bg-white rounded-xl shadow-xl border border-gray-100 overflow-hidden flex flex-col py-1">
-                      
-                      <button 
-                        onClick={() => { handleTabChange("resume"); setResumeViewMode("web"); }} 
+                      <button
+                        onClick={() => { handleTabChange("resume"); setResumeViewMode("web"); }}
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "web" && activeTab === "resume" ? "text-purple-700 bg-purple-50" : "text-gray-700 hover:bg-gray-50"}`}
                       >
                         <Monitor className="w-4 h-4" /> Web View
                       </button>
-                      
-                      <button 
-                        onClick={() => { handleTabChange("resume"); setResumeViewMode("a4"); }} 
+                      <button
+                        onClick={() => { handleTabChange("resume"); setResumeViewMode("a4"); }}
                         className={`flex items-center gap-3 px-4 py-3 text-sm font-semibold transition-colors w-full text-left ${resumeViewMode === "a4" && activeTab === "resume" ? "text-teal-700 bg-teal-50" : "text-gray-700 hover:bg-gray-50"}`}
                       >
                         <Printer className="w-4 h-4" /> A4 Document
                       </button>
-                      
                       {isCurrentUser && (
                         <>
                           <div className="h-px bg-gray-100 my-1 w-full"></div>
-                          <button 
+                          <button
                             onClick={() => navigate('/resume-builder')}
                             className="flex items-center gap-3 px-4 py-3 text-sm font-semibold text-gray-700 hover:bg-purple-50 hover:text-purple-700 transition-colors w-full text-left"
                           >
@@ -290,11 +252,10 @@ const DesktopProfileHeader = ({
               );
             }
 
-            // Normal Tab Button
             return (
               <button
                 key={item.name}
-                onClick={() => handleTabChange(item.tab)} 
+                onClick={() => handleTabChange(item.tab)}
                 className={`px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors ${activeTab === item.tab ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm" : "text-gray-500 hover:bg-gray-100"}`}
               >
                 <item.icon className="w-4 h-4" /> {item.name}
@@ -302,7 +263,7 @@ const DesktopProfileHeader = ({
             );
           })}
         </div>
-        
+
         {isCurrentUser && (
           <button
             className={`px-4 py-2 text-sm font-bold rounded-lg transition duration-150 flex items-center gap-1.5 bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm hover:opacity-90`}
@@ -316,18 +277,9 @@ const DesktopProfileHeader = ({
   );
 };
 
-const DesktopProfileSidebar = ({
-  user,
-  isCurrentUser,
-  friendshipStatus,
-  onFriendAction,
-}) => {
-  const scrollbarHideStyle = {
-    msOverflowStyle: "none",
-    scrollbarWidth: "none",
-  };
-  
-  // 🟢 THE FIX: Safely destructure Icon and cast text to String
+const DesktopProfileSidebar = ({ user, isCurrentUser, friendshipStatus, onFriendAction }) => {
+  const scrollbarHideStyle = { msOverflowStyle: "none", scrollbarWidth: "none" };
+
   const InfoRow = ({ Icon, text, link, linkText }) => {
     if (!text || String(text).includes("undefined") || String(text).includes("null")) return null;
     return (
@@ -356,30 +308,19 @@ const DesktopProfileSidebar = ({
     >
       <div className="relative h-28 bg-gray-200 overflow-hidden rounded-t-xl">
         <img
-          src={
-            user.coverPhoto ||
-            "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"
-          }
+          src={user.coverPhoto || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"}
           alt={`Cover`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent"></div>
       </div>
       <div className="w-24 h-24 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-16 z-10 bg-white">
-        <img
-          src={getAvatar(user)}
-          alt={`Profile`}
-          className="w-full h-full object-cover"
-        />
+        <img src={getAvatar(user)} alt={`Profile`} className="w-full h-full object-cover" />
       </div>
       <div className="p-4 pt-14">
         <div className="text-center pb-4 mb-4 border-b border-gray-100">
-          <h2 className="text-lg font-bold text-gray-800 mb-1">
-            {user.full_name || user.name}
-          </h2>
-          <p className="text-gray-500 text-xs my-0 px-2 leading-snug">
-            {user.bio || "Hello! I am using Rigya."}
-          </p>
+          <h2 className="text-lg font-bold text-gray-800 mb-1">{user.full_name || user.name}</h2>
+          <p className="text-gray-500 text-xs my-0 px-2 leading-snug">{user.bio || "Hello! I am using Rigya."}</p>
           <div className="mt-0 flex justify-center gap-3">
             {!isCurrentUser ? (
               <div className="flex gap-2 mt-4 px-2 w-full flex-wrap">
@@ -402,22 +343,10 @@ const DesktopProfileSidebar = ({
             )}
           </div>
           <div className="mt-2 space-y-3 text-left pt-4 px-1">
-            <InfoRow
-              Icon={UserIcon}
-              text={user.pronouns ? `Pronouns: ${user.pronouns}` : null}
-            />
-            <InfoRow
-              Icon={Briefcase}
-              text={user.work ? `Works at ${user.work}` : null}
-            />
-            <InfoRow
-              Icon={GraduationCap}
-              text={user.university ? `Studied at ${user.university}` : null}
-            />
-            <InfoRow
-              Icon={MapPin}
-              text={user.currentCity ? `Lives in ${user.currentCity}` : null}
-            />
+            <InfoRow Icon={UserIcon} text={user.pronouns ? `Pronouns: ${user.pronouns}` : null} />
+            <InfoRow Icon={Briefcase} text={user.work ? `Works at ${user.work}` : null} />
+            <InfoRow Icon={GraduationCap} text={user.university ? `Studied at ${user.university}` : null} />
+            <InfoRow Icon={MapPin} text={user.currentCity ? `Lives in ${user.currentCity}` : null} />
             {user.socialLink && (
               <InfoRow
                 Icon={Globe}
@@ -436,12 +365,7 @@ const DesktopProfileSidebar = ({
 // ==========================================
 // 📱 MOBILE COMPONENTS
 // ==========================================
-const MobileTabBar = ({
-  activeTab,
-  handleTabChange, 
-  isCurrentUser,
-  setShowEdit,
-}) => {
+const MobileTabBar = ({ activeTab, handleTabChange, isCurrentUser, setShowEdit }) => {
   const navItems = [
     { name: "Posts", icon: Star, tab: "posts" },
     { name: "Media", icon: ImageIcon, tab: "media" },
@@ -455,24 +379,19 @@ const MobileTabBar = ({
           {navItems.map((item) => (
             <button
               key={item.name}
-              onClick={() => handleTabChange(item.tab)} 
-              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${
-                activeTab === item.tab
+              onClick={() => handleTabChange(item.tab)}
+              className={`w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 ${activeTab === item.tab
                   ? "bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-md transform scale-110"
                   : "text-gray-500 hover:bg-gray-100"
-              }`}
+                }`}
             >
-              <item.icon
-                className={`w-5 h-5 ${activeTab === item.tab ? "fill-current" : ""}`}
-              />
+              <item.icon className={`w-5 h-5 ${activeTab === item.tab ? "fill-current" : ""}`} />
             </button>
           ))}
         </div>
-
         {isCurrentUser && (
           <>
             <div className="w-px h-8 bg-gray-200 mx-4 flex-shrink-0"></div>
-
             <button
               onClick={() => setShowEdit(true)}
               className="w-11 h-11 flex items-center justify-center bg-gray-50 text-gray-700 hover:bg-gray-200 rounded-full transition-colors shadow-sm flex-shrink-0 border border-gray-100"
@@ -486,13 +405,7 @@ const MobileTabBar = ({
   );
 };
 
-const MobileProfileSidebar = ({
-  user,
-  isCurrentUser,
-  friendshipStatus,
-  onFriendAction,
-}) => {
-  // 🟢 THE FIX: Safely destructure Icon and cast text to String
+const MobileProfileSidebar = ({ user, isCurrentUser, friendshipStatus, onFriendAction }) => {
   const InfoRow = ({ Icon, text, link, linkText }) => {
     if (!text || String(text).includes("undefined") || String(text).includes("null")) return null;
     return (
@@ -518,36 +431,19 @@ const MobileProfileSidebar = ({
     <div className="bg-white relative pb-6 shadow-md border border-gray-100 rounded-2xl mx-3 mt-4">
       <div className="relative h-40 bg-gray-200 overflow-hidden rounded-t-2xl">
         <img
-          src={
-            user.coverPhoto ||
-            "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"
-          }
+          src={user.coverPhoto || "https://images.unsplash.com/photo-1707343843437-caacff5cfa74"}
           alt={`Cover`}
           className="w-full h-full object-cover"
         />
         <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent"></div>
       </div>
-
       <div className="w-32 h-32 mx-auto rounded-full overflow-hidden border-4 border-white shadow-xl absolute left-1/2 -translate-x-1/2 top-20 z-10 bg-white">
-        <img
-          src={
-            user.profilePicture ||
-            `https://ui-avatars.com/api/?name=${user.name || "User"}&background=EBF4FF&color=4F46E5&size=150`
-          }
-          alt={`Profile`}
-          className="w-full h-full object-cover"
-        />
+        <img src={getAvatar(user)} alt={`Profile`} className="w-full h-full object-cover" />
       </div>
-
       <div className="p-4 pt-16">
         <div className="text-center pb-4 mb-2">
-          <h2 className="text-2xl font-extrabold text-gray-900 mb-1">
-            {user.full_name || user.name}
-          </h2>
-          <p className="text-gray-500 text-sm my-0 px-4 leading-relaxed">
-            {user.bio || "Hello! I am using Rigya."}
-          </p>
-
+          <h2 className="text-2xl font-extrabold text-gray-900 mb-1">{user.full_name || user.name}</h2>
+          <p className="text-gray-500 text-sm my-0 px-4 leading-relaxed">{user.bio || "Hello! I am using Rigya."}</p>
           {!isCurrentUser && (
             <div className="flex gap-3 mt-6 px-4 w-full">
               <FriendButton
@@ -566,40 +462,14 @@ const MobileProfileSidebar = ({
             </div>
           )}
         </div>
-
         <div className="space-y-3.5 text-left pt-4 px-5 bg-gray-50/50 mx-2 rounded-2xl border border-gray-100 py-4">
-          <InfoRow
-            Icon={UserIcon}
-            text={user.pronouns ? `Pronouns: ${user.pronouns}` : null}
-          />
-          <InfoRow
-            Icon={Briefcase}
-            text={user.work ? `Works at ${user.work}` : null}
-          />
-          <InfoRow
-            Icon={GraduationCap}
-            text={user.university ? `Studied at ${user.university}` : null}
-          />
-          <InfoRow
-            Icon={GraduationCap}
-            text={user.highSchool ? `Went to ${user.highSchool}` : null}
-          />
-          <InfoRow
-            Icon={MapPin}
-            text={user.currentCity ? `Lives in ${user.currentCity}` : null}
-          />
-          <InfoRow
-            Icon={MapPin}
-            text={user.hometown ? `From ${user.hometown}` : null}
-          />
-          <InfoRow
-            Icon={Heart}
-            text={
-              user.relationship && user.relationship !== "Not specified"
-                ? user.relationship
-                : null
-            }
-          />
+          <InfoRow Icon={UserIcon} text={user.pronouns ? `Pronouns: ${user.pronouns}` : null} />
+          <InfoRow Icon={Briefcase} text={user.work ? `Works at ${user.work}` : null} />
+          <InfoRow Icon={GraduationCap} text={user.university ? `Studied at ${user.university}` : null} />
+          <InfoRow Icon={GraduationCap} text={user.highSchool ? `Went to ${user.highSchool}` : null} />
+          <InfoRow Icon={MapPin} text={user.currentCity ? `Lives in ${user.currentCity}` : null} />
+          <InfoRow Icon={MapPin} text={user.hometown ? `From ${user.hometown}` : null} />
+          <InfoRow Icon={Heart} text={user.relationship && user.relationship !== "Not specified" ? user.relationship : null} />
           {user.socialLink && (
             <InfoRow
               Icon={Globe}
@@ -617,9 +487,9 @@ const MobileProfileSidebar = ({
 // ==========================================
 // 🚀 MAIN COMPONENT EXPORT
 // ==========================================
-const Profile = ({posts: allPosts }) => {
+const Profile = ({ posts: allPosts }) => {
   const { ProfileId } = useParams();
-  const { authData, instituteData } = useAuth(); 
+  const { authData, instituteData } = useAuth();
   const isCurrentUser = !ProfileId || ProfileId === authData?._id;
 
   const [searchParams, setSearchParams] = useSearchParams();
@@ -640,16 +510,15 @@ const Profile = ({posts: allPosts }) => {
   const [posts, setPosts] = useState([]);
   const [showEdit, setShowEdit] = useState(false);
   const [friendshipStatus, setFriendshipStatus] = useState("not_friends");
-  const [friendList, setFriendList] = useState([]);
 
   const [resumeViewMode, setResumeViewMode] = useState("web");
   const [isMobile, setIsMobile] = useState(window.innerWidth < 1024);
 
+  // 🟢 HISTORY FIX: Removed { replace: true }
   const handleTabChange = (tabId) => {
-    setSearchParams({ tab: tabId }, { replace: true });
+    setSearchParams({ tab: tabId });
   };
 
-  // 🟢 2. ADD THIS: Tell the context to load the friends list if it hasn't already!
   useEffect(() => {
     fetchSocialDataOnDemand();
   }, [fetchSocialDataOnDemand]);
@@ -677,14 +546,11 @@ const Profile = ({posts: allPosts }) => {
 
   useEffect(() => {
     if (allPosts && user) {
-      const profilePosts = allPosts.filter(
-        (post) => post.user?._id === user._id,
-      );
+      const profilePosts = allPosts.filter((post) => post.user?._id === user._id);
       setPosts(profilePosts);
     }
   }, [allPosts, user]);
 
-// 🟢 3. UPDATE THIS: Bulletproof friendship status checker
   useEffect(() => {
     if (ProfileId && ProfileId !== authData?._id) {
       if (friends?.some((friend) => friend?._id === ProfileId)) {
@@ -697,13 +563,30 @@ const Profile = ({posts: allPosts }) => {
         setFriendshipStatus("not_friends");
       }
     }
-    
-    if (isCurrentUser) setFriendList(friends);
-    else setFriendList([]);
-    
   }, [ProfileId, friends, requests, suggestions, isCurrentUser, authData]);
-  
+
   if (!user) return <Loading />;
+
+  // 🟢 THE GOLDEN FIX
+  let friendsToDisplay = isCurrentUser ? friends : (user?.friends || []);
+
+  if (!isCurrentUser && friendshipStatus === "friends") {
+    const amIInTheirList = friendsToDisplay.some(f => f._id === authData?._id);
+    
+    if (!amIInTheirList && authData) {
+      friendsToDisplay = [
+        {
+          _id: authData._id,
+          name: authData.name,
+          full_name: authData.full_name,
+          profilePicture: authData.profilePicture,
+          instituteId: authData.instituteId,
+          instituteName: instituteData?.instituteName || "Connected"
+        },
+        ...friendsToDisplay
+      ];
+    }
+  }
 
   // 📱 MOBILE RENDER
   if (isMobile) {
@@ -720,33 +603,21 @@ const Profile = ({posts: allPosts }) => {
             if (action === "accept") handleAcceptRequest(ProfileId);
           }}
         />
-
         <div className="w-full flex-grow pt-4 px-3 pb-32 overflow-visible">
           <ProfileMainContent
             user={user}
             posts={posts}
             activeTab={activeTab}
-            friends={friendList}
+            friendsList={friendsToDisplay} 
+            isCurrentUser={isCurrentUser}
             instituteLogo={instituteData?.instituteLogo || instituteData?.logo?.url}
-            resumeViewMode={resumeViewMode} 
-            setResumeViewMode={setResumeViewMode} 
+            resumeViewMode={resumeViewMode}
+            setResumeViewMode={setResumeViewMode}
+            friendshipStatus={friendshipStatus}
           />
         </div>
-
-        <MobileTabBar
-          activeTab={activeTab}
-          handleTabChange={handleTabChange} 
-          isCurrentUser={isCurrentUser}
-          setShowEdit={setShowEdit}
-        />
-
-        {showEdit && isCurrentUser && (
-          <EditProfile
-            user={user}
-            setShowEdit={setShowEdit}
-            setUser={setUser}
-          />
-        )}
+        <MobileTabBar activeTab={activeTab} handleTabChange={handleTabChange} isCurrentUser={isCurrentUser} setShowEdit={setShowEdit} />
+        {showEdit && isCurrentUser && <EditProfile user={user} setShowEdit={setShowEdit} setUser={setUser} />}
       </div>
     );
   }
@@ -755,8 +626,6 @@ const Profile = ({posts: allPosts }) => {
   return (
     <div className="pt-1.5 w-full">
       <div className="w-full max-w-[1100px] mx-auto px-4 relative flex items-start justify-center gap-4 lg:gap-6 lg:h-[calc(100vh-5rem)]">
-        
-        {/* Fixed Sidebar Container */}
         <div className="hidden lg:block w-[260px] shrink-0 sticky top-[0.5rem] -mt-6 h-fit max-h-[calc(100vh-8rem)]">
           <DesktopProfileSidebar
             user={user}
@@ -770,36 +639,24 @@ const Profile = ({posts: allPosts }) => {
             }}
           />
         </div>
-
         <div className="flex-1 min-w-[400px] flex flex-col h-full">
-          <DesktopProfileHeader
-            activeTab={activeTab}
-            handleTabChange={handleTabChange} 
-            isCurrentUser={isCurrentUser}
-            setShowEdit={setShowEdit}
-            resumeViewMode={resumeViewMode} 
-            setResumeViewMode={setResumeViewMode} 
-          />
-          <div
-            className="flex-grow overflow-y-scroll mt-4 pb-10"
-            style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}
-          >
+          <DesktopProfileHeader activeTab={activeTab} handleTabChange={handleTabChange} isCurrentUser={isCurrentUser} setShowEdit={setShowEdit} resumeViewMode={resumeViewMode} setResumeViewMode={setResumeViewMode} />
+          <div className="flex-grow overflow-y-scroll mt-4 pb-10" style={{ msOverflowStyle: "none", scrollbarWidth: "none" }}>
             <ProfileMainContent
               user={user}
               posts={posts}
               activeTab={activeTab}
-              friends={friendList}
-              instituteLogo={instituteData?.instituteLogo || instituteData?.logo?.url} 
-              resumeViewMode={resumeViewMode} 
-              setResumeViewMode={setResumeViewMode} 
+              friendsList={friendsToDisplay}
+              isCurrentUser={isCurrentUser}
+              instituteLogo={instituteData?.instituteLogo || instituteData?.logo?.url}
+              resumeViewMode={resumeViewMode}
+              setResumeViewMode={setResumeViewMode}
+              friendshipStatus={friendshipStatus}
             />
           </div>
         </div>
       </div>
-
-      {showEdit && isCurrentUser && (
-        <EditProfile user={user} setShowEdit={setShowEdit} setUser={setUser} />
-      )}
+      {showEdit && isCurrentUser && <EditProfile user={user} setShowEdit={setShowEdit} setUser={setUser} />}
     </div>
   );
 };

@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { FileText, Loader2, Clock, Download, Lock, AlertTriangle } from 'lucide-react';
+import { FileText, Loader2, Clock, Download, Lock, AlertTriangle, Users } from 'lucide-react';
 import { useReactToPrint } from 'react-to-print';
 import { getMyResults, getUserResults, getUserById } from '../api';
 import { useAuth } from '../context/AuthContext'; 
@@ -35,7 +35,6 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     return (
         <div 
             ref={contentRef} 
-            // 🟢 THE FIX: Changed print:p-0 to print:p-10 to give the PDF breathing room inside!
             className="bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none flex-shrink-0 animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-10 print:m-0"
         >
             {/* WATERMARK */}
@@ -211,7 +210,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
 // ==========================================
 // 🚀 MAIN COMPONENT
 // ==========================================
-const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, instituteLogo }) => {
+const ProfileResults = ({ userId, isCurrentUser, instituteLogo, isFriend = false }) => {
     const { authData, instituteData } = useAuth(); 
     const [results, setResults] = useState([]);
     const [fetchedTargetUser, setFetchedTargetUser] = useState(null); 
@@ -224,64 +223,87 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
     const currentUserData = authData?.user || authData || {};
     const displayData = isCurrentUser ? currentUserData : (fetchedTargetUser || currentUserData);
 
-    // ✅ CHECK ROLES & VERIFICATION
     const isOfficial = authData?.userType === "Institute" || authData?.role === "admin" || authData?.role === "superadmin";
     const isVerified = authData?.isVerifiedByInstitute === true;
 
+    const hasPermissionToView = isCurrentUser || isOfficial || isFriend;
+
+    // 🟢 HISTORY FIX: Removed { replace: true }
     const handleSemesterChange = useCallback((sem) => {
         const newParams = new URLSearchParams(searchParams);
         newParams.set('semester', sem);
-        setSearchParams(newParams, { replace: true });
+        setSearchParams(newParams);
     }, [searchParams, setSearchParams]);
 
+    // 🟢 LOOP FIX: Single unified fetch with 'isMounted' check and minimal dependencies
     useEffect(() => {
+        let isMounted = true; 
+
         const fetchData = async () => {
-            if (!isCurrentUser && !isResultsPublic) {
-                setLoading(false);
+            if (!hasPermissionToView) {
+                if (!isCurrentUser && userId) {
+                    try {
+                        const userDataRes = await getUserById(userId);
+                        if (isMounted) setFetchedTargetUser(userDataRes);
+                    } catch (e) {}
+                }
+                if (isMounted) setLoading(false);
                 return;
             }
 
-            // ✅ BOUNCER CHECK: Stop API calls if student is unverified
             if (!isOfficial && !isVerified) {
-                setLoading(false);
+                if (isMounted) setLoading(false);
                 return;
             }
 
-            setLoading(true);
-            setErrorMsg(""); 
+            if (isMounted) {
+                setLoading(true);
+                setErrorMsg(""); 
+            }
             
             try {
                 const rawData = isCurrentUser ? await getMyResults() : await getUserResults(userId);
                 const actualResults = Array.isArray(rawData) ? rawData : (rawData?.results || rawData?.data || []);
 
                 if (!Array.isArray(actualResults)) throw new Error("Backend did not return an array of results.");
-                setResults(actualResults);
                 
-                if (!isCurrentUser && userId) {
-                    try {
-                        const userDataRes = await getUserById(userId);
-                        setFetchedTargetUser(userDataRes);
-                    } catch (userErr) {
-                        console.warn("Failed to fetch target user details:", userErr);
+                if (isMounted) {
+                    setResults(actualResults);
+                    
+                    if (!isCurrentUser && userId) {
+                        try {
+                            const userDataRes = await getUserById(userId);
+                            setFetchedTargetUser(userDataRes);
+                        } catch (userErr) {}
+                    }
+                    
+                    // Set default semester ONLY if not currently in URL
+                    if (actualResults.length > 0 && !searchParams.get('semester')) {
+                        const sortedResults = [...actualResults].sort((a, b) => a.semester.localeCompare(b.semester));
+                        const latestSem = sortedResults[sortedResults.length - 1].semester;
+                        
+                        const newParams = new URLSearchParams(searchParams);
+                        newParams.set('semester', latestSem);
+                        setSearchParams(newParams, { replace: true });
                     }
                 }
-                
-                if (actualResults.length > 0 && !searchParams.get('semester')) {
-                    const sortedResults = [...actualResults].sort((a, b) => a.semester.localeCompare(b.semester));
-                    handleSemesterChange(sortedResults[sortedResults.length - 1].semester);
-                }
-                
             } catch (error) {
-                console.error("Failed to fetch results:", error);
-                setErrorMsg(error.message || "An unknown error occurred while fetching results.");
-                setResults([]);
+                if (isMounted) {
+                    setErrorMsg(error.message || "An unknown error occurred while fetching results.");
+                    setResults([]);
+                }
             } finally {
-                setLoading(false);
+                if (isMounted) setLoading(false);
             }
         };
 
         if (userId) fetchData();
-    }, [userId, isCurrentUser, isResultsPublic, isOfficial, isVerified, searchParams, handleSemesterChange]);
+        
+        return () => {
+            isMounted = false;
+        };
+        
+    }, [userId, isCurrentUser, isOfficial, isVerified, hasPermissionToView]); 
 
     if (loading) {
         return (
@@ -291,7 +313,6 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
         );
     }
 
-    // ✅ SHOW BOUNCER SCREEN IF UNVERIFIED
     if (!isOfficial && !isVerified) {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-slate-200 flex-1 w-full animate-in fade-in duration-300">
@@ -312,21 +333,22 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
                 <AlertTriangle className="w-12 h-12 text-rose-500 mb-3" />
                 <h3 className="text-lg font-extrabold text-rose-800">Connection Error</h3>
                 <p className="text-sm text-rose-600 mt-2 text-center px-4 font-medium">The backend failed to return the results.</p>
-                <div className="mt-4 p-3 bg-white border border-rose-100 rounded-lg shadow-inner text-xs text-rose-800 max-w-xs overflow-auto">
-                    <code>{errorMsg}</code>
-                </div>
             </div>
         );
     }
 
-    if (!isCurrentUser && !isResultsPublic) {
+    if (!hasPermissionToView) {
         return (
             <div className="flex flex-col items-center justify-center py-20 bg-white rounded-xl shadow-sm border border-gray-200 flex-1 w-full animate-in fade-in duration-300">
-                <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4 border border-gray-100">
-                    <Lock className="w-8 h-8 text-gray-300" />
+                <div className="w-20 h-20 bg-purple-50 rounded-full flex items-center justify-center mb-5 border-4 border-purple-100">
+                    <Users className="w-10 h-10 text-purple-400" />
                 </div>
-                <h3 className="text-lg font-extrabold text-gray-800">Results are Private</h3>
-                <p className="text-sm text-gray-500 mt-2 text-center max-w-sm px-4 font-medium">This student has chosen to keep their academic transcripts private.</p>
+                <h3 className="text-xl font-black text-gray-900 mb-2">Connection Required</h3>
+                <p className="text-sm text-gray-500 mt-1 text-center max-w-md px-4 font-medium leading-relaxed">
+                    You are not currently friends with <span className="font-bold text-gray-700 capitalize">{displayData?.name || displayData?.full_name || "this student"}</span>. 
+                    <br/><br/>
+                    They have restricted their academic scorecard strictly to their connections. Please send a friend request to view their results!
+                </p>
             </div>
         );
     }
@@ -339,7 +361,6 @@ const ProfileResults = ({ userId, isCurrentUser, isResultsPublic = true, institu
             <style>{`
                 @media print {
                     body { -webkit-print-color-adjust: exact; print-color-adjust: exact; background: white; }
-                    /* 🟢 THE FIX: Margin 0 completely hides the browser's default headers, dates, and URLs! */
                     @page { size: A4 portrait; margin: 0mm; } 
                     .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
                     tr { break-inside: avoid; page-break-inside: avoid; }
