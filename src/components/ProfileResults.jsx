@@ -27,9 +27,17 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     const contentRef = useRef(null);
     const totalCr = result.subjects?.reduce((sum, sub) => sum + (parseFloat(sub.credits) || 0), 0);
 
+    // 🟢 THE FIX: Safely extract the student data from the populated result!
+    // It looks at result.student first. If it fails, it falls back to displayData.
+    const studentInfo = result.student || displayData || {};
+    const studentName = studentInfo.name || studentInfo.full_name || '-';
+    const registrationNo = studentInfo.registrationNo || '-';
+    const branch = studentInfo.branch || '-';
+    const batch = studentInfo.batch || '-';
+
     const handleDownloadPDF = useReactToPrint({
         contentRef: contentRef, 
-        documentTitle: `Transcript_${displayData?.registrationNo || 'Student'}_${result.semester.replace(' ', '_')}`,
+        documentTitle: `Transcript_${registrationNo}_${result.semester.replace(' ', '_')}`,
     });
 
     return (
@@ -70,11 +78,13 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                             <tbody>
                                 <tr>
                                     <td className="py-1 pr-4 font-bold text-gray-500 uppercase text-xs whitespace-nowrap">Student Name :-</td>
-                                    <td className="py-1 font-extrabold text-gray-900 capitalize text-sm"> {displayData?.name || displayData?.full_name || '-'}</td>
+                                    {/* 🟢 Updated Web View Name */}
+                                    <td className="py-1 font-extrabold text-gray-900 capitalize text-sm"> {studentName}</td>
                                 </tr>
                                 <tr>
                                     <td className="py-1 font-bold text-gray-500 uppercase text-xs">Registration No. :-</td>
-                                    <td className="py-1 font-extrabold text-gray-900 uppercase text-sm"> {displayData?.registrationNo || '-'}</td>
+                                    {/* 🟢 Updated Web View Reg No */}
+                                    <td className="py-1 font-extrabold text-gray-900 uppercase text-sm"> {registrationNo}</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -108,21 +118,25 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                         <tbody>
                             <tr>
                                 <td className="py-1 font-bold text-gray-500 w-36 uppercase text-xs">Student Name</td>
-                                <td className="py-1 font-extrabold text-gray-900 capitalize text-sm">: {displayData?.name || displayData?.full_name || '-'}</td>
+                                {/* 🟢 Updated Print View Name */}
+                                <td className="py-1 font-extrabold text-gray-900 capitalize text-sm">: {studentName}</td>
                                 <td className="py-1 font-bold text-gray-500 w-32 uppercase text-xs">Semester</td>
                                 <td className="py-1 font-extrabold text-gray-900 text-sm">: {result.semester}</td>
                             </tr>
                             <tr>
                                 <td className="py-1 font-bold text-gray-500 uppercase text-xs">Registration No.</td>
-                                <td className="py-1 font-extrabold text-gray-900 uppercase text-sm">: {displayData?.registrationNo || '-'}</td>
+                                {/* 🟢 Updated Print View Reg No */}
+                                <td className="py-1 font-extrabold text-gray-900 uppercase text-sm">: {registrationNo}</td>
                                 <td className="py-1 font-bold text-gray-500 uppercase text-xs">Year</td>
                                 <td className="py-1 font-extrabold text-gray-900 text-sm">: {getYearFromSemester(result.semester)}</td>
                             </tr>
                             <tr>
                                 <td className="py-1 font-bold text-gray-500 uppercase text-xs">Branch</td>
-                                <td className="py-1 font-extrabold text-gray-900 capitalize text-sm">: {displayData?.branch || '-'}</td>
+                                {/* 🟢 Updated Print View Branch */}
+                                <td className="py-1 font-extrabold text-gray-900 capitalize text-sm">: {branch}</td>
                                 <td className="py-1 font-bold text-gray-500 uppercase text-xs">Batch</td>
-                                <td className="py-1 font-extrabold text-gray-900 text-sm">: {displayData?.batch || '-'}</td>
+                                {/* 🟢 Updated Print View Batch */}
+                                <td className="py-1 font-extrabold text-gray-900 text-sm">: {batch}</td>
                             </tr>
                             <tr>
                                 <td className="py-1 font-bold text-gray-500 uppercase text-xs">Date of Issue</td>

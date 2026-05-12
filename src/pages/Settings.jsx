@@ -5,6 +5,8 @@ import {
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 import { updateUserSettings } from "../api";
+import axios from "axios"; 
+import PushNotificationModal from "../components/PushNotificationModal"; // 🟢 Import the Modal!
 
 // Reusable Toggle Switch Component
 const ToggleSwitch = ({ checked, onChange }) => (
@@ -15,48 +17,89 @@ const ToggleSwitch = ({ checked, onChange }) => (
 );
 
 export default function Settings() {
-  const { authData } = useAuth(); // Grabs the logged-in user!
+  const { authData } = useAuth(); 
   const [message, setMessage] = useState("");
+  const [showPushModal, setShowPushModal] = useState(false); // 🟢 State for the modal
   
   const [settings, setSettings] = useState({
     publicProfile: true,
     publicResults: true,
     emailNotifications: false,
-    pushNotifications: true,
+    pushNotifications: false, // Default to false until we check the browser
     darkMode: false,
   });
 
-  // ✅ 1. Load their actual privacy setting from the database on page load
+  // Helper to check if the browser is ACTUALLY subscribed right now
+  const checkPushSubscription = async () => {
+    if ('serviceWorker' in navigator && 'PushManager' in window) {
+      const register = await navigator.serviceWorker.getRegistration();
+      if (register && register.pushManager) {
+        const subscription = await register.pushManager.getSubscription();
+        // If subscription exists, set to true. Otherwise false.
+        setSettings(prev => ({ ...prev, pushNotifications: !!subscription }));
+      }
+    }
+  };
+
+  // Load database settings AND check OS Push status on mount
   useEffect(() => {
     if (authData) {
       setSettings(prev => ({
         ...prev,
-        // If it's undefined, default to true. Otherwise use their choice.
         publicResults: authData.isResultsPublic !== false 
       }));
     }
+    // 🟢 Check real push status when page loads
+    checkPushSubscription();
   }, [authData]);
 
-  // Helper to show success toasts
   const showMessage = (msg) => {
     setMessage(msg);
     setTimeout(() => setMessage(''), 3000);
   };
 
-  // ✅ 2. Handle toggles and instantly save to database
+  // Handle toggles
   const handleToggle = async (key) => {
     const newValue = !settings[key];
+
+    // 🟢 SPECIAL LOGIC FOR PUSH NOTIFICATIONS
+    if (key === 'pushNotifications') {
+      if (newValue) {
+        // They want to turn it ON -> Show the Modal
+        setShowPushModal(true);
+      } else {
+        // They want to turn it OFF -> Unsubscribe silently
+        try {
+          const register = await navigator.serviceWorker.getRegistration();
+          if (register && register.pushManager) {
+            const subscription = await register.pushManager.getSubscription();
+            if (subscription) {
+              await axios.post(
+                'http://localhost:4000/api/v1/push/unsubscribe', 
+                { endpoint: subscription.endpoint },
+                { withCredentials: true }
+              );
+              await subscription.unsubscribe();
+            }
+          }
+          setSettings(prev => ({ ...prev, pushNotifications: false }));
+          showMessage("Desktop alerts disabled for this device.");
+        } catch (error) {
+          console.error("Error unsubscribing:", error);
+          showMessage("Failed to disable notifications.");
+        }
+      }
+      return; // Stop here so it doesn't run the standard toggle code below
+    }
     
-    // Update UI instantly for a snappy feel
+    // STANDARD LOGIC FOR OTHER TOGGLES
     setSettings(prev => ({ ...prev, [key]: newValue }));
 
-    // If they clicked the Results Privacy toggle, save to Database!
     if (key === 'publicResults') {
       try {
         await updateUserSettings({ publicResults: newValue });
         showMessage("Privacy settings successfully updated!");
       } catch  {
-        // If the API fails, revert the toggle back to its previous state
         setSettings(prev => ({ ...prev, [key]: !newValue }));
         showMessage("Error: Failed to save setting.");
       }
@@ -129,7 +172,6 @@ export default function Settings() {
                 <ToggleSwitch checked={settings.publicProfile} onChange={() => handleToggle('publicProfile')} />
               </div>
               
-              {/* THE WIRED UP TOGGLE! */}
               <div className="px-6 py-4 flex items-center justify-between">
                 <div>
                   <p className="font-bold text-gray-900">Share Academic Results</p>
@@ -155,6 +197,7 @@ export default function Settings() {
                   <p className="font-bold text-gray-900">Push Notifications</p>
                   <p className="text-xs text-gray-500 mt-0.5">Get notified about messages and results</p>
                 </div>
+                {/* THIS TOGGLE IS NOW FULLY WIRED UP! */}
                 <ToggleSwitch checked={settings.pushNotifications} onChange={() => handleToggle('pushNotifications')} />
               </div>
               
@@ -198,6 +241,16 @@ export default function Settings() {
 
         </div>
       </div>
+
+      {/* 🟢 Mount the Modal here! It updates the toggle automatically when closed */}
+      <PushNotificationModal 
+        isOpen={showPushModal} 
+        onClose={() => {
+          setShowPushModal(false);
+          checkPushSubscription(); // Re-check the OS status in case they allowed/blocked it
+        }} 
+      />
+
     </div>
   );
 }

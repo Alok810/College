@@ -7,6 +7,8 @@ import HiddenIcon from "../assets/hidden.png";
 import RigyaIcon from "../assets/rigya.png";
 import { registerUser, loginUser, sendOtp, verifyOtp, sendPasswordResetLink, getPublicDepartments, searchAisheInstitutes } from "../api.js";
 import { useAuth } from '../context/AuthContext';
+// 🟢 NEW: Import the direct subscription function instead of the modal
+import { subscribeToOSNotifications } from '../utils/pushNotifications';
 
 function generateCaptcha() {
   const a = Math.floor(Math.random() * 10);
@@ -48,7 +50,7 @@ export default function AuthPage() {
   const [showForgotPassword, setShowForgotPassword] = useState(false);
   const [forgotPasswordEmail, setForgotPasswordEmail] = useState("");
   const [forgotPasswordStatus, setForgotPasswordStatus] = useState("idle");
-  
+
   const navigate = useNavigate();
 
   const [availableBranches, setAvailableBranches] = useState([]);
@@ -108,7 +110,6 @@ export default function AuthPage() {
     setAvailableBranches([]);
     setInstSearchQuery(""); 
     
-    // 🟢 NEW: Clear the validated code when the form is reset
     sessionStorage.removeItem("validAisheCode"); 
   };
 
@@ -219,7 +220,6 @@ export default function AuthPage() {
       return;
     }
 
-    // 🟢 NEW: Verify the user selected a valid institute from the list (or is a dev using "18")
     const enteredID = formData.instituteRegistrationNumber.trim();
     const validID = sessionStorage.getItem("validAisheCode");
 
@@ -280,7 +280,12 @@ export default function AuthPage() {
         if (response.success) {
           await fetchAuthData(); 
           setIsAuthenticated(true);
+          
+          // 🟢 THE NEW FIX: Trigger the OS prompt and redirect instantly!
+          // No 'await' prevents the UI from freezing.
+          subscribeToOSNotifications();
           navigate("/");
+          
         } else {
           alert(response.message);
         }
@@ -339,7 +344,6 @@ export default function AuthPage() {
                 setInstSearchQuery(inst.aisheCode);
                 setShowInstDropdown(false);
                 
-                // 🟢 NEW: Save the official code when they click it!
                 sessionStorage.setItem("validAisheCode", inst.aisheCode); 
               }}
               className="w-full text-left px-4 py-2.5 hover:bg-purple-50 border-b border-gray-50 last:border-0 transition-colors flex flex-col gap-1"

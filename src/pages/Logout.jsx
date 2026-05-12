@@ -1,7 +1,8 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { logoutUser } from "../api"; // 👈 Import from your api.js!
+import { logoutUser } from "../api"; 
+import axios from "axios"; 
 
 export default function Logout() {
   const navigate = useNavigate();
@@ -9,20 +10,46 @@ export default function Logout() {
 
   useEffect(() => {
     const performLogout = async () => {
+      // 🟢 1. UNSUBSCRIBE FROM PUSH NOTIFICATIONS
       try {
-        // 1. Let Axios handle the exact URL, port, and secure cookie headers!
+        if ('serviceWorker' in navigator) {
+            // THE FIX: Use getRegistration() instead of ready!
+            // This returns instantly whether a service worker exists or not.
+            const register = await navigator.serviceWorker.getRegistration();
+            
+            if (register && register.pushManager) {
+                const subscription = await register.pushManager.getSubscription();
+                
+                if (subscription) {
+                    await axios.post(
+                        'http://localhost:4000/api/v1/push/unsubscribe', 
+                        { endpoint: subscription.endpoint },
+                        { withCredentials: true } 
+                    );
+                    
+                    await subscription.unsubscribe();
+                    console.log("Successfully unsubscribed from Push Notifications.");
+                }
+            }
+        }
+      } catch (error) {
+        console.error("Failed to unsubscribe during logout:", error);
+      }
+
+      // 2. PROCEED WITH NORMAL LOGOUT
+      try {
         await logoutUser();
       } catch (error) {
         console.error("Error logging out from server:", error);
       } finally {
-        // 2. Nuke local storage
+        // 3. Nuke local storage
         localStorage.clear();
         sessionStorage.clear();
 
-        // 3. Clear React memory
+        // 4. Clear React memory
         setIsAuthenticated(false);
 
-        // 4. Redirect safely
+        // 5. Redirect safely
         navigate("/auth", { replace: true });
       }
     };
