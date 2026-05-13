@@ -26,7 +26,7 @@ export default function FocusPod() {
   
   const myDisplayName = authData?.name || authData?.username || authData?.user?.name || "Student";
   
-  // 🟢 NEW: Socket state inside the component
+  // 🟢 Socket state inside the component
   const [socket, setSocket] = useState(null);
 
   const [stream] = useState(new MediaStream()); 
@@ -124,9 +124,21 @@ export default function FocusPod() {
 
   const callUser = (userToCallId) => {
     setIsCalling(true);
-    const peer = new Peer({ initiator: true, trickle: false, stream: stream });
+    // ✨ STUN SERVERS ADDED HERE TO BYPASS NAT FIREWALL
+    const peer = new Peer({ 
+        initiator: true, 
+        trickle: false, 
+        stream: stream,
+        config: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+        }
+    });
+    
     peer.on("signal", (data) => {
-      // 🟢 Uses the state-based socket safely
       socket?.emit("call-user", { userToCall: userToCallId, signalData: data, from: myPodId, name: myDisplayName });
     });
     peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
@@ -152,7 +164,20 @@ export default function FocusPod() {
   const answerCall = () => {
     setCallAccepted(true);
     setReceivingCall(false);
-    const peer = new Peer({ initiator: false, trickle: false, stream: stream });
+    // ✨ STUN SERVERS ADDED HERE TO BYPASS NAT FIREWALL
+    const peer = new Peer({ 
+        initiator: false, 
+        trickle: false, 
+        stream: stream,
+        config: {
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:global.stun.twilio.com:3478' }
+            ]
+        }
+    });
+    
     peer.on("signal", (data) => socket?.emit("answer-call", { signal: data, to: callerId }));
     peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
     peer.on("data", handlePeerData); 
