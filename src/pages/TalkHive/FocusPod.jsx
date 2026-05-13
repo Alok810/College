@@ -449,7 +449,7 @@ export default function FocusPod() {
                             : "absolute inset-0 w-full h-full border-none rounded-none z-0"
                           )
                 }`}>
-                    <video ref={userVideoRef} playsInline autoPlay className={`w-full h-full object-cover ${!receivingCall && "hidden"}`} />
+                    <video ref={userVideoRef} playsInline autoPlay className="w-full h-full object-cover" />
                     <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-black/50 text-white px-2 py-1 sm:px-3 sm:py-1.5 rounded-md sm:rounded-lg text-xs sm:text-sm font-bold truncate max-w-[60%] z-10">
                         {callerName || "Remote User"}
                     </div>
