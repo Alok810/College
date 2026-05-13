@@ -14,7 +14,7 @@ import {
 const FriendContext = createContext();
 
 const ENDPOINT = import.meta.env.MODE === "production" 
-  ? "https://rigya-backend.onrender.com" 
+  ? "https://aishe.rigya.in" 
   : "http://localhost:4000";
 
 export const FriendProvider = ({ children }) => {
