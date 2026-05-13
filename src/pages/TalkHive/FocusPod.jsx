@@ -10,7 +10,6 @@ import io from "socket.io-client";
 import Peer from "simple-peer";
 
 // ✨ IMPORT YOUR BULLETPROOF URL FROM API.JS!
-// Adjust this path if your api.js is in a different folder.
 import { BACKEND_URL } from "../../api"; 
 
 // Initialize the socket using that single source of truth
@@ -143,6 +142,7 @@ export default function FocusPod() {
 
   const answerCall = () => {
     setCallAccepted(true);
+    setReceivingCall(false);
     const peer = new Peer({ initiator: false, trickle: false, stream: stream });
     peer.on("signal", (data) => socket.emit("answer-call", { signal: data, to: callerId }));
     peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
@@ -464,7 +464,6 @@ export default function FocusPod() {
         )}
       </div>
 
-      {/* BOTTOM CONTROLS & DIALER BAR */}
       <div className={`mt-4 sm:mt-6 flex flex-col lg:flex-row gap-4 sm:gap-6 w-full bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 shrink-0 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
         <div className="flex justify-center gap-2 sm:gap-3 border-b lg:border-b-0 lg:border-r border-gray-200 pb-4 lg:pb-0 lg:pr-6 flex-wrap">
             <button onClick={toggleMic} className={`p-3 md:p-4 rounded-xl transition-all ${micEnabled ? 'bg-gray-100 text-gray-700 hover:bg-gray-200' : 'bg-red-50 text-red-600'}`}>{micEnabled ? <Mic size={20} /> : <MicOff size={20} />}</button>
