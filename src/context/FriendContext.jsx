@@ -1,7 +1,10 @@
 import React, { createContext, useState, useContext, useEffect, useCallback, useRef } from 'react';
 import { io } from "socket.io-client"; 
 import { useAuth } from './AuthContext'; 
+
+// 🟢 FIX: Import the MAIN BACKEND_URL instead of AISHE
 import { 
+  BACKEND_URL, 
   toggleFriendRequest, 
   acceptFriendRequest, 
   rejectFriendRequest, 
@@ -13,10 +16,6 @@ import {
 
 const FriendContext = createContext();
 
-const ENDPOINT = import.meta.env.MODE === "production" 
-  ? "https://aishe.rigya.in" 
-  : "http://localhost:4000";
-
 export const FriendProvider = ({ children }) => {
   const { authData } = useAuth(); 
 
@@ -25,19 +24,14 @@ export const FriendProvider = ({ children }) => {
   const [suggestions, setSuggestions] = useState([]);
   const [notifications, setNotifications] = useState([]);
   
-  // 🟢 LAZY FETCHING STATES
   const [hasLoaded, setHasLoaded] = useState(false);
   const [isLoading, setIsLoading] = useState(false); 
 
-  // 🟢 THE FIX: Use a Ref to track fetching status silently to prevent infinite loops
   const fetchTracker = useRef({ isFetching: false, isLoaded: false });
 
-  // 🟢 THE LAZY FETCH FUNCTION
   const fetchSocialDataOnDemand = useCallback(async () => {
-      // 1. Security check
       if (!authData || !authData._id) return; 
       
-      // 2. Cache check using the silent Ref
       if (fetchTracker.current.isLoaded || fetchTracker.current.isFetching) return; 
 
       try {
@@ -62,7 +56,6 @@ export const FriendProvider = ({ children }) => {
         
         setSuggestions([...mappedSuggestions, ...mappedSentRequests]);
 
-        // Safely map notifications
         const requestNotifications = safeRequests.map(req => ({
           _id: `req_${req?._id || Date.now()}`,
           user: {
@@ -79,7 +72,6 @@ export const FriendProvider = ({ children }) => {
         const dbNotifications = notifData?.notifications || [];
         setNotifications([...requestNotifications, ...dbNotifications]);
 
-        // 3. Mark as loaded so we never fetch again this session!
         fetchTracker.current.isLoaded = true;
         setHasLoaded(true);
 
@@ -90,15 +82,16 @@ export const FriendProvider = ({ children }) => {
         setIsLoading(false); 
       }
       
-  // 🟢 Dependency array relies ONLY on auth ID now. No more infinite loops!
   }, [authData?._id]);
 
   useEffect(() => {
     if (!authData || !authData._id) return;
 
-    const socket = io(ENDPOINT, {
+    // 🟢 FIX: Connect to the MAIN BACKEND_URL where your sockets actually live!
+    const socket = io(BACKEND_URL, {
       withCredentials: true 
     });
+    
     socket.emit("join", authData._id);
 
     socket.on("new notification", (newNotification) => {

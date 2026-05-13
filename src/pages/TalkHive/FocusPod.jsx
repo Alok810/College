@@ -12,9 +12,6 @@ import Peer from "simple-peer";
 // ✨ IMPORT YOUR BULLETPROOF URL FROM API.JS!
 import { BACKEND_URL } from "../../api"; 
 
-// Initialize the socket using that single source of truth
-const socket = io(BACKEND_URL); 
-
 const generateSecureRoomCode = () => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
     let code = '';
@@ -29,6 +26,9 @@ export default function FocusPod() {
   
   const myDisplayName = authData?.name || authData?.username || authData?.user?.name || "Student";
   
+  // 🟢 NEW: Socket state inside the component
+  const [socket, setSocket] = useState(null);
+
   const [stream] = useState(new MediaStream()); 
   const [micEnabled, setMicEnabled] = useState(false); 
   const [cameraEnabled, setCameraEnabled] = useState(false); 
@@ -69,26 +69,33 @@ export default function FocusPod() {
   const podContainerRef = useRef(null); 
 
   useEffect(() => {
+    // 🟢 Initialize Socket AFTER component mount using the runtime URL
+    const newSocket = io(BACKEND_URL, {
+        withCredentials: true
+    });
+    setSocket(newSocket);
+
     const newRoomCode = generateSecureRoomCode();
     setMyPodId(newRoomCode);
     
     // ✨ Isolated Join Event
-    if (authData?._id) socket.emit("join-pod", newRoomCode);
+    if (authData?._id) newSocket.emit("join-pod", newRoomCode);
 
-    socket.on("call-incoming", (data) => {
+    newSocket.on("call-incoming", (data) => {
       setReceivingCall(true);
       setCallerId(data.from); 
       setCallerName(data.name || "Remote User");
       setCallerSignal(data.signal);
     });
 
-    socket.on("call-ended", () => {
+    newSocket.on("call-ended", () => {
         window.location.reload();
     });
 
     return () => {
-        socket.off("call-incoming");
-        socket.off("call-ended");
+        newSocket.off("call-incoming");
+        newSocket.off("call-ended");
+        newSocket.disconnect(); // 🟢 Properly disconnect on unmount
         stream.getTracks().forEach(track => track.stop());
         if (screenTrackRef.current) screenTrackRef.current.stop();
     };
@@ -119,7 +126,8 @@ export default function FocusPod() {
     setIsCalling(true);
     const peer = new Peer({ initiator: true, trickle: false, stream: stream });
     peer.on("signal", (data) => {
-      socket.emit("call-user", { userToCall: userToCallId, signalData: data, from: myPodId, name: myDisplayName });
+      // 🟢 Uses the state-based socket safely
+      socket?.emit("call-user", { userToCall: userToCallId, signalData: data, from: myPodId, name: myDisplayName });
     });
     peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
     peer.on("data", handlePeerData); 
@@ -132,7 +140,8 @@ export default function FocusPod() {
             peer.send(JSON.stringify({ type: 'code', text: codeText }));
         }, 800);
     });
-    socket.on("call-accepted", (signalData) => { 
+    
+    socket?.on("call-accepted", (signalData) => { 
         setIsCalling(false); 
         setCallAccepted(true); 
         peer.signal(signalData.signal || signalData); 
@@ -144,7 +153,7 @@ export default function FocusPod() {
     setCallAccepted(true);
     setReceivingCall(false);
     const peer = new Peer({ initiator: false, trickle: false, stream: stream });
-    peer.on("signal", (data) => socket.emit("answer-call", { signal: data, to: callerId }));
+    peer.on("signal", (data) => socket?.emit("answer-call", { signal: data, to: callerId }));
     peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
     peer.on("data", handlePeerData); 
     
@@ -172,7 +181,7 @@ export default function FocusPod() {
     }
     
     if (connectionRef.current) connectionRef.current.destroy();
-    socket.emit("end-call", { to: callAccepted ? callerId : idToCall });
+    socket?.emit("end-call", { to: callAccepted ? callerId : idToCall });
     window.location.reload(); 
   };
 

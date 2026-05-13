@@ -1,12 +1,13 @@
 import axios from "axios";
 
 // 🟢 THE BULLETPROOF RUNTIME CHECK
-// This ignores Vite's build step entirely and looks at the browser's actual URL bar
-const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+// First, it checks if 'window' exists (so Vercel doesn't crash during build).
+// Then, it checks if the browser is running on localhost.
+const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
 export const BACKEND_URL = isLocalhost 
   ? "http://localhost:4000" 
-  : "https://api.rigya.in";
+  : "https://api.rigya.in"; // Ensure your Node.js backend is actually hosted here!
 
 export const AISHE_BACKEND_URL = isLocalhost 
   ? "http://localhost:8000"
