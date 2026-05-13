@@ -1,7 +1,7 @@
 // src/components/Sidebar.jsx
 import React, { useState, useRef, useEffect } from "react";
 import { NavLink, useNavigate } from "react-router-dom";
-import { ShieldCheck } from "lucide-react"; 
+import { ShieldCheck } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
 
 import homeIcon from "../assets/house.png";
@@ -33,13 +33,11 @@ export default function Sidebar({ isOpen, setIsOpen }) {
   const isInstituteAdmin = authData?.userType === "Institute" || userRole === "admin";
 
   // 🟢 THE FIX: Applied your Emerald theme to the active state!
-  const getNavLinkClass = ({ isActive }) => 
-    `group flex items-center gap-3 py-2 px-4 rounded-xl transition-all duration-200 ${
-      !isOpen ? "justify-center" : "justify-start"
-    } ${
-      isActive 
-        ? "bg-emerald-50/80 border border-emerald-300 font-bold text-emerald-800 shadow-sm" 
-        : "border border-transparent hover:bg-white/40 active:bg-white/60 active:scale-[0.98] text-gray-800"
+  const getNavLinkClass = ({ isActive }) =>
+    `group flex items-center gap-3 py-2 px-4 rounded-xl transition-all duration-200 ${!isOpen ? "justify-center" : "justify-start"
+    } ${isActive
+      ? "bg-emerald-50/80 border border-emerald-300 font-bold text-emerald-800 shadow-sm"
+      : "border border-transparent hover:bg-white/40 active:bg-white/60 active:scale-[0.98] text-gray-800"
     }`;
 
   const iconClass = "w-6 h-6 min-w-[24px] transition-all duration-300 group-hover:scale-110 group-hover:drop-shadow-md group-active:scale-95";
@@ -72,7 +70,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
 
       {/* BACKGROUND OVERLAY FOR MOBILE */}
       {isOpen && (
-        <div 
+        <div
           className="md:hidden fixed inset-0 bg-black/50 z-40"
           onClick={() => setIsOpen(false)}
         />
@@ -141,7 +139,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
               {isOpen && "Result"}
             </NavLink>
 
-            <NavLink to="/voice" className={getNavLinkClass}>
+            <NavLink to="/TalkHive" className={getNavLinkClass}>
               <img src={voiceIcon} alt="TalkHive" className={iconClass} />
               {isOpen && "TalkHive"}
             </NavLink>
@@ -181,8 +179,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
             {isSuperAdmin && (
               <>
                 <div className="border-t border-white/50 my-2 pt-2"></div>
-                <NavLink 
-                  to="/superadmin" 
+                <NavLink
+                  to="/superadmin"
                   className={({ isActive }) => `group flex items-center gap-3 py-2.5 px-4 rounded-xl border transition-all duration-200 ${!isOpen ? "justify-center" : "justify-start"} ${isActive ? "bg-indigo-100 border-indigo-300 shadow-sm" : "bg-indigo-50/60 hover:bg-indigo-100/80 active:bg-indigo-200 border-indigo-200/50 shadow-sm active:scale-[0.98]"}`}
                 >
                   <ShieldCheck className={`w-6 h-6 min-w-[24px] text-indigo-600 transition-transform duration-300 group-hover:scale-110 group-active:scale-95`} />
@@ -190,7 +188,7 @@ export default function Sidebar({ isOpen, setIsOpen }) {
                 </NavLink>
               </>
             )}
-            
+
           </nav>
         </div>
 
@@ -198,9 +196,8 @@ export default function Sidebar({ isOpen, setIsOpen }) {
         <div className="relative shrink-0 mt-4" ref={menuRef}>
           <div
             onClick={() => setMenuOpen(!menuOpen)}
-            className={`group flex items-center gap-3 bg-white/50 p-3 rounded-xl border border-transparent shadow-sm cursor-pointer hover:bg-white/80 active:bg-white/90 active:scale-[0.98] transition-all ${
-              !isOpen ? "justify-center" : ""
-            }`}
+            className={`group flex items-center gap-3 bg-white/50 p-3 rounded-xl border border-transparent shadow-sm cursor-pointer hover:bg-white/80 active:bg-white/90 active:scale-[0.98] transition-all ${!isOpen ? "justify-center" : ""
+              }`}
           >
             <img
               src={authData?.profilePicture || `https://ui-avatars.com/api/?name=${authData?.name || 'User'}&background=EBF4FF&color=4F46E5`}

@@ -12,13 +12,17 @@ import AuthPage from "./pages/AuthPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import Department from "./pages/Department";
 import Result from "./pages/Result";
-import Voice from "./pages/Voice";
+import TalkHiveMenu from "./pages/TalkHive/TalkHiveMenu";
+import FocusPod from "./pages/TalkHive/FocusPod";
+import HiveMatch from "./pages/TalkHive/HiveMatch";
+import BuzzRoom from "./pages/TalkHive/BuzzRoom";
+import Assembly from "./pages/TalkHive/Assembly";
 import Admin from "./pages/Admin";
 import Interaction from "./pages/Interaction";
 import Library from "./pages/Library";
 import Hostel from "./pages/Hostel";
 import Club from "./pages/Club";
-import SuperAdminDashboard from "./pages/SuperAdminDashboard"; 
+import SuperAdminDashboard from "./pages/SuperAdminDashboard";
 import Tab from "./components/Tab";
 
 import { AuthProvider, useAuth } from "./context/AuthContext";
@@ -37,25 +41,26 @@ import InstallPrompt from './components/InstallPrompt';
 import AnnouncementBanner from "./components/AnnouncementBanner";
 import ResumeBuilder from './pages/ResumeBuilder';
 
-// ✨ 1. We removed the standard import and replaced it with React.lazy!
 const HelpDesk = React.lazy(() => import('./pages/HelpDesk'));
 
 const AppContent = () => {
   const location = useLocation();
-  const hideSidebar = 
-    location.pathname === "/auth" || 
-    location.pathname === "/reset-password" || 
-    location.pathname === "/resume-builder" || 
-    location.pathname === "/helpdesk"; // ✨ 2. Updated this to match the new URL!
   
-  // 🟢 1. Detect if we are currently on a page that needs outer scroll locking
+  // ✨ The Magic Fix: Added the Focus Pod route here to hide the Sidebar and Header!
+  const hideSidebar =
+    location.pathname === "/auth" ||
+    location.pathname === "/reset-password" ||
+    location.pathname === "/resume-builder" ||
+    location.pathname === "/helpdesk" ||
+    location.pathname === "/TalkHive/focus-pod"; 
+
   const isProfilePage = location.pathname.startsWith("/profile");
   const isClubPage = location.pathname.startsWith("/club");
   const isDeptPage = location.pathname.startsWith("/department");
   const isResultPage = location.pathname.startsWith("/result");
   const isLibraryPage = location.pathname.startsWith("/library");
   const isInteractionPage = location.pathname.startsWith("/interaction")
-  
+
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeMobileModal, setActiveMobileModal] = useState(null);
@@ -78,7 +83,7 @@ const AppContent = () => {
   useEffect(() => {
     const fetchFeed = async () => {
       if (!authData || !authData._id) return;
-      
+
       setIsFetching(true);
 
       try {
@@ -101,7 +106,7 @@ const AppContent = () => {
     };
 
     if (location.pathname === "/") {
-        fetchFeed();
+      fetchFeed();
     }
   }, [authData, page, location.pathname]);
 
@@ -124,23 +129,16 @@ const AppContent = () => {
   const headerOffset = isHomePage ? HEADER_SHIFT_LEFT : 0;
   const contentOffset = isHomePage ? CONTENT_SHIFT_RIGHT : 0;
 
-useEffect(() => {
+  useEffect(() => {
     const updateHeaderHeight = () => {
       if (headerRef.current) {
         setHeaderHeight(`${headerRef.current.offsetHeight}px`);
       }
     };
 
-    // 1. Measure immediately
     updateHeaderHeight();
-
-    // 2. Measure again 150ms later to allow logos and fonts to finish painting on the screen
     const timeoutId = setTimeout(updateHeaderHeight, 150);
-
-    // Cleanup the timer
     return () => clearTimeout(timeoutId);
-    
-  // 🟢 THE FIX: Added location.pathname so it always recalculates when leaving the Auth page!
   }, [isSidebarOpen, instituteData, location.pathname]);
 
   useEffect(() => {
@@ -169,11 +167,10 @@ useEffect(() => {
   const contentMarginLeft =
     hideSidebar || isMobile ? "0" : isSidebarOpen ? "16rem" : "5rem";
 
-  const contentPaddingTop = hideSidebar ? "0px" : `calc(${headerHeight} + 2rem)`; 
+  const contentPaddingTop = hideSidebar ? "0px" : `calc(${headerHeight} + 2rem)`;
   const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
-  const maskCutoffLine = hideSidebar ? "0px" : `calc(${contentPaddingTop} - 0.40rem)`; 
+  const maskCutoffLine = hideSidebar ? "0px" : `calc(${contentPaddingTop} - 0.40rem)`;
 
-// 🟢 2. Intelligent Scroll Lock: Lock outer scroll ONLY on specific desktop pages
   const lockOuterScroll = (isProfilePage || isClubPage || isDeptPage || isResultPage || isLibraryPage || isInteractionPage) && !isMobile;
 
   if (loading) {
@@ -190,16 +187,16 @@ useEffect(() => {
       className="relative h-[100dvh] w-full overflow-hidden"
       style={{
         backgroundColor: hideSidebar ? "#f9fafb" : "transparent",
-        backgroundImage: hideSidebar ? "none" : "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", 
+        backgroundImage: hideSidebar ? "none" : "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)",
         backgroundAttachment: "fixed",
         backgroundRepeat: "no-repeat",
         backgroundSize: "cover",
       }}
     >
-       <AnnouncementBanner />
+      <AnnouncementBanner />
 
       <div className="flex h-[100dvh] transition-all duration-300">
-        
+
         {!hideSidebar && (
           <div className="fixed left-0 top-0 h-[100dvh] transition-all duration-300 z-40">
             <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
@@ -222,8 +219,6 @@ useEffect(() => {
             </div>
           )}
 
-          {/* 🟢 3. Apply the scroll lock dynamically to this container */}
-{/* 🟢 THE FIX: We grouped the padding classes into full strings so Tailwind doesn't delete them! */}
           <div
             className={`px-0 md:px-6 ${hideSidebar ? "pb-0 md:pb-0" : "pb-32 md:pb-4"} ${lockOuterScroll ? "overflow-hidden" : "overflow-y-auto"} overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
             onScroll={handleScroll}
@@ -264,27 +259,27 @@ useEffect(() => {
                 <Route path="/logout" element={<Logout />} />
                 <Route path="/department" element={<Department />} />
                 <Route path="/result" element={<Result />} />
-                <Route path="/voice" element={<Voice />} />
+                {/* TalkHive Feature Routes */}
+                <Route path="/TalkHive" element={<TalkHiveMenu />} />
+                <Route path="/TalkHive/focus-pod" element={<FocusPod />} />
+                <Route path="/TalkHive/hive-match" element={<HiveMatch />} />
+                <Route path="/TalkHive/buzz-room" element={<BuzzRoom />} />
+                <Route path="/TalkHive/assembly" element={<Assembly />} />
                 <Route path="/admin" element={<Admin />} />
                 <Route path="/interaction" element={<Interaction />} />
                 <Route path="/superadmin" element={<SuperAdminDashboard />} />
-                <Route
-                  path="/library"
-                  element={<Library userRole={userRole} />}
-                />
+                <Route path="/library" element={<Library userRole={userRole} />} />
                 <Route path="/hostel" element={<Hostel />} />
                 <Route path="/club" element={<Club />} />
-                
                 <Route path="/resume-builder" element={<ResumeBuilder />} />
               </Route>
 
               {/* Public Routes */}
               <Route path="/auth" element={<AuthPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
-              
-              {/* ✨ 3. Wrapped the new route in Suspense so React knows what to show while it downloads the file */}
-              <Route 
-                path="/helpdesk" 
+
+              <Route
+                path="/helpdesk"
                 element={
                   <Suspense fallback={
                     <div className="flex h-screen items-center justify-center">
@@ -293,7 +288,7 @@ useEffect(() => {
                   }>
                     <HelpDesk />
                   </Suspense>
-                } 
+                }
               />
             </Routes>
           </div>
@@ -309,8 +304,8 @@ useEffect(() => {
         {/* MOBILE BOTTOM NAVIGATION, MODALS, AND INSTALL PROMPT */}
         {!hideSidebar && (
           <>
-            <InstallPrompt /> 
-            
+            <InstallPrompt />
+
             <BottomNav
               activeModal={activeMobileModal}
               setActiveModal={setActiveMobileModal}
