@@ -9,9 +9,10 @@ import { useAuth } from "../../context/AuthContext";
 import io from "socket.io-client";
 import Peer from "simple-peer";
 
+// 🚨 CRITICAL PROD FIX: Replace "https://api.rigya.in" with your ACTUAL live backend URL
 const BACKEND_URL = window.location.hostname === "localhost" 
   ? "http://localhost:4000" 
-  : `http://${window.location.hostname}:4000`;
+  : "https://api.rigya.in"; // MUST start with https://
 
 const socket = io(BACKEND_URL); 
 
@@ -71,7 +72,9 @@ export default function FocusPod() {
   useEffect(() => {
     const newRoomCode = generateSecureRoomCode();
     setMyPodId(newRoomCode);
-    if (authData?._id) socket.emit("join", newRoomCode);
+    
+    // ✨ FIX: Use the isolated join-pod event!
+    if (authData?._id) socket.emit("join-pod", newRoomCode);
 
     socket.on("call-incoming", (data) => {
       setReceivingCall(true);
