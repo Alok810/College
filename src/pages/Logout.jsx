@@ -1,8 +1,8 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
-import { logoutUser } from "../api"; 
-import axios from "axios"; 
+// ✨ FIX: Import your custom 'api' instance
+import { logoutUser, api } from "../api"; 
 
 export default function Logout() {
   const navigate = useNavigate();
@@ -13,18 +13,16 @@ export default function Logout() {
       // 🟢 1. UNSUBSCRIBE FROM PUSH NOTIFICATIONS
       try {
         if ('serviceWorker' in navigator) {
-            // THE FIX: Use getRegistration() instead of ready!
-            // This returns instantly whether a service worker exists or not.
             const register = await navigator.serviceWorker.getRegistration();
             
             if (register && register.pushManager) {
                 const subscription = await register.pushManager.getSubscription();
                 
                 if (subscription) {
-                    await axios.post(
-                        'http://localhost:4000/api/v1/push/unsubscribe', 
-                        { endpoint: subscription.endpoint },
-                        { withCredentials: true } 
+                    // ✨ FIX: Use the custom api instance! No more localhost.
+                    await api.post(
+                        '/push/unsubscribe', 
+                        { endpoint: subscription.endpoint }
                     );
                     
                     await subscription.unsubscribe();

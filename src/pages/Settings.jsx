@@ -4,11 +4,10 @@ import {
   LogOut, HelpCircle, FileText 
 } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
-import { updateUserSettings } from "../api";
-import axios from "axios"; 
-import PushNotificationModal from "../components/PushNotificationModal"; // 🟢 Import the Modal!
+// ✨ FIX: Imported your custom 'api' instance
+import { updateUserSettings, api } from "../api";
+import PushNotificationModal from "../components/PushNotificationModal"; 
 
-// Reusable Toggle Switch Component
 const ToggleSwitch = ({ checked, onChange }) => (
   <label className="relative inline-flex items-center cursor-pointer">
     <input type="checkbox" className="sr-only peer" checked={checked} onChange={onChange} />
@@ -19,29 +18,26 @@ const ToggleSwitch = ({ checked, onChange }) => (
 export default function Settings() {
   const { authData } = useAuth(); 
   const [message, setMessage] = useState("");
-  const [showPushModal, setShowPushModal] = useState(false); // 🟢 State for the modal
+  const [showPushModal, setShowPushModal] = useState(false); 
   
   const [settings, setSettings] = useState({
     publicProfile: true,
     publicResults: true,
     emailNotifications: false,
-    pushNotifications: false, // Default to false until we check the browser
+    pushNotifications: false, 
     darkMode: false,
   });
 
-  // Helper to check if the browser is ACTUALLY subscribed right now
   const checkPushSubscription = async () => {
     if ('serviceWorker' in navigator && 'PushManager' in window) {
       const register = await navigator.serviceWorker.getRegistration();
       if (register && register.pushManager) {
         const subscription = await register.pushManager.getSubscription();
-        // If subscription exists, set to true. Otherwise false.
         setSettings(prev => ({ ...prev, pushNotifications: !!subscription }));
       }
     }
   };
 
-  // Load database settings AND check OS Push status on mount
   useEffect(() => {
     if (authData) {
       setSettings(prev => ({
@@ -49,7 +45,6 @@ export default function Settings() {
         publicResults: authData.isResultsPublic !== false 
       }));
     }
-    // 🟢 Check real push status when page loads
     checkPushSubscription();
   }, [authData]);
 
@@ -58,27 +53,20 @@ export default function Settings() {
     setTimeout(() => setMessage(''), 3000);
   };
 
-  // Handle toggles
   const handleToggle = async (key) => {
     const newValue = !settings[key];
 
-    // 🟢 SPECIAL LOGIC FOR PUSH NOTIFICATIONS
     if (key === 'pushNotifications') {
       if (newValue) {
-        // They want to turn it ON -> Show the Modal
         setShowPushModal(true);
       } else {
-        // They want to turn it OFF -> Unsubscribe silently
         try {
           const register = await navigator.serviceWorker.getRegistration();
           if (register && register.pushManager) {
             const subscription = await register.pushManager.getSubscription();
             if (subscription) {
-              await axios.post(
-                'http://localhost:4000/api/v1/push/unsubscribe', 
-                { endpoint: subscription.endpoint },
-                { withCredentials: true }
-              );
+              // ✨ FIX: Using your custom api instance! It automatically adds baseURL and withCredentials!
+              await api.post('/push/unsubscribe', { endpoint: subscription.endpoint });
               await subscription.unsubscribe();
             }
           }
@@ -89,10 +77,9 @@ export default function Settings() {
           showMessage("Failed to disable notifications.");
         }
       }
-      return; // Stop here so it doesn't run the standard toggle code below
+      return; 
     }
     
-    // STANDARD LOGIC FOR OTHER TOGGLES
     setSettings(prev => ({ ...prev, [key]: newValue }));
 
     if (key === 'publicResults') {
@@ -197,7 +184,6 @@ export default function Settings() {
                   <p className="font-bold text-gray-900">Push Notifications</p>
                   <p className="text-xs text-gray-500 mt-0.5">Get notified about messages and results</p>
                 </div>
-                {/* THIS TOGGLE IS NOW FULLY WIRED UP! */}
                 <ToggleSwitch checked={settings.pushNotifications} onChange={() => handleToggle('pushNotifications')} />
               </div>
               
@@ -242,12 +228,11 @@ export default function Settings() {
         </div>
       </div>
 
-      {/* 🟢 Mount the Modal here! It updates the toggle automatically when closed */}
       <PushNotificationModal 
         isOpen={showPushModal} 
         onClose={() => {
           setShowPushModal(false);
-          checkPushSubscription(); // Re-check the OS status in case they allowed/blocked it
+          checkPushSubscription(); 
         }} 
       />
 

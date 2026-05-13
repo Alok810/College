@@ -4,7 +4,11 @@ import { useAuth } from "../../context/AuthContext";
 import io from "socket.io-client";
 import Peer from "simple-peer";
 
-const socket = io("http://localhost:4000");
+// ✨ FIX: Import your bulletproof URL!
+import { BACKEND_URL } from "../../api";
+
+// Initialize the socket using the single source of truth
+const socket = io(BACKEND_URL);
 
 export default function HiveMatch() {
   const { authData } = useAuth();
@@ -107,8 +111,21 @@ export default function HiveMatch() {
     window.location.reload();
   };
 
-  const toggleMic = () => { /* Same as FocusPod */ if (stream) { const audioTrack = stream.getAudioTracks()[0]; audioTrack.enabled = !audioTrack.enabled; setMicEnabled(audioTrack.enabled); } };
-  const toggleCamera = () => { /* Same as FocusPod */ if (stream) { const videoTrack = stream.getVideoTracks()[0]; videoTrack.enabled = !videoTrack.enabled; setCameraEnabled(videoTrack.enabled); } };
+  const toggleMic = () => { 
+      if (stream) { 
+          const audioTrack = stream.getAudioTracks()[0]; 
+          audioTrack.enabled = !audioTrack.enabled; 
+          setMicEnabled(audioTrack.enabled); 
+      } 
+  };
+  
+  const toggleCamera = () => { 
+      if (stream) { 
+          const videoTrack = stream.getVideoTracks()[0]; 
+          videoTrack.enabled = !videoTrack.enabled; 
+          setCameraEnabled(videoTrack.enabled); 
+      } 
+  };
 
   return (
     <div className="p-6 h-full flex flex-col items-center">
