@@ -1,7 +1,7 @@
 import axios from "axios";
 
 // --- MAIN RIGYA BACKEND ---
-const BACKEND_URL = import.meta.env.MODE === "production" 
+export const BACKEND_URL = import.meta.env.MODE === "production" 
   ? "https://api.rigya.in" 
   : "http://localhost:4000";
 
