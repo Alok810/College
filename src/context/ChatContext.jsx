@@ -9,7 +9,7 @@ import {
 
 const ChatContext = createContext();
 
-let socket;
+// 🛠️ PRO-TIP 3: Removed global 'let socket;' to prevent data leaks in SSR apps
 
 export const ChatProvider = ({ children }) => {
   const { authData } = useAuth();
@@ -30,14 +30,19 @@ export const ChatProvider = ({ children }) => {
     if (!authData || !authData._id) return;
 
     // ✨ USE THE SINGLE SOURCE OF TRUTH URL
-    socket = io(BACKEND_URL, {
+    const newSocket = io(BACKEND_URL, {
         withCredentials: true
     });
     
-    socket.emit("join", authData._id); 
-    setSocketInstance(socket); 
+    // 🛠️ PRO-TIP 1: Catch connection errors (CORS, network drops)
+    newSocket.on("connect_error", (err) => {
+        console.error(`🔌 Socket connection error: ${err.message}`);
+    });
+
+    newSocket.emit("join", authData._id); 
+    setSocketInstance(newSocket); 
     
-    return () => socket.disconnect();
+    return () => newSocket.disconnect();
   }, [authData]);
 
   // 🟢 LAZY FETCH FUNCTION
@@ -104,17 +109,22 @@ export const ChatProvider = ({ children }) => {
     };
   }, [activeChat, socketInstance, loadSidebarChats]);
 
+  // 🛠️ PRO-TIP 2: Wrapped in try/catch to prevent crashes on network blips
   const openChat = async (targetUserId) => {
-    const data = await accessChat(targetUserId);
-    setActiveChat(data.chat);
-    const msgData = await fetchMessages(data.chat._id);
-    setMessages(msgData.messages);
+    try {
+      const data = await accessChat(targetUserId);
+      setActiveChat(data.chat);
+      const msgData = await fetchMessages(data.chat._id);
+      setMessages(msgData.messages);
 
-    await markMessagesAsRead(data.chat._id);
-    if (socketInstance) {
-      socketInstance.emit("mark as read", { receiverId: targetUserId, chatId: data.chat._id });
+      await markMessagesAsRead(data.chat._id);
+      if (socketInstance) {
+        socketInstance.emit("mark as read", { receiverId: targetUserId, chatId: data.chat._id });
+      }
+      loadSidebarChats(true); 
+    } catch (error) {
+      console.error("Failed to open chat:", error);
     }
-    loadSidebarChats(true); 
   };
 
   const sendNewMessage = async (formData) => {

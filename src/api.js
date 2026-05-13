@@ -1,19 +1,23 @@
 import axios from "axios";
 
-// --- MAIN RIGYA BACKEND ---
-export const BACKEND_URL = import.meta.env.MODE === "production" 
-  ? "https://api.rigya.in" 
-  : "http://localhost:4000";
+// 🟢 THE BULLETPROOF RUNTIME CHECK
+// This ignores Vite's build step entirely and looks at the browser's actual URL bar
+const isLocalhost = window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
 
-// 🟢 THE FIX: ADD THIS AISHE MICROSERVICE URL!
-export const AISHE_BACKEND_URL = import.meta.env.MODE === "production" 
-  ? "https://aishe.rigya.in"
-  : "http://localhost:8000";
+export const BACKEND_URL = isLocalhost 
+  ? "http://localhost:4000" 
+  : "https://api.rigya.in";
+
+export const AISHE_BACKEND_URL = isLocalhost 
+  ? "http://localhost:8000"
+  : "https://aishe.rigya.in";
 
 export const api = axios.create({
   baseURL: `${BACKEND_URL}/api/v1`,
   withCredentials: true,
 });
+
+// ... the rest of your api.js code stays exactly the same
 
 // 🟢 THE GLOBAL SAFETY NET: Auto-Logout on Expired Session
 api.interceptors.response.use(
