@@ -9,11 +9,11 @@ import { useAuth } from "../../context/AuthContext";
 import io from "socket.io-client";
 import Peer from "simple-peer";
 
-// 🚨 CRITICAL PROD FIX: Replace "https://api.rigya.in" with your ACTUAL live backend URL
-const BACKEND_URL = window.location.hostname === "localhost" 
-  ? "http://localhost:4000" 
-  : "https://api.rigya.in"; // MUST start with https://
+// ✨ IMPORT YOUR BULLETPROOF URL FROM API.JS!
+// Adjust this path if your api.js is in a different folder.
+import { BACKEND_URL } from "../../api"; 
 
+// Initialize the socket using that single source of truth
 const socket = io(BACKEND_URL); 
 
 const generateSecureRoomCode = () => {
@@ -73,7 +73,7 @@ export default function FocusPod() {
     const newRoomCode = generateSecureRoomCode();
     setMyPodId(newRoomCode);
     
-    // ✨ FIX: Use the isolated join-pod event!
+    // ✨ Isolated Join Event
     if (authData?._id) socket.emit("join-pod", newRoomCode);
 
     socket.on("call-incoming", (data) => {
