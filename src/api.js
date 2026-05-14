@@ -9,12 +9,17 @@ export const BACKEND_URL = isLocalhost
   ? "http://localhost:4000" 
   : "https://api.rigya.in"; // Ensure your Node.js backend is actually hosted here!
 
-  console.log("🚨 SYSTEM CHECK - IS LOCALHOST?:", isLocalhost);
-  console.log("🚨 SYSTEM CHECK - TARGET URL:", BACKEND_URL);
-
 export const AISHE_BACKEND_URL = isLocalhost 
   ? "http://localhost:8000"
   : "https://aishe.rigya.in";
+
+export const TALKHIVE_URL = isLocalhost 
+  ? "http://localhost:4001" 
+  : "https://talkhive-engine.onrender.com";
+
+  console.log("🚨 SYSTEM CHECK - IS LOCALHOST?:", isLocalhost);
+  console.log("🚨 SYSTEM CHECK - TARGET URL:", BACKEND_URL);
+  console.log("🐝 TALKHIVE ENGINE URL:", TALKHIVE_URL);
 
 export const api = axios.create({
   baseURL: `${BACKEND_URL}/api/v1`,

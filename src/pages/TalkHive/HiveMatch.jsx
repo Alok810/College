@@ -1,201 +1,221 @@
-import React, { useEffect, useRef, useState } from "react";
-import { Mic, MicOff, Video, VideoOff, PhoneOff, Zap, Loader2, Timer } from "lucide-react";
+import React, { useState } from "react";
+import { Sparkles, Users, Radio, Send, ShieldCheck, Loader2, UserPlus, Lightbulb, Zap, MessageSquare } from "lucide-react";
+import { useHiveMatch } from "../../hooks/useHiveMatch";
+import rigyaLogo from "../../assets/rigya.png"; 
 import { useAuth } from "../../context/AuthContext";
-import io from "socket.io-client";
-import Peer from "simple-peer";
 
-// ✨ FIX: Import your bulletproof URL!
-import { BACKEND_URL } from "../../api";
-
-// Initialize the socket using the single source of truth
-const socket = io(BACKEND_URL);
+const TOPIC_CATEGORIES = ["Web Development", "Cybersecurity", "System Design", "Algorithms", "Interviews", "Tech Debates"];
 
 export default function HiveMatch() {
   const { authData } = useAuth();
-  
-  const [stream, setStream] = useState(null);
-  const [micEnabled, setMicEnabled] = useState(true);
-  const [cameraEnabled, setCameraEnabled] = useState(true);
-  
-  const [isSearching, setIsSearching] = useState(false);
-  const [matchFound, setMatchFound] = useState(false);
-  const [timeLeft, setTimeLeft] = useState(300); // 5 minutes = 300 seconds
-  
-  const myVideoRef = useRef();
-  const userVideoRef = useRef();
-  const connectionRef = useRef();
+  const [chatInput, setChatInput] = useState("");
 
-  // 1. Initialize Camera
-  useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ video: true, audio: true })
-      .then((currentStream) => {
-        setStream(currentStream);
-        if (myVideoRef.current) myVideoRef.current.srcObject = currentStream;
-      })
-      .catch((err) => console.error("Failed to access media:", err));
+  const hive = useHiveMatch({ 
+      name: authData?.name || "Rigya Student", 
+      id: authData?._id || "unknown" 
+  });
 
-    if (authData?._id) socket.emit("join", authData._id);
-
-    return () => {
-        if (stream) stream.getTracks().forEach(track => track.stop());
-        socket.emit("leave-matchmaking", authData?._id);
-    };
-  }, [authData]);
-
-  // 2. The 5-Minute Countdown Timer
-  useEffect(() => {
-    let timerId;
-    if (matchFound && timeLeft > 0) {
-      timerId = setInterval(() => setTimeLeft((prev) => prev - 1), 1000);
-    } else if (timeLeft === 0) {
-      leaveCall(); // Auto-hangup when timer hits 0!
-    }
-    return () => clearInterval(timerId);
-  }, [matchFound, timeLeft]);
-
-  const formatTime = (seconds) => {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
-    return `${m}:${s < 10 ? "0" : ""}${s}`;
-  };
-
-  // 3. Matchmaking Logic
-  const startMatchmaking = () => {
-    setIsSearching(true);
-    socket.emit("join-matchmaking", authData._id);
-  };
-
-  // Listen for a match from the backend
-  useEffect(() => {
-    socket.on("match-found", ({ matchedUser, initiator }) => {
-      setIsSearching(false);
-      setMatchFound(true);
-      setTimeLeft(300); // Reset timer to 5 mins
-
-      if (initiator) {
-        // We are the caller
-        const peer = new Peer({ initiator: true, trickle: false, stream: stream });
-        peer.on("signal", (data) => socket.emit("call-user", { userToCall: matchedUser, signalData: data, from: authData._id, name: "Hive Match Peer" }));
-        peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
-        socket.on("call-accepted", (signal) => peer.signal(signal));
-        connectionRef.current = peer;
-      }
-    });
-
-    // Listen for incoming match call (if we are the receiver)
-    socket.on("call-incoming", (data) => {
-        if(isSearching) {
-            setIsSearching(false);
-            setMatchFound(true);
-            setTimeLeft(300);
-            const peer = new Peer({ initiator: false, trickle: false, stream: stream });
-            peer.on("signal", (ansData) => socket.emit("answer-call", { signal: ansData, to: data.from }));
-            peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
-            peer.signal(data.signal);
-            connectionRef.current = peer;
-        }
-    });
-
-    return () => {
-      socket.off("match-found");
-      socket.off("call-incoming");
-      socket.off("call-accepted");
-    };
-  }, [stream, isSearching]);
-
-  const leaveCall = () => {
-    setMatchFound(false);
-    setIsSearching(false);
-    setTimeLeft(300);
-    if (connectionRef.current) connectionRef.current.destroy();
-    window.location.reload();
-  };
-
-  const toggleMic = () => { 
-      if (stream) { 
-          const audioTrack = stream.getAudioTracks()[0]; 
-          audioTrack.enabled = !audioTrack.enabled; 
-          setMicEnabled(audioTrack.enabled); 
-      } 
-  };
-  
-  const toggleCamera = () => { 
-      if (stream) { 
-          const videoTrack = stream.getVideoTracks()[0]; 
-          videoTrack.enabled = !videoTrack.enabled; 
-          setCameraEnabled(videoTrack.enabled); 
-      } 
+  const handleSend = (e) => {
+      e.preventDefault();
+      hive.sendMessage(chatInput);
+      setChatInput("");
   };
 
   return (
-    <div className="p-6 h-full flex flex-col items-center">
+    <div className={`flex flex-col font-sans overflow-hidden transition-colors duration-500 
+        ${hive.status !== "idle" ? "bg-[#ebf8ff] -mx-4 md:-mx-6 -mt-0 h-[calc(100vh-0px)]" : "min-h-full w-full bg-[#ebf8ff]"}`}>
       
-      {/* 🟢 TOP HEADER & TIMER */}
-      <div className="w-full max-w-5xl flex justify-between items-center mb-6 bg-white p-4 rounded-2xl shadow-sm border border-gray-100">
-        <div>
-            <h1 className="text-2xl font-black flex items-center gap-2 text-amber-600"><Zap size={24}/> Hive Match</h1>
-            <p className="text-gray-500 text-sm font-medium">5-Minute Speed Networking</p>
-        </div>
-        
-        {matchFound && (
-            <div className={`flex items-center gap-2 px-6 py-2 rounded-xl font-black text-xl shadow-inner ${timeLeft < 60 ? 'bg-red-100 text-red-600 animate-pulse' : 'bg-amber-100 text-amber-700'}`}>
-                <Timer size={24} /> {formatTime(timeLeft)}
+      {hive.status !== "idle" ? (
+        <div className="flex-1 flex flex-col min-h-0">
+            {/* HEADER */}
+            <div className="h-16 shrink-0 bg-white/80 backdrop-blur-md border-b border-blue-100 px-6 flex items-center justify-between shadow-sm z-10">
+                <div className="flex items-center gap-3">
+                    <img src={rigyaLogo} alt="Rigya" className="h-7 w-auto drop-shadow-sm" />
+                    <h1 className="text-xl font-black text-gray-900 tracking-tight">Hive <span className="text-indigo-600">Match</span></h1>
+                </div>
+                <div className="flex items-center gap-2 bg-emerald-50 px-3 py-1.5 rounded-full border border-emerald-100">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse shadow-[0_0_8px_rgba(16,185,129,0.5)]"></span>
+                    <span className="text-xs font-bold uppercase tracking-widest text-emerald-700">158+ Online</span>
+                </div>
             </div>
-        )}
-      </div>
 
-      {/* 🟢 VIDEO SCREENS */}
-      <div className="w-full max-w-5xl flex flex-col md:flex-row gap-6 justify-center relative min-h-[400px]">
-        
-        {/* Radar Overlay when searching */}
-        {isSearching && (
-            <div className="absolute inset-0 z-10 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm rounded-3xl border-4 border-amber-200">
-                <Loader2 size={64} className="text-amber-500 animate-spin mb-4" />
-                <h2 className="text-2xl font-bold text-gray-800">Looking for a Peer...</h2>
-                <p className="text-gray-500 mt-2">Waiting for someone to join the Hive.</p>
-                <button onClick={() => {setIsSearching(false); socket.emit("leave-matchmaking", authData?._id);}} className="mt-6 px-6 py-2 bg-gray-200 text-gray-700 rounded-full hover:bg-gray-300 font-bold">
-                    Cancel Search
+            <div className="flex-1 flex flex-col lg:flex-row p-4 gap-4 overflow-hidden min-h-0">
+                
+                {/* 🟢 COLUMN 1: VIDEOS */}
+                <div className="flex flex-col gap-4 shrink-0 min-h-0 overflow-y-auto lg:overflow-hidden w-full lg:w-auto lg:flex-[3]">
+                    <div className="relative w-full aspect-[4/3] bg-[#2a2d35] rounded-2xl overflow-hidden shadow-sm border border-gray-300/50 flex items-center justify-center">
+                        <video ref={hive.partnerVideoRef} autoPlay playsInline className={`w-full h-full object-cover transition-opacity duration-300 ${hive.isPeerConnected ? 'opacity-100' : 'opacity-0'}`} />
+                        {hive.status === "searching" && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#2a2d35] z-10">
+                                <Loader2 size={32} className="text-indigo-400 animate-spin mb-3 opacity-80" />
+                                <p className="text-gray-300 font-medium text-sm">Scanning network...</p>
+                            </div>
+                        )}
+                        {hive.status === "connected" && !hive.isPeerConnected && (
+                            <div className="absolute inset-0 flex flex-col items-center justify-center bg-[#2a2d35] z-10">
+                                <Loader2 size={32} className="text-indigo-500 animate-spin mb-3" />
+                                <p className="text-white font-bold tracking-wide text-sm">Securing connection...</p>
+                            </div>
+                        )}
+                        <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-md text-white text-[10px] font-bold z-20 border border-white/10 uppercase tracking-widest">Stranger</div>
+                    </div>
+
+                    <div className="relative w-full aspect-[4/3] bg-[#2a2d35] rounded-2xl overflow-hidden shadow-sm border border-gray-300/50">
+                        <video ref={hive.myVideoRef} autoPlay playsInline muted className="w-full h-full object-cover scale-x-[-1]" />
+                        <div className="absolute bottom-3 left-3 bg-black/50 backdrop-blur-md px-2.5 py-1 rounded-md text-white text-[10px] font-bold z-20 border border-white/10 uppercase tracking-widest">You</div>
+                    </div>
+                </div>
+
+                {/* 🟢 COLUMN 2: DISCUSSION THEME */}
+                <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 flex flex-col relative overflow-hidden min-h-[300px] w-full lg:w-auto lg:flex-[4]">
+                    <div className="absolute -right-16 -top-16 text-indigo-500/5"><MessageSquare size={250} /></div>
+                    <div className="absolute -left-10 -bottom-10 text-purple-500/5"><Sparkles size={200} /></div>
+
+                    <div className="relative z-10 flex flex-col h-full p-6 lg:p-8">
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-100/60 pb-4 mb-5">
+                            <div className="flex items-center gap-3">
+                                <div className="bg-indigo-600 p-2 rounded-xl shadow-md shadow-indigo-600/20">
+                                    <Lightbulb size={20} className="text-white" />
+                                </div>
+                                <div>
+                                    <h2 className="text-base font-black text-indigo-950 uppercase tracking-widest leading-none">AI Discussion Theme</h2>
+                                    <p className="text-[11px] font-bold text-indigo-500 uppercase mt-1 flex items-center gap-1.5">
+                                        <Zap size={12} className="fill-current" /> Powered by Gemini 1.5 Flash
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-wrap gap-2 mb-6">
+                            {TOPIC_CATEGORIES.map(category => (
+                                <button
+                                    key={category}
+                                    onClick={() => hive.generateNewTopic(category)}
+                                    disabled={hive.isGeneratingTheme || hive.status !== "connected"} 
+                                    className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${
+                                        hive.selectedCategory === category 
+                                        ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-105" 
+                                        : "bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50 disabled:opacity-50 disabled:scale-100"
+                                    }`}
+                                >
+                                    {category}
+                                </button>
+                            ))}
+                        </div>
+                        
+                        <div className="flex-1 flex items-center justify-center pb-8">
+                            <div className={`bg-white/70 backdrop-blur-md border border-white rounded-3xl p-8 lg:p-10 shadow-xl shadow-indigo-900/5 w-full text-center transition-all duration-300 ${hive.isGeneratingTheme ? 'opacity-50 scale-95' : 'opacity-100 scale-100 hover:scale-[1.02]'}`}>
+                                <div className="text-indigo-300 flex justify-center mb-4">
+                                    {hive.isGeneratingTheme ? <Loader2 size={32} className="animate-spin" /> : <MessageSquare size={32} />}
+                                </div>
+                                <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-800 leading-tight">
+                                    "{hive.activeTopic}"
+                                </h3>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                {/* 🟢 COLUMN 3: CHAT BOX */}
+                <div className="bg-white rounded-2xl shadow-sm border border-blue-100 flex flex-col overflow-hidden shrink-0 w-full lg:w-auto lg:flex-[3]">
+                    <div ref={hive.chatScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar bg-slate-50/30">
+                        <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                            <h3 className="text-gray-900 font-black text-lg mb-2">Welcome to Hive Match.</h3>
+                            <div className="text-[13px] text-gray-600 space-y-1.5 font-medium">
+                                <p className="text-rose-600 font-bold flex items-center gap-1.5 mb-2">
+                                    <ShieldCheck size={16} /> Campus verified users only
+                                </p>
+                                <p>• No nudity, hate speech, or harassment</p>
+                                <p>• Keep it professional.</p>
+                            </div>
+                        </div>
+
+                        {hive.messages.map((msg, i) => {
+                            if (msg.system) {
+                                return (
+                                    <div key={i} className="flex justify-center my-4">
+                                        <span className="bg-indigo-50 text-indigo-500 border border-indigo-100 font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full">
+                                            {msg.text}
+                                        </span>
+                                    </div>
+                                );
+                            }
+
+                            const isMe = msg.sender === "You";
+                            return (
+                                <div key={i} className={`flex w-full ${isMe ? 'justify-end' : 'justify-start'}`}>
+                                    <div className={`max-w-[85%] px-4 py-2 text-[14px] shadow-sm ${
+                                        isMe 
+                                        ? 'bg-indigo-600 text-white rounded-2xl rounded-br-sm' 
+                                        : 'bg-white text-gray-800 rounded-2xl rounded-bl-sm border border-gray-200'
+                                    }`}>
+                                        <span className={`block text-[9px] uppercase tracking-wider font-bold mb-0.5 ${isMe ? 'text-indigo-200' : 'text-gray-400'}`}>
+                                            {msg.sender}
+                                        </span>
+                                        {msg.text}
+                                    </div>
+                                </div>
+                            );
+                        })}
+                    </div>
+
+                    <div className="shrink-0 p-3 bg-white border-t border-gray-100 flex flex-col gap-2 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
+                        <form onSubmit={handleSend} className="flex items-stretch gap-2">
+                            <input
+                                type="text"
+                                value={chatInput}
+                                onChange={(e) => setChatInput(e.target.value)}
+                                disabled={hive.status !== "connected"}
+                                placeholder={hive.status === "connected" ? "Type a message..." : "Waiting for peer..."}
+                                className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-4 py-2.5 outline-none focus:border-indigo-500 focus:bg-white focus:ring-2 focus:ring-indigo-500/20 text-gray-900 disabled:bg-gray-100 text-sm font-medium transition-all"
+                            />
+                            <button
+                                type="submit"
+                                disabled={!chatInput.trim() || hive.status !== "connected"}
+                                className="w-12 bg-indigo-50 border border-indigo-100 rounded-xl flex items-center justify-center text-indigo-600 hover:bg-indigo-600 hover:text-white disabled:opacity-40 transition-all shadow-sm"
+                            >
+                                <Send size={18} className={chatInput.trim() ? "translate-x-0.5 -translate-y-0.5 transition-transform" : ""} />
+                            </button>
+                        </form>
+
+                        <div className="flex gap-2 h-10">
+                            {hive.status === "connected" ? (
+                                <button onClick={hive.skipMatch} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95">
+                                    Next Stranger
+                                </button>
+                            ) : (
+                                <button disabled className="flex-1 bg-indigo-50 text-indigo-400 rounded-xl font-bold text-sm flex items-center justify-center gap-2 cursor-wait border border-indigo-100">
+                                    <Loader2 size={16} className="animate-spin" /> Searching
+                                </button>
+                            )}
+                            
+                            <button onClick={hive.stopSearch} className="w-20 bg-white border border-gray-200 hover:bg-rose-50 text-gray-600 hover:text-rose-600 hover:border-rose-200 rounded-xl font-bold text-sm flex items-center justify-center transition-all shadow-sm">
+                                Stop
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+      ) : (
+        /* 🟢 LANDING PAGE */
+        <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto">
+            <div className="animate-in slide-in-from-bottom-6 duration-700 flex flex-col items-center">
+                <div className="inline-flex items-center gap-2 px-5 py-2 bg-white text-indigo-600 rounded-full text-xs font-black uppercase tracking-widest mb-8 shadow-sm border border-blue-50">
+                    <Sparkles size={16} /> Global Student Matchmaking
+                </div>
+                <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter mb-6 leading-none">
+                    Meet your next <br/><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">Study Partner.</span>
+                </h2>
+                <p className="text-lg md:text-xl text-slate-600 font-medium mb-12 max-w-2xl leading-relaxed">
+                    Instantly connect with random peers across the network. Start a video session, share knowledge, and grow together.
+                </p>
+                <button onClick={hive.startSearch} className="group px-12 py-5 bg-[#111827] hover:bg-black text-white rounded-full font-black text-xl shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all flex items-center gap-4">
+                    START MATCHMAKING <Radio size={24} className="group-hover:animate-pulse text-indigo-400" />
                 </button>
             </div>
-        )}
-
-        {/* My Video */}
-        <div className={`relative aspect-video bg-gray-900 rounded-3xl overflow-hidden shadow-xl border-4 ${matchFound ? 'w-full md:w-1/2 border-amber-500' : 'w-full max-w-2xl border-gray-800'}`}>
-          <video ref={myVideoRef} playsInline muted autoPlay className={`w-full h-full object-cover ${!cameraEnabled ? 'hidden' : ''}`} />
-          {!cameraEnabled && <div className="absolute inset-0 flex items-center justify-center bg-gray-800 text-white font-bold">Camera Off</div>}
-          <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-lg text-sm font-bold">You</div>
         </div>
-
-        {/* Peer Video */}
-        {matchFound && (
-          <div className="relative w-full md:w-1/2 aspect-video bg-gray-900 rounded-3xl overflow-hidden shadow-xl border-4 border-amber-500">
-            <video ref={userVideoRef} playsInline autoPlay className="w-full h-full object-cover" />
-            <div className="absolute bottom-4 left-4 bg-black/50 text-white px-3 py-1 rounded-lg text-sm font-bold">Peer</div>
-          </div>
-        )}
-      </div>
-
-      {/* 🟢 CONTROLS */}
-      <div className="mt-8 flex gap-6 w-full max-w-2xl bg-white p-6 rounded-3xl shadow-sm border border-gray-100 justify-center">
-        <button onClick={toggleMic} className={`p-4 rounded-2xl transition-all ${micEnabled ? 'bg-gray-100 text-gray-700' : 'bg-red-50 text-red-600'}`}>
-            {micEnabled ? <Mic size={24} /> : <MicOff size={24} />}
-        </button>
-        <button onClick={toggleCamera} className={`p-4 rounded-2xl transition-all ${cameraEnabled ? 'bg-gray-100 text-gray-700' : 'bg-red-50 text-red-600'}`}>
-            {cameraEnabled ? <Video size={24} /> : <VideoOff size={24} />}
-        </button>
-
-        {!isSearching && !matchFound && (
-            <button onClick={startMatchmaking} className="px-8 bg-amber-500 hover:bg-amber-600 text-white rounded-2xl font-black flex items-center gap-2 shadow-lg transition-transform hover:scale-105">
-                <Zap size={24} /> Find Match
-            </button>
-        )}
-
-        {matchFound && (
-            <button onClick={leaveCall} className="px-8 bg-red-500 hover:bg-red-600 text-white rounded-2xl font-black flex items-center gap-2 shadow-lg transition-transform hover:scale-105">
-                <PhoneOff size={24} /> Skip / Leave
-            </button>
-        )}
-      </div>
+      )}
     </div>
   );
 }

@@ -1,9 +1,9 @@
 import { useEffect, useRef, useState } from "react";
-import io from "socket.io-client";
+import { io } from "socket.io-client";
 import Peer from "simple-peer";
 
-// ✨ Make sure these import paths match your folder structure!
-import { BACKEND_URL } from "../api";
+// ✨ Import TALKHIVE_URL and AuthContext
+import { TALKHIVE_URL } from "../api";
 import { useAuth } from "../context/AuthContext";
 
 const generateSecureRoomCode = () => {
@@ -15,7 +15,7 @@ const generateSecureRoomCode = () => {
     return `RIGYA-${code}`;
 };
 
-// 🟢 THE SECRET SAUCE: Generates a fake, pure-black video stream
+// 🟢 Generates a fake, pure-black video stream
 const createEmptyVideoTrack = () => {
     const canvas = document.createElement('canvas');
     canvas.width = 640;
@@ -25,7 +25,7 @@ const createEmptyVideoTrack = () => {
     return stream.getVideoTracks()[0];
 };
 
-// 🟢 THE ENTERPRISE FALLBACK: Generates a pure silent audio track if hardware is missing/blocked
+// 🟢 Generates a pure silent audio track if hardware is missing/blocked
 const createEmptyAudioTrack = () => {
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
@@ -38,7 +38,7 @@ const createEmptyAudioTrack = () => {
     }
 };
 
-// 🟢 GLOBAL MEMORY: Prevents the code from changing when navigating between React pages!
+// 🟢 GLOBAL MEMORY: Prevents the code from changing when navigating between React pages
 let globalSessionPodId = null;
 
 export const useFocusPod = () => {
@@ -55,7 +55,7 @@ export const useFocusPod = () => {
     // Graceful error state for UI toasts
     const [mediaError, setMediaError] = useState(null);
 
-    // 🟢 NEW LOGIC: Only generate a new code if one doesn't exist in the global memory
+    // Only generate a new code if one doesn't exist in the global memory
     const [myPodId, setMyPodId] = useState(() => {
         if (!globalSessionPodId) {
             globalSessionPodId = generateSecureRoomCode();
@@ -85,8 +85,6 @@ export const useFocusPod = () => {
     const connectionRef = useRef();
     const screenTrackRef = useRef();
     const chatScrollRef = useRef();
-
-    // 🟢 NEW: The Ringtone Audio Player
     const ringtoneAudioRef = useRef(typeof window !== "undefined" ? new Audio('/ringtone.mp3') : null);
 
     // --- FIREWALL CONFIG ---
@@ -100,10 +98,22 @@ export const useFocusPod = () => {
 
     // --- INITIALIZATION ---
     useEffect(() => {
-        const newSocket = io(BACKEND_URL, { withCredentials: true });
+        const userId = authData?._id;
+        
+        // 🟢 ADD THIS LINE HERE TOO!
+        if (!userId) return;
+
+        const newSocket = io(TALKHIVE_URL, { 
+            auth: { userId: userId } 
+        });
+        
+        newSocket.on("connect_error", (err) => {
+            console.error("🔌 TalkHive Socket Error:", err.message);
+        });
+        
         setSocket(newSocket);
 
-        // 🟢 Uses the state variable, preventing recreation on mount
+        // Uses the state variable, preventing recreation on mount
         if (authData?._id) newSocket.emit("join-pod", myPodId);
 
         navigator.mediaDevices.getUserMedia({
@@ -111,8 +121,8 @@ export const useFocusPod = () => {
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true,
-                sampleRate: 48000, // CD/Studio quality audio sampling!
-                channelCount: 1    // Mono channel is mathematically best for voice
+                sampleRate: 48000, 
+                channelCount: 1    
             }
         })
         .then((audioStream) => {
@@ -132,7 +142,6 @@ export const useFocusPod = () => {
             else if (err.name === 'NotAllowedError') setMediaError("Microphone blocked. Check your URL bar permissions.");
             else setMediaError("Hardware access failed. You are in Text/Code mode.");
 
-            // Inject absolute fallback tracks so the call doesn't crash!
             const dummyVideoTrack = createEmptyVideoTrack();
             const dummyAudioTrack = createEmptyAudioTrack();
             const tracks = [dummyVideoTrack];
@@ -258,7 +267,7 @@ export const useFocusPod = () => {
                 audioTrack.enabled = !audioTrack.enabled;
                 setMicEnabled(audioTrack.enabled);
             } else if (mediaError) {
-                alert(mediaError); // Remind user they are in fallback mode
+                alert(mediaError); 
             }
         }
     };
@@ -266,7 +275,7 @@ export const useFocusPod = () => {
     const toggleCamera = async () => {
         if (cameraEnabled) {
             const currentVideoTrack = stream.getVideoTracks()[0];
-            currentVideoTrack.stop(); // Kills the physical light
+            currentVideoTrack.stop(); 
 
             const dummyVideoTrack = createEmptyVideoTrack();
             stream.removeTrack(currentVideoTrack);
@@ -281,7 +290,7 @@ export const useFocusPod = () => {
             try {
                 const newStream = await navigator.mediaDevices.getUserMedia({
                     video: {
-                        width: { ideal: 1280, max: 1920 },  // HD Routing
+                        width: { ideal: 1280, max: 1920 },  
                         height: { ideal: 720, max: 1080 },
                         frameRate: { ideal: 30, max: 60 },
                         facingMode: "user"
@@ -392,19 +401,15 @@ export const useFocusPod = () => {
     useEffect(() => {
         if (!ringtoneAudioRef.current) return;
         
-        // Make the ringtone loop continuously until answered
         ringtoneAudioRef.current.loop = true; 
 
         if (receivingCall && !callAccepted) {
-            // Play the ringtone (wrapped in a catch in case the browser blocks autoplay)
             ringtoneAudioRef.current.play().catch(err => console.warn("Autoplay blocked by browser:", err));
         } else {
-            // Stop the ringtone immediately when answered, rejected, or ended
             ringtoneAudioRef.current.pause();
             ringtoneAudioRef.current.currentTime = 0; 
         }
 
-        // Cleanup function: stop sound if the component is destroyed
         return () => {
             ringtoneAudioRef.current.pause();
             ringtoneAudioRef.current.currentTime = 0;

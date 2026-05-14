@@ -52,7 +52,8 @@ const AppContent = () => {
     location.pathname === "/reset-password" ||
     location.pathname === "/resume-builder" ||
     location.pathname === "/helpdesk" ||
-    location.pathname === "/TalkHive/focus-pod"; 
+    location.pathname === "/TalkHive/focus-pod" ||
+    location.pathname === "/TalkHive/hive-match"; // 🟢 Added this line!
 
   const isProfilePage = location.pathname.startsWith("/profile");
   const isClubPage = location.pathname.startsWith("/club");

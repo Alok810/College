@@ -21,7 +21,7 @@ export default function TalkHive() {
       desc: "5-Minute Speed Networking & Mock Interviews",
       icon: <Zap size={32} className="text-amber-600" />,
       bg: "bg-amber-50 hover:bg-amber-100 border-amber-200",
-      active: false, // Set to true when we build it!
+      active: true, // Set to true when we build it!
       path: "/TalkHive/hive-match"
     },
     {
