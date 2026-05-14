@@ -1,20 +1,16 @@
 import React, { useState, useRef, useEffect } from "react";
 import { PhoneOff, Copy, CheckCheck, PhoneIncoming, Phone, Timer, Play, Pause, RotateCcw } from "lucide-react";
 
-// 1. Import the WebRTC Engine
 import { useFocusPod } from "../../hooks/useFocusPod";
-
-// 2. Import the UI Components (Make sure these paths match where you saved them!)
 import VideoGrid from "../../components/FocusPod/VideoGrid";
 import PodSidebar from "../../components/FocusPod/PodSidebar";
 import CallControls from "../../components/FocusPod/CallControls";
 
 export default function FocusPod() {
-  // Initialize the engine
-  const pod = useFocusPod(); 
+  const pod = useFocusPod(); // 🟢 The Engine
   const podContainerRef = useRef(null);
   
-  // UI-Only State (Only affects layout, not the actual call)
+  // Pure UI Layout State
   const [copied, setCopied] = useState(false);
   const [layoutMode, setLayoutMode] = useState("grid"); 
   const [isSwapped, setIsSwapped] = useState(false); 
@@ -49,7 +45,7 @@ export default function FocusPod() {
   return (
     <div ref={podContainerRef} className={`flex flex-col items-center custom-scrollbar overflow-y-auto bg-[#ebf8ff] ${isFullscreen ? 'w-screen h-screen p-2 sm:p-4 md:p-6' : 'p-3 sm:p-4 md:p-6 h-full pb-32'}`}>
       
-      {/* 🟢 HEADER SECTION */}
+      {/* HEADER SECTION */}
       <div className={`w-full flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-4 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
         <div>
             <h1 className="text-2xl sm:text-3xl font-black text-purple-700">The Focus Pod</h1>
@@ -70,24 +66,24 @@ export default function FocusPod() {
         )}
       </div>
 
-      {/* 🟢 DYNAMIC CONTENT AREA */}
+      {/* DYNAMIC CONTENT AREA */}
       <div className={`w-full flex flex-col lg:flex-row gap-4 md:gap-6 relative min-h-[400px] sm:min-h-0 flex-1 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
-        
         <VideoGrid 
             layoutMode={layoutMode} callAccepted={pod.callAccepted} isSwapped={isSwapped} setIsSwapped={setIsSwapped}
             myVideoRef={pod.myVideoRef} cameraEnabled={pod.cameraEnabled} isScreenSharing={pod.isScreenSharing} isMirrored={isMirrored}
             userVideoRef={pod.userVideoRef} receivingCall={pod.receivingCall} callerName={pod.callerName} callerRealDbId={pod.callerRealDbId} callEnded={pod.callEnded}
         />
         
-        <PodSidebar 
-            isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeTab={activeTab} setActiveTab={setActiveTab}
-            chatScrollRef={pod.chatScrollRef} messages={pod.messages} sendChat={pod.sendChat} codeText={pod.codeText} updateCode={pod.updateCode}
-        />
+        {pod.callAccepted && (
+            <PodSidebar 
+                isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeTab={activeTab} setActiveTab={setActiveTab}
+                chatScrollRef={pod.chatScrollRef} messages={pod.messages} sendChat={pod.sendChat} codeText={pod.codeText} updateCode={pod.updateCode}
+            />
+        )}
       </div>
 
-      {/* 🟢 CONTROLS FOOTER */}
+      {/* CONTROLS FOOTER */}
       <div className={`mt-4 sm:mt-6 flex flex-col lg:flex-row gap-4 sm:gap-6 w-full bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 shrink-0 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
-        
         <CallControls 
             micEnabled={pod.micEnabled} toggleMic={pod.toggleMic} cameraEnabled={pod.cameraEnabled} toggleCamera={pod.toggleCamera}
             isScreenSharing={pod.isScreenSharing} toggleScreenShare={pod.toggleScreenShare} isMirrored={isMirrored} setIsMirrored={setIsMirrored}
