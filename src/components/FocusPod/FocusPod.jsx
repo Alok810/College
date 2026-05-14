@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from "react";
-import { PhoneOff, Copy, CheckCheck, PhoneIncoming, Phone, Timer, Play, Pause, RotateCcw } from "lucide-react";
+import { PhoneOff, Copy, CheckCheck, PhoneIncoming, Phone, Timer, Play, Pause, RotateCcw, User } from "lucide-react";
 
 import { useFocusPod } from "../../hooks/useFocusPod";
 import VideoGrid from "../../components/FocusPod/VideoGrid";
@@ -98,18 +98,44 @@ export default function FocusPod() {
                 </div>
             ) : pod.receivingCall ? (
                 <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-center w-full">
+                  
+                  {/* Secure Pod Code Block */}
                   <div className="w-full lg:w-auto flex-1 flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2 rounded-xl sm:rounded-2xl">
                     <div className="flex flex-col overflow-hidden pr-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Secure Pod Code</span><span className="text-xs sm:text-sm font-mono font-bold text-indigo-900 truncate tracking-widest">{pod.myPodId || "Generating..."}</span></div>
                     <button onClick={copyMyId} className="p-1.5 bg-white text-indigo-600 rounded-lg shadow-sm hover:bg-indigo-600 hover:text-white transition-colors shrink-0">{copied ? <CheckCheck size={18} /> : <Copy size={18} />}</button>
                   </div>
-                  <div className="w-full lg:w-auto flex-1 flex items-center justify-between gap-2 bg-emerald-500 p-1 pl-4 rounded-xl sm:rounded-2xl shadow-sm overflow-hidden animate-pulse">
-                      <div className="flex flex-col text-white flex-1 min-w-0 pr-2">
-                          <span className="text-sm sm:text-base font-bold truncate">{pod.callerName} is calling!</span>
-                          <span className="text-[10px] sm:text-xs opacity-90 truncate">Click Answer to join</span>
-                      </div>
-                      <button onClick={pod.answerCall} className="px-5 sm:px-8 bg-white text-emerald-600 hover:bg-emerald-50 rounded-xl font-black flex items-center justify-center gap-2 transition-transform hover:scale-105 active:scale-95 shrink-0 text-sm sm:text-base py-2.5 sm:py-3 h-full">
-                          <PhoneIncoming size={18} /> <span className="hidden sm:block">Answer</span>
-                      </button>
+                  
+                  {/* 🟢 PREMIUM INCOMING CALL BANNER (Fixed Padding & Hover) */}
+                  <div className="w-full lg:w-auto flex-[1.5] flex items-center justify-between bg-gray-900 border border-gray-700/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden ring-1 ring-white/10">
+                    
+                    {/* Glowing Top Border */}
+                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse"></div>
+
+                    <div className="flex items-center gap-3 sm:gap-4 pl-1 sm:pl-2">
+                        {/* Pulsing Avatar */}
+                        <div className="relative shrink-0">
+                            <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
+                            <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-800 relative z-10">
+                                <User size={20} className="text-white" />
+                            </div>
+                        </div>
+
+                        {/* Caller Info */}
+                        <div className="flex flex-col text-white flex-1 min-w-0 pr-2">
+                            <span className="text-sm sm:text-base font-bold truncate tracking-wide">{pod.callerName}</span>
+                            <span className="text-[10px] sm:text-xs text-emerald-400 flex items-center gap-1.5 mt-0.5">
+                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                               Incoming Video Call...
+                            </span>
+                        </div>
+                    </div>
+
+                    {/* Glowing Accept Button (Replaced scale-105 with -translate-y-0.5) */}
+                    <button onClick={pod.answerCall} className="group relative px-5 py-2 sm:px-6 sm:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-black flex items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] shrink-0 text-sm sm:text-base border border-emerald-400/50 mr-1 sm:mr-2">
+                        <PhoneIncoming size={18} className="animate-bounce" style={{ animationDuration: '2s' }}/>
+                        <span className="hidden sm:block tracking-wide">ACCEPT</span>
+                    </button>
+
                   </div>
                 </div>
             ) : (

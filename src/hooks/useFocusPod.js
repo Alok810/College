@@ -38,6 +38,9 @@ const createEmptyAudioTrack = () => {
     }
 };
 
+// 🟢 GLOBAL MEMORY: Prevents the code from changing when navigating between React pages!
+let globalSessionPodId = null;
+
 export const useFocusPod = () => {
     const { authData } = useAuth();
     const myDisplayName = authData?.name || authData?.username || authData?.user?.name || "Student";
@@ -49,10 +52,17 @@ export const useFocusPod = () => {
     const [cameraEnabled, setCameraEnabled] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
 
-    // 🟢 NEW: Graceful error state for UI toasts
+    // Graceful error state for UI toasts
     const [mediaError, setMediaError] = useState(null);
 
-    const [myPodId, setMyPodId] = useState("");
+    // 🟢 NEW LOGIC: Only generate a new code if one doesn't exist in the global memory
+    const [myPodId, setMyPodId] = useState(() => {
+        if (!globalSessionPodId) {
+            globalSessionPodId = generateSecureRoomCode();
+        }
+        return globalSessionPodId;
+    });
+    
     const [idToCall, setIdToCall] = useState("");
     const [receivingCall, setReceivingCall] = useState(false);
     const [isCalling, setIsCalling] = useState(false);
@@ -76,6 +86,9 @@ export const useFocusPod = () => {
     const screenTrackRef = useRef();
     const chatScrollRef = useRef();
 
+    // 🟢 NEW: The Ringtone Audio Player
+    const ringtoneAudioRef = useRef(typeof window !== "undefined" ? new Audio('/ringtone.mp3') : null);
+
     // --- FIREWALL CONFIG ---
     const getIceServers = () => ({
         iceServers: [
@@ -90,46 +103,45 @@ export const useFocusPod = () => {
         const newSocket = io(BACKEND_URL, { withCredentials: true });
         setSocket(newSocket);
 
-        const newRoomCode = generateSecureRoomCode();
-        setMyPodId(newRoomCode);
+        // 🟢 Uses the state variable, preventing recreation on mount
+        if (authData?._id) newSocket.emit("join-pod", myPodId);
 
-        if (authData?._id) newSocket.emit("join-pod", newRoomCode);
-
-        // 🟢 ENTERPRISE HARDWARE HANDLING
         navigator.mediaDevices.getUserMedia({
             audio: {
                 echoCancellation: true,
                 noiseSuppression: true,
-                autoGainControl: true
+                autoGainControl: true,
+                sampleRate: 48000, // CD/Studio quality audio sampling!
+                channelCount: 1    // Mono channel is mathematically best for voice
             }
         })
-            .then((audioStream) => {
-                const audioTrack = audioStream.getAudioTracks()[0];
-                audioTrack.enabled = false;
+        .then((audioStream) => {
+            const audioTrack = audioStream.getAudioTracks()[0];
+            audioTrack.enabled = false;
 
-                const dummyVideoTrack = createEmptyVideoTrack();
-                const mixedStream = new MediaStream([audioTrack, dummyVideoTrack]);
+            const dummyVideoTrack = createEmptyVideoTrack();
+            const mixedStream = new MediaStream([audioTrack, dummyVideoTrack]);
 
-                setStream(mixedStream);
-                if (myVideoRef.current) myVideoRef.current.srcObject = mixedStream;
-            })
-            .catch(err => {
-                console.warn("Hardware access blocked or missing, falling back to dummy tracks:", err);
+            setStream(mixedStream);
+            if (myVideoRef.current) myVideoRef.current.srcObject = mixedStream;
+        })
+        .catch(err => {
+            console.warn("Hardware access blocked or missing, falling back to dummy tracks:", err);
 
-                if (err.name === 'NotFoundError') setMediaError("No microphone found. Plug one in to speak.");
-                else if (err.name === 'NotAllowedError') setMediaError("Microphone blocked. Check your URL bar permissions.");
-                else setMediaError("Hardware access failed. You are in Text/Code mode.");
+            if (err.name === 'NotFoundError') setMediaError("No microphone found. Plug one in to speak.");
+            else if (err.name === 'NotAllowedError') setMediaError("Microphone blocked. Check your URL bar permissions.");
+            else setMediaError("Hardware access failed. You are in Text/Code mode.");
 
-                // Inject absolute fallback tracks so the call doesn't crash!
-                const dummyVideoTrack = createEmptyVideoTrack();
-                const dummyAudioTrack = createEmptyAudioTrack();
-                const tracks = [dummyVideoTrack];
-                if (dummyAudioTrack) tracks.push(dummyAudioTrack);
+            // Inject absolute fallback tracks so the call doesn't crash!
+            const dummyVideoTrack = createEmptyVideoTrack();
+            const dummyAudioTrack = createEmptyAudioTrack();
+            const tracks = [dummyVideoTrack];
+            if (dummyAudioTrack) tracks.push(dummyAudioTrack);
 
-                const fallbackStream = new MediaStream(tracks);
-                setStream(fallbackStream);
-                if (myVideoRef.current) myVideoRef.current.srcObject = fallbackStream;
-            });
+            const fallbackStream = new MediaStream(tracks);
+            setStream(fallbackStream);
+            if (myVideoRef.current) myVideoRef.current.srcObject = fallbackStream;
+        });
 
         newSocket.on("call-incoming", (data) => {
             setReceivingCall(true);
@@ -148,7 +160,7 @@ export const useFocusPod = () => {
             if (screenTrackRef.current) screenTrackRef.current.stop();
         };
         // eslint-disable-next-line
-    }, [authData]);
+    }, [authData, myPodId]);
 
     // --- PEER DATA HANDLER ---
     const handlePeerData = (data) => {
@@ -267,7 +279,14 @@ export const useFocusPod = () => {
             setCameraEnabled(false);
         } else {
             try {
-                const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+                const newStream = await navigator.mediaDevices.getUserMedia({
+                    video: {
+                        width: { ideal: 1280, max: 1920 },  // HD Routing
+                        height: { ideal: 720, max: 1080 },
+                        frameRate: { ideal: 30, max: 60 },
+                        facingMode: "user"
+                    }
+                });
                 const newVideoTrack = newStream.getVideoTracks()[0];
                 const oldVideoTrack = stream.getVideoTracks()[0];
 
@@ -298,7 +317,7 @@ export const useFocusPod = () => {
                 }
                 if (existingVideoTrack) {
                     stream.removeTrack(existingVideoTrack);
-                    existingVideoTrack.stop(); // Turn off camera hardware
+                    existingVideoTrack.stop(); 
                 }
                 stream.addTrack(screenTrack);
 
@@ -369,9 +388,32 @@ export const useFocusPod = () => {
         }
     };
 
+    // --- RINGTONE LOGIC ---
+    useEffect(() => {
+        if (!ringtoneAudioRef.current) return;
+        
+        // Make the ringtone loop continuously until answered
+        ringtoneAudioRef.current.loop = true; 
+
+        if (receivingCall && !callAccepted) {
+            // Play the ringtone (wrapped in a catch in case the browser blocks autoplay)
+            ringtoneAudioRef.current.play().catch(err => console.warn("Autoplay blocked by browser:", err));
+        } else {
+            // Stop the ringtone immediately when answered, rejected, or ended
+            ringtoneAudioRef.current.pause();
+            ringtoneAudioRef.current.currentTime = 0; 
+        }
+
+        // Cleanup function: stop sound if the component is destroyed
+        return () => {
+            ringtoneAudioRef.current.pause();
+            ringtoneAudioRef.current.currentTime = 0;
+        };
+    }, [receivingCall, callAccepted]);
+
     // --- RETURN ALL LOGIC FOR THE UI ---
     return {
-        mediaError, // 🟢 You can display this in the UI if you want!
+        mediaError, 
         myVideoRef, userVideoRef, chatScrollRef,
         myPodId, idToCall, setIdToCall, receivingCall, isCalling, callerName, callerRealDbId, callAccepted, callEnded,
         micEnabled, cameraEnabled, isScreenSharing, messages, codeText, interviewTime, isTimerRunning,
