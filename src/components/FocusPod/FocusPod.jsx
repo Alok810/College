@@ -2,15 +2,17 @@ import React, { useState, useRef, useEffect } from "react";
 import { PhoneOff, Copy, CheckCheck, PhoneIncoming, Phone, Timer, Play, Pause, RotateCcw, User } from "lucide-react";
 
 import { useFocusPod } from "../../hooks/useFocusPod";
-import VideoGrid from "../../components/FocusPod/VideoGrid";
-import PodSidebar from "../../components/FocusPod/PodSidebar";
-import CallControls from "../../components/FocusPod/CallControls";
+import VideoGrid from "./VideoGrid";
+import PodSidebar from "./PodSidebar";
+import CallControls from "./CallControls";
+
+// Import your Brand Logo!
+import rigyaLogo from "../../assets/rigya.png"; 
 
 export default function FocusPod() {
-  const pod = useFocusPod(); // 🟢 The Engine
+  const pod = useFocusPod(); 
   const podContainerRef = useRef(null);
   
-  // Pure UI Layout State
   const [copied, setCopied] = useState(false);
   const [layoutMode, setLayoutMode] = useState("grid"); 
   const [isSwapped, setIsSwapped] = useState(false); 
@@ -38,18 +40,23 @@ export default function FocusPod() {
 
   const toggleFullScreen = () => {
     if (!document.fullscreenElement) {
-      if (podContainerRef.current) podContainerRef.current.requestFullscreen().catch(err => console.error(err));
+      if (podContainerRef.current) podContainerRef.current.requestFullscreen().catch(console.error);
     } else document.exitFullscreen();
   };
 
   return (
     <div ref={podContainerRef} className={`flex flex-col items-center custom-scrollbar overflow-y-auto bg-[#ebf8ff] ${isFullscreen ? 'w-screen h-screen p-2 sm:p-4 md:p-6' : 'p-3 sm:p-4 md:p-6 h-full pb-32'}`}>
       
-      {/* HEADER SECTION */}
+      {/* 🟢 HEADER SECTION */}
       <div className={`w-full flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-4 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
-        <div>
-            <h1 className="text-2xl sm:text-3xl font-black text-purple-700">The Focus Pod</h1>
-            <p className="text-sm sm:text-base text-gray-500 font-medium">1-on-1 Mentorship & Study Room</p>
+        
+        {/* 🟢 BRANDING BLOCK - FIXED ALIGNMENT */}
+        <div className="flex items-center gap-3 sm:gap-4">
+            <img src={rigyaLogo} alt="Rigya Logo" className="h-10 sm:h-12 w-auto object-contain drop-shadow-sm shrink-0" />
+            <div className="flex flex-col justify-center">
+                <h1 className="text-2xl sm:text-3xl font-black text-purple-700 leading-tight">The Focus Pod</h1>
+                <p className="text-sm sm:text-base text-gray-500 font-medium mt-0.5">1-on-1 Mentorship & Study Room</p>
+            </div>
         </div>
         
         {pod.callAccepted && (
@@ -73,7 +80,6 @@ export default function FocusPod() {
             myVideoRef={pod.myVideoRef} cameraEnabled={pod.cameraEnabled} isScreenSharing={pod.isScreenSharing} isMirrored={isMirrored}
             userVideoRef={pod.userVideoRef} receivingCall={pod.receivingCall} callerName={pod.callerName} callerRealDbId={pod.callerRealDbId} callEnded={pod.callEnded}
         />
-        
         {pod.callAccepted && (
             <PodSidebar 
                 isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen} activeTab={activeTab} setActiveTab={setActiveTab}
@@ -82,81 +88,76 @@ export default function FocusPod() {
         )}
       </div>
 
-      {/* CONTROLS FOOTER */}
-      <div className={`mt-4 sm:mt-6 flex flex-col lg:flex-row gap-4 sm:gap-6 w-full bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 shrink-0 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
-        <CallControls 
-            micEnabled={pod.micEnabled} toggleMic={pod.toggleMic} cameraEnabled={pod.cameraEnabled} toggleCamera={pod.toggleCamera}
-            isScreenSharing={pod.isScreenSharing} toggleScreenShare={pod.toggleScreenShare} isMirrored={isMirrored} setIsMirrored={setIsMirrored}
-            isFullscreen={isFullscreen} toggleFullScreen={toggleFullScreen} callAccepted={pod.callAccepted}
-            layoutMode={layoutMode} setLayoutMode={setLayoutMode} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
-        />
+      {/* CONTROLS FOOTER (DYNAMIC FLOATING DOCK) */}
+      <div className={`mt-4 sm:mt-6 shrink-0 transition-all duration-500 ease-out z-50
+        ${pod.callAccepted 
+            ? 'w-fit mx-auto bg-white/95 backdrop-blur-lg px-4 py-2 sm:px-6 sm:py-3 rounded-full shadow-[0_8px_30px_rgb(0,0,0,0.08)] border border-gray-100 flex items-center justify-center ring-1 ring-gray-900/5' 
+            : `w-full bg-white p-4 sm:p-6 rounded-2xl sm:rounded-3xl shadow-sm border border-gray-100 flex justify-center ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`
+        }`}>
         
-        <div className="flex-1 flex flex-col gap-3 sm:gap-4 justify-center w-full">
-            {pod.callAccepted ? (
-                <div className="flex-1 flex justify-center items-center h-full w-full">
-                    <button onClick={pod.leaveCall} className="w-full py-3 sm:py-4 bg-red-500 hover:bg-red-600 text-white rounded-xl sm:rounded-2xl font-black flex items-center justify-center gap-2 shadow-lg transition-transform active:scale-95 lg:hover:scale-105 min-h-[48px] whitespace-nowrap"><PhoneOff size={20} /> END SESSION</button>
-                </div>
-            ) : pod.receivingCall ? (
-                <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-center w-full">
-                  
-                  {/* Secure Pod Code Block */}
-                  <div className="w-full lg:w-auto flex-1 flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2 rounded-xl sm:rounded-2xl">
-                    <div className="flex flex-col overflow-hidden pr-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Secure Pod Code</span><span className="text-xs sm:text-sm font-mono font-bold text-indigo-900 truncate tracking-widest">{pod.myPodId || "Generating..."}</span></div>
-                    <button onClick={copyMyId} className="p-1.5 bg-white text-indigo-600 rounded-lg shadow-sm hover:bg-indigo-600 hover:text-white transition-colors shrink-0">{copied ? <CheckCheck size={18} /> : <Copy size={18} />}</button>
-                  </div>
-                  
-                  {/* 🟢 PREMIUM INCOMING CALL BANNER (Fixed Padding & Hover) */}
-                  <div className="w-full lg:w-auto flex-[1.5] flex items-center justify-between bg-gray-900 border border-gray-700/50 p-3 sm:p-3.5 rounded-xl sm:rounded-2xl shadow-2xl relative overflow-hidden ring-1 ring-white/10">
-                    
-                    {/* Glowing Top Border */}
-                    <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse"></div>
+        {pod.callAccepted ? (
+            <div className="flex items-center justify-center gap-2 sm:gap-4">
+                <CallControls 
+                    micEnabled={pod.micEnabled} toggleMic={pod.toggleMic} cameraEnabled={pod.cameraEnabled} toggleCamera={pod.toggleCamera}
+                    isScreenSharing={pod.isScreenSharing} toggleScreenShare={pod.toggleScreenShare} isMirrored={isMirrored} setIsMirrored={setIsMirrored}
+                    isFullscreen={isFullscreen} toggleFullScreen={toggleFullScreen} callAccepted={pod.callAccepted}
+                    layoutMode={layoutMode} setLayoutMode={setLayoutMode} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
+                />
+                
+                <div className="w-px h-8 bg-gray-200 mx-1 sm:mx-2 hidden sm:block"></div>
 
-                    <div className="flex items-center gap-3 sm:gap-4 pl-1 sm:pl-2">
-                        {/* Pulsing Avatar */}
-                        <div className="relative shrink-0">
-                            <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
-                            <div className="w-10 h-10 sm:w-11 sm:h-11 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-800 relative z-10">
-                                <User size={20} className="text-white" />
+                <button onClick={pod.leaveCall} className="px-5 py-2 sm:px-8 sm:py-2.5 bg-red-500 hover:bg-red-600 text-white rounded-full font-black flex items-center justify-center gap-2 shadow-md transition-transform active:scale-95 hover:-translate-y-0.5 whitespace-nowrap">
+                    <PhoneOff size={18} /> <span className="hidden sm:block">END SESSION</span>
+                </button>
+            </div>
+        ) : (
+            <div className="flex flex-col lg:flex-row gap-4 sm:gap-6 w-full items-center">
+                <CallControls 
+                    micEnabled={pod.micEnabled} toggleMic={pod.toggleMic} cameraEnabled={pod.cameraEnabled} toggleCamera={pod.toggleCamera}
+                    isScreenSharing={pod.isScreenSharing} toggleScreenShare={pod.toggleScreenShare} isMirrored={isMirrored} setIsMirrored={setIsMirrored}
+                    isFullscreen={isFullscreen} toggleFullScreen={toggleFullScreen} callAccepted={pod.callAccepted}
+                    layoutMode={layoutMode} setLayoutMode={setLayoutMode} isSidebarOpen={isSidebarOpen} setIsSidebarOpen={setIsSidebarOpen}
+                />
+                
+                <div className="flex-1 flex flex-col gap-3 sm:gap-4 justify-center w-full">
+                    <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-center w-full">
+                      
+                      <div className="w-full lg:w-auto flex-1 flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2 rounded-xl">
+                        <div className="flex flex-col overflow-hidden pr-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Secure Pod Code</span><span className="text-xs sm:text-sm font-mono font-bold text-indigo-900 truncate tracking-widest">{pod.myPodId || "Generating..."}</span></div>
+                        <button onClick={copyMyId} className="p-1.5 bg-white text-indigo-600 rounded-lg shadow-sm hover:bg-indigo-600 hover:text-white transition-colors shrink-0">{copied ? <CheckCheck size={18} /> : <Copy size={18} />}</button>
+                      </div>
+                      
+                      {pod.receivingCall ? (
+                          <div className="w-full lg:w-auto flex-1 flex items-center justify-between bg-gray-900 border border-gray-700/50 p-2 sm:p-2 rounded-xl shadow-2xl relative overflow-hidden ring-1 ring-white/10">
+                            <div className="absolute top-0 left-0 w-full h-[2px] bg-gradient-to-r from-transparent via-emerald-400 to-transparent animate-pulse"></div>
+                            
+                            <div className="flex items-center gap-2 sm:gap-3 pl-1 sm:pl-2">
+                                <div className="relative shrink-0">
+                                    <div className="absolute inset-0 bg-emerald-500 rounded-full animate-ping opacity-20"></div>
+                                    <div className="w-9 h-9 sm:w-10 sm:h-10 bg-gradient-to-br from-emerald-400 to-teal-600 rounded-full flex items-center justify-center shadow-lg border-2 border-gray-800 relative z-10"><User size={18} className="text-white" /></div>
+                                </div>
+                                <div className="flex flex-col text-white flex-1 min-w-0 pr-2">
+                                    <span className="text-sm font-bold truncate tracking-wide">{pod.callerName}</span>
+                                    <span className="text-[10px] text-emerald-400 flex items-center gap-1.5 mt-0.5"><span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>Incoming...</span>
+                                </div>
                             </div>
-                        </div>
-
-                        {/* Caller Info */}
-                        <div className="flex flex-col text-white flex-1 min-w-0 pr-2">
-                            <span className="text-sm sm:text-base font-bold truncate tracking-wide">{pod.callerName}</span>
-                            <span className="text-[10px] sm:text-xs text-emerald-400 flex items-center gap-1.5 mt-0.5">
-                               <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                               Incoming Video Call...
-                            </span>
-                        </div>
+                            
+                            <button onClick={pod.answerCall} className="group relative px-4 py-1.5 sm:px-5 sm:py-2 bg-emerald-500 hover:bg-emerald-400 text-white rounded-lg font-black flex items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.3)] shrink-0 text-sm border border-emerald-400/50">
+                                <PhoneIncoming size={16} className="animate-bounce" style={{ animationDuration: '2s' }}/><span className="hidden sm:block tracking-wide">ACCEPT</span>
+                            </button>
+                          </div>
+                      ) : (
+                          <div className="w-full lg:w-auto flex-1 flex gap-2">
+                              <input type="text" placeholder="Enter Pod Code..." value={pod.idToCall} onChange={(e) => pod.setIdToCall(e.target.value)} className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-200 text-sm sm:text-base font-mono uppercase tracking-widest min-w-0" />
+                              <button onClick={() => pod.callUser(pod.idToCall.toUpperCase())} disabled={!pod.idToCall || pod.isCalling} className="px-4 sm:px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 transition-colors shrink-0 text-sm sm:text-base w-32 justify-center">
+                                  {pod.isCalling ? <><div className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></div> Calling...</> : <><Phone size={18} /> Call</>}
+                              </button>
+                          </div>
+                      )}
                     </div>
-
-                    {/* Glowing Accept Button (Replaced scale-105 with -translate-y-0.5) */}
-                    <button onClick={pod.answerCall} className="group relative px-5 py-2 sm:px-6 sm:py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white rounded-xl font-black flex items-center justify-center gap-2 transition-all duration-300 hover:-translate-y-0.5 active:translate-y-0 active:scale-95 shadow-[0_0_15px_rgba(16,185,129,0.3)] hover:shadow-[0_0_25px_rgba(16,185,129,0.6)] shrink-0 text-sm sm:text-base border border-emerald-400/50 mr-1 sm:mr-2">
-                        <PhoneIncoming size={18} className="animate-bounce" style={{ animationDuration: '2s' }}/>
-                        <span className="hidden sm:block tracking-wide">ACCEPT</span>
-                    </button>
-
-                  </div>
                 </div>
-            ) : (
-                <div className="flex flex-col lg:flex-row gap-3 sm:gap-4 items-center w-full">
-                  <div className="w-full lg:w-auto flex-1 flex items-center justify-between bg-indigo-50 border border-indigo-100 p-2 rounded-xl sm:rounded-2xl">
-                    <div className="flex flex-col overflow-hidden pr-2"><span className="text-[10px] font-bold text-indigo-400 uppercase tracking-wider">Secure Pod Code</span><span className="text-xs sm:text-sm font-mono font-bold text-indigo-900 truncate tracking-widest">{pod.myPodId || "Generating..."}</span></div>
-                    <button onClick={copyMyId} className="p-1.5 bg-white text-indigo-600 rounded-lg shadow-sm hover:bg-indigo-600 hover:text-white transition-colors shrink-0">{copied ? <CheckCheck size={18} /> : <Copy size={18} />}</button>
-                  </div>
-                  <div className="w-full lg:w-auto flex-1 flex gap-2">
-                      <input type="text" placeholder="Enter Pod Code..." value={pod.idToCall} onChange={(e) => pod.setIdToCall(e.target.value)} className="flex-1 px-3 sm:px-4 py-2 sm:py-3 bg-gray-50 border border-gray-200 rounded-xl outline-none focus:ring-2 focus:ring-purple-200 text-sm sm:text-base font-mono uppercase tracking-widest min-w-0" />
-                      <button onClick={() => pod.callUser(pod.idToCall.toUpperCase())} disabled={!pod.idToCall || pod.isCalling} className="px-4 sm:px-6 bg-purple-600 hover:bg-purple-700 text-white rounded-xl font-bold flex items-center gap-2 disabled:opacity-50 transition-colors shrink-0 text-sm sm:text-base w-32 justify-center">
-                          {pod.isCalling ? (
-                              <><div className="animate-spin border-2 border-white border-t-transparent rounded-full w-4 h-4"></div> Calling...</>
-                          ) : (
-                              <><Phone size={18} /> Call</>
-                          )}
-                      </button>
-                  </div>
-                </div>
-            )}
-        </div>
+            </div>
+        )}
       </div>
     </div>
   );
