@@ -8,8 +8,6 @@ import {
 import { useAuth } from "../../context/AuthContext";
 import io from "socket.io-client";
 import Peer from "simple-peer";
-
-// ✨ IMPORT YOUR BULLETPROOF URL FROM API.JS!
 import { BACKEND_URL } from "../../api"; 
 
 const generateSecureRoomCode = () => {
@@ -21,15 +19,22 @@ const generateSecureRoomCode = () => {
     return `RIGYA-${code}`; 
 };
 
+// 🟢 THE SECRET SAUCE: Generates a fake, pure-black video stream to keep WebRTC alive without using the hardware camera!
+const createEmptyVideoTrack = () => {
+    const canvas = document.createElement('canvas');
+    canvas.width = 640;
+    canvas.height = 480;
+    canvas.getContext('2d').fillRect(0, 0, 640, 480);
+    const stream = canvas.captureStream();
+    return stream.getVideoTracks()[0];
+};
+
 export default function FocusPod() {
   const { authData } = useAuth(); 
-  
   const myDisplayName = authData?.name || authData?.username || authData?.user?.name || "Student";
   
-  // 🟢 Socket state inside the component
   const [socket, setSocket] = useState(null);
-
-  const [stream] = useState(new MediaStream()); 
+  const [stream, setStream] = useState(null); 
   const [micEnabled, setMicEnabled] = useState(false); 
   const [cameraEnabled, setCameraEnabled] = useState(false); 
   const [isScreenSharing, setIsScreenSharing] = useState(false);
@@ -54,7 +59,6 @@ export default function FocusPod() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("chat"); 
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState("");
   const [codeText, setCodeText] = useState("// Welcome to the Collaborative Code Pad!\n// Start typing to share code instantly...\n\n"); 
   
   const [interviewTime, setInterviewTime] = useState(0);
@@ -69,17 +73,26 @@ export default function FocusPod() {
   const podContainerRef = useRef(null); 
 
   useEffect(() => {
-    // 🟢 Initialize Socket AFTER component mount using the runtime URL
-    const newSocket = io(BACKEND_URL, {
-        withCredentials: true
-    });
+    const newSocket = io(BACKEND_URL, { withCredentials: true });
     setSocket(newSocket);
-
     const newRoomCode = generateSecureRoomCode();
     setMyPodId(newRoomCode);
-    
-    // ✨ Isolated Join Event
     if (authData?._id) newSocket.emit("join-pod", newRoomCode);
+
+    // 🟢 INITIAL LOAD: Only request AUDIO so the camera light NEVER turns on until they click the button!
+    navigator.mediaDevices.getUserMedia({ audio: true })
+      .then((audioStream) => {
+          const audioTrack = audioStream.getAudioTracks()[0];
+          audioTrack.enabled = false; // Start muted
+          
+          // Mix the real mic with the fake video
+          const dummyVideoTrack = createEmptyVideoTrack();
+          const mixedStream = new MediaStream([audioTrack, dummyVideoTrack]);
+          
+          setStream(mixedStream);
+          if (myVideoRef.current) myVideoRef.current.srcObject = mixedStream;
+      })
+      .catch(err => console.error("Mic access denied:", err));
 
     newSocket.on("call-incoming", (data) => {
       setReceivingCall(true);
@@ -88,27 +101,22 @@ export default function FocusPod() {
       setCallerSignal(data.signal);
     });
 
-    newSocket.on("call-ended", () => {
-        window.location.reload();
-    });
+    newSocket.on("call-ended", () => window.location.reload());
 
     return () => {
         newSocket.off("call-incoming");
         newSocket.off("call-ended");
-        newSocket.disconnect(); // 🟢 Properly disconnect on unmount
-        stream.getTracks().forEach(track => track.stop());
+        newSocket.disconnect();
+        if (stream) stream.getTracks().forEach(track => track.stop());
         if (screenTrackRef.current) screenTrackRef.current.stop();
     };
-  }, [authData, stream]);
+    // eslint-disable-next-line
+  }, [authData]);
 
   const handlePeerData = (data) => {
     try {
         const parsed = JSON.parse(data.toString());
-        
-        if (parsed.type === 'end-call') {
-            window.location.reload();
-        }
-        
+        if (parsed.type === 'end-call') window.location.reload();
         if (parsed.type === 'handshake') {
             if (parsed.id) setCallerRealDbId(parsed.id);
             if (parsed.name) setCallerName(parsed.name); 
@@ -123,29 +131,17 @@ export default function FocusPod() {
   };
 
   const callUser = (userToCallId) => {
+    if (!stream) return alert("Please allow media access to make a call.");
     setIsCalling(true);
-    // ✨ STUN SERVERS ADDED HERE TO BYPASS NAT FIREWALL
     const peer = new Peer({ 
-        initiator: true, 
-        trickle: false, 
-        stream: stream,
-        config: {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' }
-            ]
-        }
+        initiator: true, trickle: false, stream: stream,
+        config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' } ] }
     });
     
-    peer.on("signal", (data) => {
-      socket?.emit("call-user", { userToCall: userToCallId, signalData: data, from: myPodId, name: myDisplayName });
-    });
+    peer.on("signal", (data) => socket?.emit("call-user", { userToCall: userToCallId, signalData: data, from: myPodId, name: myDisplayName }));
     peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
     peer.on("data", handlePeerData); 
-    
     peer.on("close", () => window.location.reload());
-
     peer.on("connect", () => {
         setTimeout(() => {
             peer.send(JSON.stringify({ type: 'handshake', id: authData?._id, name: myDisplayName }));
@@ -162,32 +158,20 @@ export default function FocusPod() {
   };
 
   const answerCall = () => {
+    if (!stream) return alert("Please allow media access to answer.");
     setCallAccepted(true);
     setReceivingCall(false);
-    // ✨ STUN SERVERS ADDED HERE TO BYPASS NAT FIREWALL
     const peer = new Peer({ 
-        initiator: false, 
-        trickle: false, 
-        stream: stream,
-        config: {
-            iceServers: [
-                { urls: 'stun:stun.l.google.com:19302' },
-                { urls: 'stun:stun1.l.google.com:19302' },
-                { urls: 'stun:global.stun.twilio.com:3478' }
-            ]
-        }
+        initiator: false, trickle: false, stream: stream,
+        config: { iceServers: [ { urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }, { urls: 'stun:global.stun.twilio.com:3478' } ] }
     });
     
     peer.on("signal", (data) => socket?.emit("answer-call", { signal: data, to: callerId }));
     peer.on("stream", (currentStream) => { if (userVideoRef.current) userVideoRef.current.srcObject = currentStream; });
     peer.on("data", handlePeerData); 
-    
     peer.on("close", () => window.location.reload());
-
     peer.on("connect", () => {
-        setTimeout(() => {
-            peer.send(JSON.stringify({ type: 'handshake', id: authData?._id, name: myDisplayName }));
-        }, 800);
+        setTimeout(() => peer.send(JSON.stringify({ type: 'handshake', id: authData?._id, name: myDisplayName })), 800);
     });
     peer.signal(callerSignal);
     connectionRef.current = peer;
@@ -196,113 +180,81 @@ export default function FocusPod() {
   const leaveCall = () => {
     setCallEnded(true);
     setIsCalling(false); 
-    
     if (connectionRef.current && connectionRef.current.connected) {
-        try { 
-            connectionRef.current.send(JSON.stringify({ type: 'end-call' })); 
-        } catch (err) { 
-            console.debug("Failed to send disconnect signal", err); 
-        }
+        try { connectionRef.current.send(JSON.stringify({ type: 'end-call' })); } 
+        catch (err) { console.debug("Disconnect signal failed", err); }
     }
-    
     if (connectionRef.current) connectionRef.current.destroy();
     socket?.emit("end-call", { to: callAccepted ? callerId : idToCall });
     window.location.reload(); 
   };
 
-  const toggleMic = async () => {
-    if (micEnabled) {
-      const audioTrack = stream.getAudioTracks()[0];
-      if (audioTrack) {
-          audioTrack.stop(); 
-          stream.removeTrack(audioTrack);
-          if (connectionRef.current) { 
-              try { 
-                  connectionRef.current.removeTrack(audioTrack, stream); 
-              } catch (err) { 
-                  console.debug("Track removal ignored", err); 
-              } 
-          }
-      }
-      setMicEnabled(false);
-    } else {
-      try {
-        const newStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        const newAudioTrack = newStream.getAudioTracks()[0];
-        stream.addTrack(newAudioTrack);
-        if (connectionRef.current) { 
-            try { 
-                connectionRef.current.addTrack(newAudioTrack, stream); 
-            } catch (err) { 
-                console.debug("Track addition ignored", err); 
-            } 
+  // Mic doesn't have a hardware light, so instant muting is still the best and fastest way!
+  const toggleMic = () => {
+    if (stream) {
+        const audioTrack = stream.getAudioTracks()[0];
+        if (audioTrack) {
+            audioTrack.enabled = !audioTrack.enabled;
+            setMicEnabled(audioTrack.enabled);
         }
-        setMicEnabled(true);
-      } catch (err) { console.error("Mic error:", err); }
     }
   };
 
+  // 🟢 THE FIX: Actively STOP the camera hardware to kill the light, and inject the Dummy Track into the live call!
   const toggleCamera = async () => {
     if (cameraEnabled) {
-      const videoTrack = stream.getVideoTracks()[0];
-      if (videoTrack) {
-          videoTrack.stop(); 
-          stream.removeTrack(videoTrack);
-          if (connectionRef.current) { 
-              try { 
-                  connectionRef.current.removeTrack(videoTrack, stream); 
-              } catch (err) { 
-                  console.debug("Track removal ignored", err); 
-              } 
-          }
-      }
-      setCameraEnabled(false);
-    } else {
-      try {
-        const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
-        const newVideoTrack = newStream.getVideoTracks()[0];
-        stream.addTrack(newVideoTrack);
-        if (connectionRef.current) { 
-            try { 
-                connectionRef.current.addTrack(newVideoTrack, stream); 
-            } catch (err) { 
-                console.debug("Track addition ignored", err); 
-            } 
+        // TURN OFF: Kill the hardware and inject fake video
+        const currentVideoTrack = stream.getVideoTracks()[0];
+        currentVideoTrack.stop(); // 🚨 THIS TURNS THE LIGHT OFF!
+        
+        const dummyVideoTrack = createEmptyVideoTrack();
+        stream.removeTrack(currentVideoTrack);
+        stream.addTrack(dummyVideoTrack);
+        
+        if (connectionRef.current && connectionRef.current.connected) {
+            connectionRef.current.replaceTrack(currentVideoTrack, dummyVideoTrack, stream);
         }
         if (myVideoRef.current) myVideoRef.current.srcObject = stream;
-        setCameraEnabled(true);
-      } catch (err) { console.error("Camera error:", err); }
+        setCameraEnabled(false);
+    } else {
+        // TURN ON: Ask for real camera and inject it
+        try {
+            const newStream = await navigator.mediaDevices.getUserMedia({ video: true });
+            const newVideoTrack = newStream.getVideoTracks()[0];
+            const oldVideoTrack = stream.getVideoTracks()[0];
+            
+            stream.removeTrack(oldVideoTrack);
+            stream.addTrack(newVideoTrack);
+            
+            if (connectionRef.current && connectionRef.current.connected) {
+                connectionRef.current.replaceTrack(oldVideoTrack, newVideoTrack, stream);
+            }
+            if (myVideoRef.current) myVideoRef.current.srcObject = stream;
+            setCameraEnabled(true);
+        } catch (err) { console.error("Camera error:", err); }
     }
   };
 
   const toggleScreenShare = async () => {
     if (!isScreenSharing) {
       try {
-        const screenStream = await navigator.mediaDevices.getDisplayMedia({ cursor: true });
+        const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         const screenTrack = screenStream.getVideoTracks()[0];
-        const existingVideoTrack = stream.getVideoTracks()[0];
+        const existingVideoTrack = stream?.getVideoTracks()[0];
+        
+        if (existingVideoTrack && connectionRef.current && connectionRef.current.connected) {
+            connectionRef.current.replaceTrack(existingVideoTrack, screenTrack, stream);
+        }
         if (existingVideoTrack) {
             stream.removeTrack(existingVideoTrack);
-            if (connectionRef.current) { 
-                try { 
-                    connectionRef.current.replaceTrack(existingVideoTrack, screenTrack, stream); 
-                } catch (err) { 
-                    console.debug("Track replacement ignored", err); 
-                } 
-            }
-        } else {
-            stream.addTrack(screenTrack);
-            if (connectionRef.current) { 
-                try { 
-                    connectionRef.current.addTrack(screenTrack, stream); 
-                } catch (err) { 
-                    console.debug("Track addition ignored", err); 
-                } 
-            }
+            existingVideoTrack.stop(); // Turn off camera hardware while screen sharing!
         }
-        if (myVideoRef.current) myVideoRef.current.srcObject = screenStream;
+        stream.addTrack(screenTrack);
+        
+        if (myVideoRef.current) myVideoRef.current.srcObject = stream;
         screenTrackRef.current = screenTrack;
         setIsScreenSharing(true);
+        setCameraEnabled(false); // Make sure UI updates
         screenTrack.onended = () => stopScreenShare();
       } catch (error) { console.error("Screen share error:", error); }
     } else { stopScreenShare(); }
@@ -311,8 +263,20 @@ export default function FocusPod() {
   const stopScreenShare = () => {
     if (screenTrackRef.current) screenTrackRef.current.stop();
     setIsScreenSharing(false);
-    if (cameraEnabled) { setCameraEnabled(false); toggleCamera(); } 
-    else { if (myVideoRef.current) myVideoRef.current.srcObject = null; }
+    
+    // Inject the dummy track so the call doesn't drop when screen share stops
+    const currentTrack = stream?.getVideoTracks()[0];
+    const dummyVideoTrack = createEmptyVideoTrack();
+    
+    if (stream && currentTrack) {
+        stream.removeTrack(currentTrack);
+        stream.addTrack(dummyVideoTrack);
+        if (connectionRef.current && connectionRef.current.connected) {
+            connectionRef.current.replaceTrack(currentTrack, dummyVideoTrack, stream);
+        }
+    }
+    if (myVideoRef.current) myVideoRef.current.srcObject = stream;
+    setCameraEnabled(false);
   };
 
   const copyMyId = () => {
@@ -336,11 +300,8 @@ export default function FocusPod() {
     const newCode = e.target.value;
     setCodeText(newCode);
     if (connectionRef.current && connectionRef.current.connected) {
-        try { 
-            connectionRef.current.send(JSON.stringify({ type: 'code', text: newCode })); 
-        } catch (err) { 
-            console.debug("Code sync delayed", err); 
-        }
+        try { connectionRef.current.send(JSON.stringify({ type: 'code', text: newCode })); } 
+        catch (err) { console.debug("Code sync delayed", err); }
     }
   };
 
@@ -388,7 +349,6 @@ export default function FocusPod() {
   return (
     <div ref={podContainerRef} className={`flex flex-col items-center custom-scrollbar overflow-y-auto bg-[#ebf8ff] ${isFullscreen ? 'w-screen h-screen p-2 sm:p-4 md:p-6' : 'p-3 sm:p-4 md:p-6 h-full pb-32'}`}>
       
-      {/* HEADER & STOPWATCH */}
       <div className={`w-full flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 md:mb-6 gap-4 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
         <div>
             <h1 className="text-2xl sm:text-3xl font-black text-purple-700">The Focus Pod</h1>
@@ -409,16 +369,13 @@ export default function FocusPod() {
         )}
       </div>
 
-      {/* 🟢 DYNAMIC VIDEO AREA (Grid & WhatsApp PiP Swapping) */}
       <div className={`w-full flex flex-col lg:flex-row gap-4 md:gap-6 relative min-h-[400px] sm:min-h-0 flex-1 ${isFullscreen ? 'max-w-[1600px]' : 'max-w-7xl'}`}>
-        
         <div className={`flex-1 min-w-0 flex transition-all duration-500 ${
             layoutMode === "grid" || !callAccepted
                 ? `items-center justify-center flex-col sm:flex-row gap-4 md:gap-8`
                 : "relative items-center justify-center bg-gray-900 rounded-[2rem] shadow-2xl overflow-hidden border-2 sm:border-4 border-gray-800"
         }`}>
             
-            {/* YOU VIDEO */}
             <div 
                 onClick={() => { if (layoutMode === "focus" && !isSwapped) setIsSwapped(true); }}
                 className={`bg-gray-900 overflow-hidden shadow-xl transition-all duration-500 ${
@@ -437,7 +394,6 @@ export default function FocusPod() {
                 <div className="absolute bottom-2 left-2 sm:bottom-4 sm:left-4 bg-black/50 text-white px-2 py-1 rounded-md text-[10px] sm:text-xs font-bold z-10">You</div>
             </div>
 
-            {/* PEER VIDEO */}
             {callAccepted && !callEnded && (
                 <div 
                     onClick={() => { if (layoutMode === "focus" && isSwapped) setIsSwapped(false); }}
@@ -465,7 +421,6 @@ export default function FocusPod() {
             )}
         </div>
 
-        {/* SIDEBAR */}
         {isSidebarOpen && callAccepted && (
             <div className="absolute inset-0 z-40 lg:relative lg:inset-auto lg:z-auto w-full lg:w-96 bg-white border border-gray-200 rounded-2xl sm:rounded-3xl shadow-2xl lg:shadow-lg flex flex-col overflow-hidden lg:min-h-[400px]">
                 <div className="flex border-b border-gray-100 bg-gray-50">
