@@ -59,7 +59,8 @@ export default function FocusPod() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("chat"); 
   const [messages, setMessages] = useState([]);
-  const [codeText, setCodeText] = useState("// Welcome to the Collaborative Code Pad!\n// Start typing to share code instantly...\n\n"); 
+  const [newMessage, setNewMessage] = useState(""); // 🟢 ADD THIS LINE BACK IN!
+  const [codeText, setCodeText] = useState("// Welcome to the Collaborative Code Pad!\n// Start typing to share code instantly...\n\n");
   
   const [interviewTime, setInterviewTime] = useState(0);
   const [isTimerRunning, setIsTimerRunning] = useState(false);
