@@ -54,6 +54,9 @@ export const useHiveMatch = (userData) => {
             if (myVideoRef.current) myVideoRef.current.srcObject = stream;
         } catch (err) {
             console.error("Camera access denied:", err);
+            if (err.name === "NotReadableError") {
+                alert("Camera is already in use by another tab or application! Please close it and try again.");
+            }
         }
 
         if (socket) socket.emit("find-match", userData); 
@@ -173,13 +176,12 @@ export const useHiveMatch = (userData) => {
             if (partnerVideoRef.current) partnerVideoRef.current.srcObject = remoteStream;
             setIsPeerConnected(true); 
             
-            // Set a default icebreaker when connection establishes
             if (peer.initiator) {
                 generateNewTopic("Web Development");
             }
         });
 
-        peer.on("data", handlePeerData); // Bind data channel listener
+        peer.on("data", handlePeerData); 
 
         peer.on("error", (err) => console.error("WebRTC Error:", err));
         peer.on("close", () => {
@@ -208,50 +210,51 @@ export const useHiveMatch = (userData) => {
         connectionRef.current = peer;
     };
 
-    // 🟢 SYNCHRONIZED CHAT SENDER
     const sendMessage = (text) => {
         if (!text.trim() || !connectionRef.current) return;
         setMessages(prev => [...prev, { text, sender: "You" }]);
         
-        // Send directly over WebRTC
         connectionRef.current.send(JSON.stringify({ type: "chat", text }));
     };
 
     // ==========================================
-    // 🤖 REAL GEMINI 1.5 FLASH TOPIC GENERATOR
+    // 🤖 DIRECT GEMINI 2.5 FLASH FRONTEND FETCH
     // ==========================================
     const generateNewTopic = async (category) => {
-        // Allow clicking pills while searching OR connected
         if (status === "idle") return;
         
         setIsGeneratingTheme(true);
         setSelectedCategory(category);
         
         try {
-            // Hit our new TalkHive backend route
-            const response = await fetch(`${TALKHIVE_URL}/api/generate-theme`, {
+            const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
+            if (!apiKey) throw new Error("API Key is missing from frontend .env");
+
+            const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
                 },
-                body: JSON.stringify({ category })
+                body: JSON.stringify({
+                    contents: [{
+                        parts: [{ text: `Generate a short, engaging discussion question about ${category} for a video chat icebreaker. Just give the question, no introductory text.` }]
+                    }]
+                })
             });
 
-            if (!response.ok) throw new Error("Network response was not ok");
+            if (!response.ok) throw new Error(`Google API returned status ${response.status}`);
 
             const data = await response.json();
-            const newTheme = data.topic;
+            const newTheme = data.candidates[0].content.parts[0].text.trim();
 
-            // Update my own screen
             setActiveTopic(newTheme);
             setIsGeneratingTheme(false);
             
-            // Only add a chat log if we are actually connected to someone
             if (status === "connected") {
                 setMessages(prev => [...prev, { system: true, text: `You set the topic to: ${category}` }]);
             }
             
-            // 🟢 Send the exact AI response to the stranger's screen via WebRTC!
+            // 🟢 Send the exact AI response to the stranger's screen via WebRTC Data Channel!
             if (connectionRef.current) {
                 connectionRef.current.send(JSON.stringify({ type: "topic", category, topic: newTheme }));
             }
