@@ -73,21 +73,58 @@ export default function AuthPage() {
   }, []);
 
   useEffect(() => {
+      const query = instSearchQuery.trim().toLowerCase();
+
+      // 🟢 The Frequent Priority Institute
+      const priorityInst = {
+          aisheCode: "U-1339",
+          name: "National Institute of Advanced Manufacturing Technology",
+          district: "Ranchi",
+          state: "Jharkhand",
+          instituteType: "University"
+      };
+
+      // 1. If input is completely empty, clear results
+      if (query.length === 0) {
+          setInstSearchResults([]);
+          return;
+      }
+
+      // 2. Instantly check if the typed letters match our Priority Institute
+      let localResults = [];
+      if (
+          priorityInst.name.toLowerCase().includes(query) || 
+          priorityInst.aisheCode.toLowerCase().includes(query)
+      ) {
+          localResults.push(priorityInst);
+      }
+
+      // 3. If under 3 chars, ONLY show local matches instantly (no backend delay)
+      if (query.length < 3) {
+          setInstSearchResults(localResults);
+          return;
+      }
+
+      // 4. If 3 or more chars, fetch from backend and merge
       const fetchInst = async () => {
-          if (instSearchQuery.trim().length < 3) {
-              setInstSearchResults([]);
-              return;
-          }
           setIsInstSearching(true);
           try {
               const data = await searchAisheInstitutes(instSearchQuery.trim());
-              if (data.success) setInstSearchResults(data.results);
+              if (data.success) {
+                  // Filter out the priority one from API results so it doesn't show twice
+                  const apiResults = data.results.filter(
+                      inst => inst.aisheCode !== priorityInst.aisheCode
+                  );
+                  // Put the priority one at the top (if it matches), then the rest
+                  setInstSearchResults([...localResults, ...apiResults]);
+              }
           } catch (error) {
               console.error(error);
           } finally {
               setIsInstSearching(false);
           }
       };
+
       const delayDebounceFn = setTimeout(() => { fetchInst(); }, 400);
       return () => clearTimeout(delayDebounceFn);
   }, [instSearchQuery]);

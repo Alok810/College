@@ -1,25 +1,23 @@
 import axios from "axios";
 
 // 🟢 THE BULLETPROOF RUNTIME CHECK
-// First, it checks if 'window' exists (so Vercel doesn't crash during build).
-// Then, it checks if the browser is running on localhost.
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
 
 export const BACKEND_URL = isLocalhost 
   ? "http://localhost:4000" 
-  : "https://api.rigya.in"; // Ensure your Node.js backend is actually hosted here!
+  : "https://api.rigya.in"; 
 
+// 🟢 The Unified Master Server
 export const AISHE_BACKEND_URL = isLocalhost 
   ? "http://localhost:8000"
   : "https://aishe.rigya.in";
 
-export const TALKHIVE_URL = isLocalhost 
-  ? "http://localhost:4001" 
-  : "https://talkhive-engine.onrender.com";
+// 🐝 TalkHive now securely routes through the AISHE Master Server!
+export const TALKHIVE_URL = AISHE_BACKEND_URL;
 
-  console.log("🚨 SYSTEM CHECK - IS LOCALHOST?:", isLocalhost);
-  console.log("🚨 SYSTEM CHECK - TARGET URL:", BACKEND_URL);
-  console.log("🐝 TALKHIVE ENGINE URL:", TALKHIVE_URL);
+console.log("🚨 SYSTEM CHECK - IS LOCALHOST?:", isLocalhost);
+console.log("🚨 SYSTEM CHECK - TARGET URL:", BACKEND_URL);
+console.log("🐝 TALKHIVE ENGINE URL:", TALKHIVE_URL);
 
 export const api = axios.create({
   baseURL: `${BACKEND_URL}/api/v1`,

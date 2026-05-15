@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from "react";
 import Peer from "simple-peer";
 import { io } from "socket.io-client";
-import { TALKHIVE_URL } from "../api";
+import { AISHE_BACKEND_URL } from "../api"
 
 export const useHiveMatch = (userData) => {
     const [socket, setSocket] = useState(null);
@@ -33,7 +33,7 @@ export const useHiveMatch = (userData) => {
         const userId = userData?.id || userData?._id;
         if (!userId || userId === "unknown") return;
 
-        const newSocket = io(TALKHIVE_URL, { auth: { userId: userId } });
+        const newSocket = io(AISHE_BACKEND_URL, { auth: { userId: userId } });
         newSocket.on("connect_error", (err) => console.error("🔌 TalkHive Socket Error:", err.message));
 
         setSocket(newSocket);
@@ -147,6 +147,7 @@ export const useHiveMatch = (userData) => {
             socket.off("call-accepted", handleCallAccepted);
             socket.off("call-ended", handleCallEnded);
         };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, userData]);
 
     // 🟢 P2P DATA HANDLER (Syncs Chat & Topics)
