@@ -1,11 +1,11 @@
 import { useState, useEffect, useRef } from "react";
-import Peer from "simple-peer"; 
-import { io } from "socket.io-client"; 
-import { TALKHIVE_URL } from "../api"; 
+import Peer from "simple-peer";
+import { io } from "socket.io-client";
+import { TALKHIVE_URL } from "../api";
 
 export const useHiveMatch = (userData) => {
     const [socket, setSocket] = useState(null);
-    const [status, setStatus] = useState("idle"); 
+    const [status, setStatus] = useState("idle");
     const [partnerInfo, setPartnerInfo] = useState(null);
     const [messages, setMessages] = useState([]);
     const [roomCode, setRoomCode] = useState(null);
@@ -20,7 +20,7 @@ export const useHiveMatch = (userData) => {
     const partnerVideoRef = useRef(null);
     const chatScrollRef = useRef(null);
     const connectionRef = useRef(null);
-    const streamRef = useRef(null); 
+    const streamRef = useRef(null);
 
     const getIceServers = () => ({
         iceServers: [
@@ -35,15 +35,15 @@ export const useHiveMatch = (userData) => {
 
         const newSocket = io(TALKHIVE_URL, { auth: { userId: userId } });
         newSocket.on("connect_error", (err) => console.error("🔌 TalkHive Socket Error:", err.message));
-        
+
         setSocket(newSocket);
         return () => newSocket.disconnect();
-    }, [userData?.id, userData?._id]); 
+    }, [userData?.id, userData?._id]);
 
     const startSearch = async () => {
         setStatus("searching");
         setPartnerInfo(null);
-        setMessages([]); 
+        setMessages([]);
         setRoomCode(null);
         setIsPeerConnected(false);
         setActiveTopic("Waiting for a match to begin discussion...");
@@ -59,7 +59,7 @@ export const useHiveMatch = (userData) => {
             }
         }
 
-        if (socket) socket.emit("find-match", userData); 
+        if (socket) socket.emit("find-match", userData);
     };
 
     const stopSearch = () => {
@@ -69,23 +69,23 @@ export const useHiveMatch = (userData) => {
     };
 
     const skipMatch = () => {
-        const targetRoom = roomCode; 
+        const targetRoom = roomCode;
         setStatus("searching");
         setPartnerInfo(null);
         setRoomCode(null);
         setIsPeerConnected(false);
         setActiveTopic("Waiting for a match to begin discussion...");
         setMessages([]);
-        
+
         if (partnerVideoRef.current) partnerVideoRef.current.srcObject = null;
         if (connectionRef.current) {
             connectionRef.current.destroy();
             connectionRef.current = null;
         }
-        
+
         if (socket) {
             if (targetRoom) socket.emit("end-call", { to: targetRoom });
-            socket.emit("find-match", userData); 
+            socket.emit("find-match", userData);
         }
     };
 
@@ -102,14 +102,14 @@ export const useHiveMatch = (userData) => {
     };
 
     useEffect(() => {
-        if (!socket) return; 
+        if (!socket) return;
 
         const handleMatchFound = ({ roomCode, partnerInfo, isCaller }) => {
             setPartnerInfo(partnerInfo);
             setRoomCode(roomCode);
             setStatus("connected");
             socket.emit("join-pod", roomCode);
-            if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 1000); 
+            if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 1000);
         };
 
         const handleCallIncoming = (data) => answerWebRTC(data.signal, data.from);
@@ -121,7 +121,7 @@ export const useHiveMatch = (userData) => {
         const handleCallEnded = () => {
             setMessages(prev => [...prev, { text: "Stranger disconnected. Finding a new match...", system: true }]);
             setIsPeerConnected(false);
-            
+
             if (partnerVideoRef.current) partnerVideoRef.current.srcObject = null;
             if (connectionRef.current) {
                 connectionRef.current.destroy();
@@ -132,7 +132,7 @@ export const useHiveMatch = (userData) => {
                 setStatus("searching");
                 setPartnerInfo(null);
                 setRoomCode(null);
-                socket.emit("find-match", userData); 
+                socket.emit("find-match", userData);
             }, 1500);
         };
 
@@ -147,23 +147,23 @@ export const useHiveMatch = (userData) => {
             socket.off("call-accepted", handleCallAccepted);
             socket.off("call-ended", handleCallEnded);
         };
-    }, [socket, userData]); 
+    }, [socket, userData]);
 
     // 🟢 P2P DATA HANDLER (Syncs Chat & Topics)
     const handlePeerData = (data) => {
         try {
             const parsed = JSON.parse(data.toString());
-            
+
             if (parsed.type === "chat") {
                 setMessages(prev => [...prev, { text: parsed.text, sender: "Stranger" }]);
-            } 
+            }
             else if (parsed.type === "topic") {
                 // Instantly update UI when the stranger changes the topic!
                 setActiveTopic(parsed.topic);
                 setSelectedCategory(parsed.category);
-                setMessages(prev => [...prev, { 
-                    system: true, 
-                    text: `Stranger set the topic to: ${parsed.category}` 
+                setMessages(prev => [...prev, {
+                    system: true,
+                    text: `Stranger set the topic to: ${parsed.category}`
                 }]);
             }
         } catch (err) {
@@ -174,14 +174,14 @@ export const useHiveMatch = (userData) => {
     const bindPeerEvents = (peer, room) => {
         peer.on("stream", (remoteStream) => {
             if (partnerVideoRef.current) partnerVideoRef.current.srcObject = remoteStream;
-            setIsPeerConnected(true); 
-            
+            setIsPeerConnected(true);
+
             if (peer.initiator) {
                 generateNewTopic("Web Development");
             }
         });
 
-        peer.on("data", handlePeerData); 
+        peer.on("data", handlePeerData);
 
         peer.on("error", (err) => console.error("WebRTC Error:", err));
         peer.on("close", () => {
@@ -213,7 +213,7 @@ export const useHiveMatch = (userData) => {
     const sendMessage = (text) => {
         if (!text.trim() || !connectionRef.current) return;
         setMessages(prev => [...prev, { text, sender: "You" }]);
-        
+
         connectionRef.current.send(JSON.stringify({ type: "chat", text }));
     };
 
@@ -222,10 +222,10 @@ export const useHiveMatch = (userData) => {
     // ==========================================
     const generateNewTopic = async (category) => {
         if (status === "idle") return;
-        
+
         setIsGeneratingTheme(true);
         setSelectedCategory(category);
-        
+
         try {
             const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
             if (!apiKey) throw new Error("API Key is missing from frontend .env");
@@ -249,14 +249,22 @@ export const useHiveMatch = (userData) => {
 
             setActiveTopic(newTheme);
             setIsGeneratingTheme(false);
-            
+
             if (status === "connected") {
                 setMessages(prev => [...prev, { system: true, text: `You set the topic to: ${category}` }]);
             }
-            
+
             // 🟢 Send the exact AI response to the stranger's screen via WebRTC Data Channel!
+            // New Code (The Safety Delay)
             if (connectionRef.current) {
-                connectionRef.current.send(JSON.stringify({ type: "topic", category, topic: newTheme }));
+                // Wait 500ms to ensure the Data Channel is fully 'open' before sending
+                setTimeout(() => {
+                    try {
+                        connectionRef.current.send(JSON.stringify({ type: "topic", category, topic: newTheme }));
+                    } catch {
+                        console.warn("WebRTC Data Channel not ready yet. Topic not synced.");
+                    }
+                }, 500);
             }
 
         } catch (error) {
@@ -272,7 +280,7 @@ export const useHiveMatch = (userData) => {
 
     return {
         status, partnerInfo, messages, myVideoRef, partnerVideoRef, chatScrollRef, isPeerConnected,
-        activeTopic, selectedCategory, isGeneratingTheme, 
-        startSearch, stopSearch, skipMatch, sendMessage, generateNewTopic 
+        activeTopic, selectedCategory, isGeneratingTheme,
+        startSearch, stopSearch, skipMatch, sendMessage, generateNewTopic
     };
 };
