@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { Sparkles, Users, Radio, Send, ShieldCheck, Loader2, UserPlus, Lightbulb, Zap, MessageSquare } from "lucide-react";
+import { Sparkles, Radio, Send, ShieldCheck, Loader2, Lightbulb, Zap, MessageSquare } from "lucide-react";
 import { useHiveMatch } from "../../hooks/useHiveMatch";
 import rigyaLogo from "../../assets/rigya.png";
 import { useAuth } from "../../context/AuthContext";
@@ -66,13 +66,14 @@ export default function HiveMatch() {
                             </div>
                         </div>
 
-                        {/* 🟢 COLUMN 2: DISCUSSION THEME */}
-                        <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 flex flex-col relative overflow-hidden min-h-[300px] w-full lg:w-auto lg:flex-[4]">
-                            <div className="absolute -right-16 -top-16 text-indigo-500/5"><MessageSquare size={250} /></div>
-                            <div className="absolute -left-10 -bottom-10 text-purple-500/5"><Sparkles size={200} /></div>
+                        {/* 🟢 COLUMN 2: DISCUSSION THEME (DIVIDED INTO TWO PARTS) */}
+                        <div className="flex flex-col gap-4 w-full lg:w-auto lg:flex-[4] min-h-0">
 
-                            <div className="relative z-10 flex flex-col h-full p-6 lg:p-8">
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-100/60 pb-4 mb-5">
+                            {/* PART 1: AI CONTROLS CARD */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-5 shrink-0 relative overflow-hidden">
+                                <div className="absolute -right-6 -top-6 text-indigo-500/5"><MessageSquare size={120} /></div>
+                                
+                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-50 pb-4 mb-4 relative z-10">
                                     <div className="flex items-center gap-3">
                                         <div className="bg-indigo-600 p-2 rounded-xl shadow-md shadow-indigo-600/20">
                                             <Lightbulb size={20} className="text-white" />
@@ -86,7 +87,7 @@ export default function HiveMatch() {
                                     </div>
                                 </div>
 
-                                <div className="flex flex-wrap gap-2 mb-6">
+                                <div className="flex flex-wrap gap-2 relative z-10">
                                     {TOPIC_CATEGORIES.map(category => (
                                         <button
                                             key={category}
@@ -94,24 +95,72 @@ export default function HiveMatch() {
                                             disabled={hive.isGeneratingTheme || hive.status !== "connected"}
                                             className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${hive.selectedCategory === category
                                                     ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-105"
-                                                    : "bg-white text-indigo-600 border border-indigo-200 hover:bg-indigo-50 disabled:opacity-50 disabled:scale-100"
+                                                    : "bg-gray-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-50 disabled:opacity-50 disabled:scale-100"
                                                 }`}
                                         >
                                             {category}
                                         </button>
                                     ))}
                                 </div>
+                            </div>
 
-                                <div className="flex-1 flex items-center justify-center pb-8">
-                                    <div className={`bg-white/70 backdrop-blur-md border border-white rounded-3xl p-8 lg:p-10 shadow-xl shadow-indigo-900/5 w-full text-center transition-all duration-300 ${hive.isGeneratingTheme ? 'opacity-50 scale-95' : 'opacity-100 scale-100 hover:scale-[1.02]'}`}>
-                                        <div className="text-indigo-300 flex justify-center mb-4">
-                                            {hive.isGeneratingTheme ? <Loader2 size={32} className="animate-spin" /> : <MessageSquare size={32} />}
+                            {/* PART 2: THE AI GUIDE DISPLAY CARD */}
+                            <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden p-4 lg:p-6 min-h-[300px]">
+                                <div className="absolute -left-10 -bottom-10 text-purple-500/5"><Sparkles size={200} /></div>
+
+                                {(() => {
+                                    // If activeTopic is a string, we are in the "Waiting" or "Error" state.
+                                    // If it's an object, we have our fully structured AI Guide!
+                                    const isWaiting = typeof hive.activeTopic === "string";
+
+                                    return (
+                                        <div className={`bg-white/90 backdrop-blur-xl border border-white rounded-[1.5rem] p-6 lg:p-8 shadow-[0_10px_30px_-10px_rgba(79,70,229,0.15)] w-full h-full transition-all duration-500 relative flex flex-col overflow-hidden ${hive.isGeneratingTheme ? 'opacity-50 scale-[0.98]' : 'opacity-100 scale-100'}`}>
+                                            
+                                            {isWaiting ? (
+                                                /* 🟢 THE WAITING STATE */
+                                                <div className="flex flex-col items-center justify-center h-full space-y-4 text-center">
+                                                    <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-300 mb-2 shadow-inner">
+                                                        {hive.isGeneratingTheme ? <Loader2 size={32} className="animate-spin" /> : <MessageSquare size={32} />}
+                                                    </div>
+                                                    <h3 className="text-xl md:text-2xl font-black text-slate-700">
+                                                        {hive.activeTopic}
+                                                    </h3>
+                                                </div>
+                                            ) : (
+                                                /* 🟢 THE DETAILED AI GUIDE STATE */
+                                                <div className="flex flex-col h-full relative">
+                                                    {/* Decorative Quote Mark */}
+                                                    <div className="absolute -top-6 -left-2 text-6xl text-indigo-100 font-serif leading-none select-none opacity-60">"</div>
+
+                                                    {/* The Main Discussion Question */}
+                                                    <h3 className="text-xl md:text-2xl font-black text-slate-800 leading-tight tracking-tight relative z-10 mb-4 text-center shrink-0 pb-3 border-b border-indigo-50">
+                                                        {hive.activeTopic.question}
+                                                    </h3>
+
+                                                    {/* Scrollable Guide Sections */}
+                                                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3 mt-2">
+                                                        {hive.activeTopic.sections?.map((section, idx) => (
+                                                            <div key={idx} className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 border border-indigo-50 rounded-xl p-4 hover:shadow-sm transition-all text-left">
+                                                                <h4 className="text-[11px] font-black uppercase tracking-widest text-indigo-600 mb-2 flex items-center gap-1.5">
+                                                                    <div className="w-1.5 h-1.5 rounded-full bg-teal-400 shadow-[0_0_5px_rgba(45,212,191,0.5)]"></div>
+                                                                    {section.title}
+                                                                </h4>
+                                                                <ul className="space-y-1.5">
+                                                                    {section.points.map((point, pIdx) => (
+                                                                        <li key={pIdx} className="text-[13.5px] text-slate-700 font-medium flex items-start gap-2.5">
+                                                                            <span className="text-indigo-400 mt-0.5 select-none">•</span>
+                                                                            <span className="leading-snug">{point}</span>
+                                                                        </li>
+                                                                    ))}
+                                                                </ul>
+                                                            </div>
+                                                        ))}
+                                                    </div>
+                                                </div>
+                                            )}
                                         </div>
-                                        <h3 className="text-xl md:text-2xl lg:text-3xl font-black text-slate-800 leading-tight whitespace-pre-wrap">
-                                            {hive.activeTopic}
-                                        </h3>
-                                    </div>
-                                </div>
+                                    );
+                                })()}
                             </div>
                         </div>
 
@@ -133,7 +182,7 @@ export default function HiveMatch() {
                                     if (msg.system) {
                                         return (
                                             <div key={i} className="flex justify-center my-4">
-                                                <span className="bg-indigo-50 text-indigo-500 border border-indigo-100 font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full">
+                                                <span className="bg-indigo-50 text-indigo-500 border border-indigo-100 font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full text-center px-4">
                                                     {msg.text}
                                                 </span>
                                             </div>

@@ -240,13 +240,21 @@ export const useHiveMatch = (userData) => {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
+                    generationConfig: { responseMimeType: "application/json" }, // 🟢 Explicitly require JSON
                     contents: [{
                         parts: [{ 
-                            text: `Generate an engaging discussion question about ${category} for a video chat. 
-                            Format your response exactly like this:
-                            [The Question]
-                            Format: [A quick 1-sentence suggested structure, e.g., 'Take 1 minute each to answer, then debate the trade-offs for 2 minutes.']
-                            Do not include any other introductory text or markdown formatting.` 
+                            text: `Generate a comprehensive discussion guide for two college students about: ${category}.
+                            Return ONLY a valid JSON object with exactly this structure:
+                            {
+                              "question": "A main, thought-provoking icebreaker question about the topic",
+                              "sections": [
+                                { "title": "Introduction to Context", "points": ["Point 1", "Point 2"] },
+                                { "title": "Presentation of Main Focus", "points": ["Point 1"] },
+                                { "title": "Overview of Related Aspects", "points": ["Point 1", "Point 2", "Point 3"] },
+                                { "title": "Analysis & Relevance", "points": ["Point 1", "Point 2"] },
+                                { "title": "Conclusion & Action", "points": ["Point 1", "Point 2"] }
+                              ]
+                            }` 
                         }]
                     }]
                 })
@@ -255,7 +263,16 @@ export const useHiveMatch = (userData) => {
             if (!response.ok) throw new Error(`Google API returned status ${response.status}`);
 
             const data = await response.json();
-            const newTheme = data.candidates[0].content.parts[0].text.trim();
+            const aiText = data.candidates[0].content.parts[0].text.trim();
+            
+            // 🟢 Safely parse the AI's JSON string into a real JavaScript Object
+            let newTheme;
+            try {
+                newTheme = JSON.parse(aiText);
+            } catch (err) {
+                console.error("Failed to parse JSON from Gemini:", aiText);
+                throw new Error("Invalid JSON structure returned.");
+            }
 
             setActiveTopic(newTheme);
             setIsGeneratingTheme(false);
@@ -265,9 +282,7 @@ export const useHiveMatch = (userData) => {
             }
 
             // 🟢 Send the exact AI response to the stranger's screen via WebRTC Data Channel!
-            // New Code (The Safety Delay)
             if (connectionRef.current) {
-                // Wait 500ms to ensure the Data Channel is fully 'open' before sending
                 setTimeout(() => {
                     try {
                         connectionRef.current.send(JSON.stringify({ type: "topic", category, topic: newTheme }));
@@ -279,7 +294,11 @@ export const useHiveMatch = (userData) => {
 
         } catch (error) {
             console.error("AI Generation Failed:", error);
-            setActiveTopic("AI connection failed. Please try a different topic.");
+            // 🟢 Fallback Object so the UI doesn't crash if the API fails
+            setActiveTopic({
+                question: "AI connection failed.",
+                sections: [{ title: "System Error", points: ["Please try clicking another topic category."] }]
+            });
             setIsGeneratingTheme(false);
         }
     };
