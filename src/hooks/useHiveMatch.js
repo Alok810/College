@@ -25,7 +25,7 @@ export const useHiveMatch = (userData) => {
     const getIceServers = () => ({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:stun1.l.google.com:19302' }
+            { urls: 'stun:global.stun.twilio.com:3478' }
         ]
     });
 
@@ -33,7 +33,10 @@ export const useHiveMatch = (userData) => {
         const userId = userData?.id || userData?._id;
         if (!userId || userId === "unknown") return;
 
-        const newSocket = io(AISHE_BACKEND_URL, { auth: { userId: userId } });
+        const newSocket = io(AISHE_BACKEND_URL, {
+            auth: { userId: userId },
+            transports: ["websocket"] // 🟢 THE RENDER FIX: Bypass polling completely!
+        });
         newSocket.on("connect_error", (err) => console.error("🔌 TalkHive Socket Error:", err.message));
 
         setSocket(newSocket);
@@ -109,7 +112,7 @@ export const useHiveMatch = (userData) => {
             setRoomCode(roomCode);
             setStatus("connected");
             socket.emit("join-pod", roomCode);
-            if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 1000);
+            if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 50);
         };
 
         const handleCallIncoming = (data) => answerWebRTC(data.signal, data.from);
@@ -133,7 +136,7 @@ export const useHiveMatch = (userData) => {
                 setPartnerInfo(null);
                 setRoomCode(null);
                 socket.emit("find-match", userData);
-            }, 1500);
+            }, 100);
         };
 
         socket.on("match-found", handleMatchFound);
@@ -238,7 +241,13 @@ export const useHiveMatch = (userData) => {
                 },
                 body: JSON.stringify({
                     contents: [{
-                        parts: [{ text: `Generate a short, engaging discussion question about ${category} for a video chat icebreaker. Just give the question, no introductory text.` }]
+                        parts: [{ 
+                            text: `Generate an engaging discussion question about ${category} for a video chat. 
+                            Format your response exactly like this:
+                            [The Question]
+                            Format: [A quick 1-sentence suggested structure, e.g., 'Take 1 minute each to answer, then debate the trade-offs for 2 minutes.']
+                            Do not include any other introductory text or markdown formatting.` 
+                        }]
                     }]
                 })
             });
