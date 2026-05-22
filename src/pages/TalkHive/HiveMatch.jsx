@@ -1,14 +1,21 @@
 import React, { useState } from "react";
-import { Sparkles, Radio, Send, ShieldCheck, Loader2, Lightbulb, Zap, MessageSquare } from "lucide-react";
+import { Sparkles, Radio, Send, ShieldCheck, Loader2, Lightbulb, MessageSquare } from "lucide-react";
 import { useHiveMatch } from "../../hooks/useHiveMatch";
 import rigyaLogo from "../../assets/rigya.png";
 import { useAuth } from "../../context/AuthContext";
 
-const TOPIC_CATEGORIES = ["Web Development", "Cybersecurity", "System Design", "Algorithms", "Interviews", "Tech Debates"];
+// 🟢 EXPANDED TOPICS: Mixed tech, strategy, arts, and general discussion
+const TOPIC_CATEGORIES = [
+    "Cybersecurity", "Web Development",
+    "Chess Strategies", "Anime Debates",
+    "Creative Writing", "Current Affairs",
+    "Startups & Business"
+];
 
 export default function HiveMatch() {
     const { authData } = useAuth();
     const [chatInput, setChatInput] = useState("");
+    const [isDropdownOpen, setIsDropdownOpen] = useState(false); 
 
     const hive = useHiveMatch({
         name: authData?.name || "Rigya Student",
@@ -66,58 +73,113 @@ export default function HiveMatch() {
                             </div>
                         </div>
 
-                        {/* 🟢 COLUMN 2: DISCUSSION THEME (DIVIDED INTO TWO PARTS) */}
+                        {/* 🟢 COLUMN 2: DISCUSSION THEME */}
                         <div className="flex flex-col gap-4 w-full lg:w-auto lg:flex-[4] min-h-0">
 
-                            {/* PART 1: AI CONTROLS CARD */}
-                            <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-5 shrink-0 relative overflow-hidden">
+                            {/* PART 1: 1-ROW CUSTOM MULTI-SELECT CARD */}
+                            <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-4 shrink-0 relative overflow-visible z-20">
                                 <div className="absolute -right-6 -top-6 text-indigo-500/5"><MessageSquare size={120} /></div>
                                 
-                                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-indigo-50 pb-4 mb-4 relative z-10">
-                                    <div className="flex items-center gap-3">
-                                        <div className="bg-indigo-600 p-2 rounded-xl shadow-md shadow-indigo-600/20">
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 relative z-10">
+                                    <div className="flex items-center gap-3 shrink-0">
+                                        <div className="bg-indigo-600 p-2 rounded-xl shadow-md shadow-indigo-600/20 shrink-0">
                                             <Lightbulb size={20} className="text-white" />
                                         </div>
-                                        <div>
-                                            <h2 className="text-base font-black text-indigo-950 uppercase tracking-widest leading-none">AI Discussion Theme</h2>
-                                            <p className="text-[11px] font-bold text-indigo-500 uppercase mt-1 flex items-center gap-1.5">
-                                                <Zap size={12} className="fill-current" /> Powered by Gemini 1.5 Flash
-                                            </p>
+                                        <h2 className="text-sm md:text-base font-black text-indigo-950 uppercase tracking-widest leading-none">
+                                            AI Discussion Theme
+                                        </h2>
+                                    </div>
+
+                                    <div className="relative shrink-0 w-full md:w-auto min-w-[180px]">
+                                        <div 
+                                            onClick={() => hive.status !== "connected" && setIsDropdownOpen(!isDropdownOpen)}
+                                            className={`flex items-center justify-between bg-indigo-50 border ${isDropdownOpen ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-indigo-200 hover:bg-indigo-100'} py-2 px-4 rounded-xl cursor-pointer transition-all min-h-[42px] w-full`}
+                                        >
+                                            <span className="text-indigo-700 text-xs md:text-sm font-bold">
+                                                {hive.myTopics.length === 0 ? "Select Topics..." : `${hive.myTopics.length} Topic${hive.myTopics.length > 1 ? 's' : ''} Selected`}
+                                            </span>
+                                            
+                                            <div className="text-indigo-500 transition-transform ml-2 shrink-0">
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" className={isDropdownOpen ? "rotate-180" : ""}><path d="m6 9 6 6 6-6"/></svg>
+                                            </div>
                                         </div>
+
+                                        {isDropdownOpen && hive.status !== "connected" && (
+                                            <>
+                                                <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
+                                                
+                                                <div className="absolute top-full right-0 mt-2 w-full min-w-[240px] bg-white border border-indigo-100 shadow-xl rounded-xl p-2 z-50 flex flex-col gap-1">
+                                                    <div className="flex justify-between items-center px-2 py-1.5 mb-1 border-b border-gray-100">
+                                                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Select up to 3</span>
+                                                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{hive.myTopics.length}/3</span>
+                                                    </div>
+                                                    
+                                                    {TOPIC_CATEGORIES.map(category => {
+                                                        const isSelected = hive.myTopics.includes(category);
+                                                        const maxReached = !isSelected && hive.myTopics.length >= 3;
+                                                        return (
+                                                            <button
+                                                                key={category}
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    hive.toggleTopic(category);
+                                                                }}
+                                                                disabled={maxReached}
+                                                                className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-between ${
+                                                                    isSelected 
+                                                                        ? "bg-indigo-50 text-indigo-700" 
+                                                                        : "text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
+                                                                }`}
+                                                            >
+                                                                {category}
+                                                                {isSelected && (
+                                                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600"><path d="M20 6 9 17l-5-5"/></svg>
+                                                                )}
+                                                            </button>
+                                                        )
+                                                    })}
+                                                </div>
+                                            </>
+                                        )}
                                     </div>
                                 </div>
-
-                                <div className="flex flex-wrap gap-2 relative z-10">
-                                    {TOPIC_CATEGORIES.map(category => (
-                                        <button
-                                            key={category}
-                                            onClick={() => hive.generateNewTopic(category)}
-                                            disabled={hive.isGeneratingTheme || hive.status !== "connected"}
-                                            className={`px-3.5 py-1.5 rounded-full text-xs font-bold transition-all ${hive.selectedCategory === category
-                                                    ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/20 scale-105"
-                                                    : "bg-gray-50 text-indigo-600 border border-indigo-100 hover:bg-indigo-50 disabled:opacity-50 disabled:scale-100"
-                                                }`}
-                                        >
-                                            {category}
-                                        </button>
-                                    ))}
-                                </div>
                             </div>
+
+                            {/* PART 1.5: SELECTED TOPICS DISPLAY CARD */}
+                            {hive.myTopics.length > 0 && (
+                                <div className="bg-white rounded-2xl shadow-sm border border-indigo-100 p-4 shrink-0 flex flex-col sm:flex-row sm:items-center gap-3 relative z-10">
+                                    <span className="text-[10px] font-black text-indigo-400 uppercase tracking-widest shrink-0">
+                                        Your Topics:
+                                    </span>
+                                    <div className="flex flex-wrap gap-2">
+                                        {hive.myTopics.map(topic => (
+                                            <div key={topic} className="flex items-center gap-1.5 bg-indigo-600 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg shadow-sm">
+                                                {topic}
+                                                {hive.status !== "connected" && (
+                                                    <button 
+                                                        onClick={() => hive.toggleTopic(topic)}
+                                                        className="hover:text-indigo-200 transition-colors focus:outline-none ml-1"
+                                                    >
+                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                                    </button>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
 
                             {/* PART 2: THE AI GUIDE DISPLAY CARD */}
                             <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden p-4 lg:p-6 min-h-[300px]">
                                 <div className="absolute -left-10 -bottom-10 text-purple-500/5"><Sparkles size={200} /></div>
 
                                 {(() => {
-                                    // If activeTopic is a string, we are in the "Waiting" or "Error" state.
-                                    // If it's an object, we have our fully structured AI Guide!
                                     const isWaiting = typeof hive.activeTopic === "string";
 
                                     return (
                                         <div className={`bg-white/90 backdrop-blur-xl border border-white rounded-[1.5rem] p-6 lg:p-8 shadow-[0_10px_30px_-10px_rgba(79,70,229,0.15)] w-full h-full transition-all duration-500 relative flex flex-col overflow-hidden ${hive.isGeneratingTheme ? 'opacity-50 scale-[0.98]' : 'opacity-100 scale-100'}`}>
-                                            
+
                                             {isWaiting ? (
-                                                /* 🟢 THE WAITING STATE */
                                                 <div className="flex flex-col items-center justify-center h-full space-y-4 text-center">
                                                     <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center text-indigo-300 mb-2 shadow-inner">
                                                         {hive.isGeneratingTheme ? <Loader2 size={32} className="animate-spin" /> : <MessageSquare size={32} />}
@@ -127,17 +189,13 @@ export default function HiveMatch() {
                                                     </h3>
                                                 </div>
                                             ) : (
-                                                /* 🟢 THE DETAILED AI GUIDE STATE */
                                                 <div className="flex flex-col h-full relative">
-                                                    {/* Decorative Quote Mark */}
                                                     <div className="absolute -top-6 -left-2 text-6xl text-indigo-100 font-serif leading-none select-none opacity-60">"</div>
 
-                                                    {/* The Main Discussion Question */}
                                                     <h3 className="text-xl md:text-2xl font-black text-slate-800 leading-tight tracking-tight relative z-10 mb-4 text-center shrink-0 pb-3 border-b border-indigo-50">
                                                         {hive.activeTopic.question}
                                                     </h3>
 
-                                                    {/* Scrollable Guide Sections */}
                                                     <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3 mt-2">
                                                         {hive.activeTopic.sections?.map((section, idx) => (
                                                             <div key={idx} className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 border border-indigo-50 rounded-xl p-4 hover:shadow-sm transition-all text-left">
@@ -245,20 +303,51 @@ export default function HiveMatch() {
                     </div>
                 </div>
             ) : (
-                /* 🟢 LANDING PAGE */
+                /* 🟢 UPDATED LANDING PAGE WITH INLINE TOPIC SELECTION */
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto">
-                    <div className="animate-in slide-in-from-bottom-6 duration-700 flex flex-col items-center">
+                    <div className="animate-in slide-in-from-bottom-6 duration-700 flex flex-col items-center w-full">
                         <div className="inline-flex items-center gap-2 px-5 py-2 bg-white text-indigo-600 rounded-full text-xs font-black uppercase tracking-widest mb-8 shadow-sm border border-blue-50">
                             <Sparkles size={16} /> Global Student Matchmaking
                         </div>
                         <h2 className="text-5xl md:text-7xl font-black text-slate-900 tracking-tighter mb-6 leading-none">
                             Meet your next <br /><span className="text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-cyan-500">Study Partner.</span>
                         </h2>
-                        <p className="text-lg md:text-xl text-slate-600 font-medium mb-12 max-w-2xl leading-relaxed">
-                            Instantly connect with random peers across the network. Start a video session, share knowledge, and grow together.
+                        <p className="text-lg md:text-xl text-slate-600 font-medium mb-8 max-w-2xl leading-relaxed">
+                            Instantly connect with peers based on shared interests. <br/>
+                            <span className="text-indigo-500 font-bold">Select up to 3 topics below to begin.</span>
                         </p>
-                        <button onClick={hive.startSearch} className="group px-12 py-5 bg-[#111827] hover:bg-black text-white rounded-full font-black text-xl shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all flex items-center gap-4">
-                            START MATCHMAKING <Radio size={24} className="group-hover:animate-pulse text-indigo-400" />
+
+                        {/* 🟢 Landing Page Topic Pills */}
+                        <div className="flex flex-wrap justify-center gap-2.5 mb-10 max-w-3xl">
+                            {TOPIC_CATEGORIES.map(category => {
+                                const isSelected = hive.myTopics.includes(category);
+                                const maxReached = !isSelected && hive.myTopics.length >= 3;
+                                return (
+                                    <button
+                                        key={category}
+                                        onClick={() => hive.toggleTopic(category)}
+                                        disabled={maxReached}
+                                        className={`px-5 py-2.5 rounded-full text-sm font-bold transition-all border ${
+                                            isSelected 
+                                                ? "bg-indigo-600 text-white border-indigo-600 shadow-lg shadow-indigo-500/30 scale-105" 
+                                                : "bg-white text-gray-600 border-gray-200 hover:border-indigo-300 hover:text-indigo-600 shadow-sm disabled:opacity-50 disabled:scale-100"
+                                        }`}
+                                    >
+                                        {category}
+                                        {isSelected && <span className="ml-2 bg-white/20 px-1.5 py-0.5 rounded text-[10px]">&times;</span>}
+                                    </button>
+                                )
+                            })}
+                        </div>
+
+                        {/* 🟢 Dynamic Start Button */}
+                        <button 
+                            onClick={hive.startSearch} 
+                            disabled={hive.myTopics.length === 0}
+                            className="group px-12 py-5 bg-[#111827] hover:bg-black text-white rounded-full font-black text-xl shadow-2xl hover:shadow-indigo-500/40 hover:-translate-y-1 transition-all flex items-center gap-4 disabled:opacity-50 disabled:hover:translate-y-0 disabled:hover:shadow-none disabled:cursor-not-allowed"
+                        >
+                            {hive.myTopics.length === 0 ? "SELECT A TOPIC TO START" : "START MATCHMAKING"} 
+                            <Radio size={24} className={hive.myTopics.length > 0 ? "group-hover:animate-pulse text-indigo-400" : "text-gray-500"} />
                         </button>
                     </div>
                 </div>

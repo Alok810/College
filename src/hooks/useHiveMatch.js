@@ -11,8 +11,8 @@ export const useHiveMatch = (userData) => {
     const [roomCode, setRoomCode] = useState(null);
     const [isPeerConnected, setIsPeerConnected] = useState(false);
 
-    // 🟢 Synchronized Topic States
-    const [selectedCategory, setSelectedCategory] = useState("Web Development");
+    // 🟢 INITIAL STATE IS NOW EMPTY: Forces user to select before matching
+    const [myTopics, setMyTopics] = useState([]); 
     const [activeTopic, setActiveTopic] = useState("Waiting for a match to begin discussion...");
     const [isGeneratingTheme, setIsGeneratingTheme] = useState(false);
 
@@ -21,11 +21,17 @@ export const useHiveMatch = (userData) => {
     const chatScrollRef = useRef(null);
     const connectionRef = useRef(null);
     const streamRef = useRef(null);
+    const isCallerRef = useRef(false);
 
     const getIceServers = () => ({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' }
+            { urls: 'stun:global.stun.twilio.com:3478' },
+            {
+                urls: "turn:global.relay.metered.ca:80", 
+                username: "66a3e974302727873303cd22",
+                credential: "xzob+5weO8l2PMt9"
+            }
         ]
     });
 
@@ -35,7 +41,7 @@ export const useHiveMatch = (userData) => {
 
         const newSocket = io(AISHE_BACKEND_URL, {
             auth: { userId: userId },
-            transports: ["websocket"] // 🟢 THE RENDER FIX: Bypass polling completely!
+            transports: ["websocket"]
         });
         newSocket.on("connect_error", (err) => console.error("🔌 TalkHive Socket Error:", err.message));
 
@@ -43,7 +49,19 @@ export const useHiveMatch = (userData) => {
         return () => newSocket.disconnect();
     }, [userData?.id, userData?._id]);
 
+    const toggleTopic = (topic) => {
+        if (status === "connected") return; // Lock selections during a live call
+        setMyTopics(prev => {
+            if (prev.includes(topic)) return prev.filter(t => t !== topic);
+            if (prev.length < 3) return [...prev, topic];
+            return prev;
+        });
+    };
+
     const startSearch = async () => {
+        // 🟢 SAFETY BLOCK: Refuse to connect if no topic is selected
+        if (myTopics.length === 0) return; 
+
         setStatus("searching");
         setPartnerInfo(null);
         setMessages([]);
@@ -72,6 +90,12 @@ export const useHiveMatch = (userData) => {
     };
 
     const skipMatch = () => {
+        // 🟢 If they cleared all topics while searching, kick them back to the landing page
+        if (myTopics.length === 0) {
+            stopSearch();
+            return;
+        }
+
         const targetRoom = roomCode;
         setStatus("searching");
         setPartnerInfo(null);
@@ -108,6 +132,7 @@ export const useHiveMatch = (userData) => {
         if (!socket) return;
 
         const handleMatchFound = ({ roomCode, partnerInfo, isCaller }) => {
+            isCallerRef.current = isCaller;
             setPartnerInfo(partnerInfo);
             setRoomCode(roomCode);
             setStatus("connected");
@@ -153,7 +178,6 @@ export const useHiveMatch = (userData) => {
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [socket, userData]);
 
-    // 🟢 P2P DATA HANDLER (Syncs Chat & Topics)
     const handlePeerData = (data) => {
         try {
             const parsed = JSON.parse(data.toString());
@@ -162,13 +186,18 @@ export const useHiveMatch = (userData) => {
                 setMessages(prev => [...prev, { text: parsed.text, sender: "Stranger" }]);
             }
             else if (parsed.type === "topic") {
-                // Instantly update UI when the stranger changes the topic!
                 setActiveTopic(parsed.topic);
-                setSelectedCategory(parsed.category);
                 setMessages(prev => [...prev, {
                     system: true,
-                    text: `Stranger set the topic to: ${parsed.category}`
+                    text: `Discussion matched on: ${parsed.category}`
                 }]);
+            }
+            else if (parsed.type === "topics_sync") {
+                if (isCallerRef.current) {
+                    const match = myTopics.find(t => parsed.topics.includes(t));
+                    const finalTopic = match || myTopics[Math.floor(Math.random() * myTopics.length)];
+                    generateNewTopic(finalTopic);
+                }
             }
         } catch (err) {
             console.error("Failed to parse peer data", err);
@@ -179,10 +208,10 @@ export const useHiveMatch = (userData) => {
         peer.on("stream", (remoteStream) => {
             if (partnerVideoRef.current) partnerVideoRef.current.srcObject = remoteStream;
             setIsPeerConnected(true);
+        });
 
-            if (peer.initiator) {
-                generateNewTopic("Web Development");
-            }
+        peer.on("connect", () => {
+            peer.send(JSON.stringify({ type: "topics_sync", topics: myTopics }));
         });
 
         peer.on("data", handlePeerData);
@@ -221,14 +250,11 @@ export const useHiveMatch = (userData) => {
         connectionRef.current.send(JSON.stringify({ type: "chat", text }));
     };
 
-    // ==========================================
-    // 🤖 DIRECT GEMINI 2.5 FLASH FRONTEND FETCH
-    // ==========================================
     const generateNewTopic = async (category) => {
         if (status === "idle") return;
 
         setIsGeneratingTheme(true);
-        setSelectedCategory(category);
+        setActiveTopic("AI is analyzing your matched interests...");
 
         try {
             const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -240,13 +266,13 @@ export const useHiveMatch = (userData) => {
                     "Content-Type": "application/json",
                 },
                 body: JSON.stringify({
-                    generationConfig: { responseMimeType: "application/json" }, // 🟢 Explicitly require JSON
+                    generationConfig: { responseMimeType: "application/json" },
                     contents: [{
                         parts: [{ 
                             text: `Generate a comprehensive discussion guide for two college students about: ${category}.
                             Return ONLY a valid JSON object with exactly this structure:
                             {
-                              "question": "A main, thought-provoking icebreaker question about the topic",
+                              "question": "A thought-provoking icebreaker question about the topic (maximum one single sentence)",
                               "sections": [
                                 { "title": "Introduction to Context", "points": ["Point 1", "Point 2"] },
                                 { "title": "Presentation of Main Focus", "points": ["Point 1"] },
@@ -265,10 +291,10 @@ export const useHiveMatch = (userData) => {
             const data = await response.json();
             const aiText = data.candidates[0].content.parts[0].text.trim();
             
-            // 🟢 Safely parse the AI's JSON string into a real JavaScript Object
             let newTheme;
             try {
                 newTheme = JSON.parse(aiText);
+            // eslint-disable-next-line no-unused-vars
             } catch (err) {
                 console.error("Failed to parse JSON from Gemini:", aiText);
                 throw new Error("Invalid JSON structure returned.");
@@ -278,10 +304,9 @@ export const useHiveMatch = (userData) => {
             setIsGeneratingTheme(false);
 
             if (status === "connected") {
-                setMessages(prev => [...prev, { system: true, text: `You set the topic to: ${category}` }]);
+                setMessages(prev => [...prev, { system: true, text: `Discussion matched on: ${category}` }]);
             }
 
-            // 🟢 Send the exact AI response to the stranger's screen via WebRTC Data Channel!
             if (connectionRef.current) {
                 setTimeout(() => {
                     try {
@@ -294,10 +319,9 @@ export const useHiveMatch = (userData) => {
 
         } catch (error) {
             console.error("AI Generation Failed:", error);
-            // 🟢 Fallback Object so the UI doesn't crash if the API fails
             setActiveTopic({
                 question: "AI connection failed.",
-                sections: [{ title: "System Error", points: ["Please try clicking another topic category."] }]
+                sections: [{ title: "System Error", points: ["Please try reconnecting."] }]
             });
             setIsGeneratingTheme(false);
         }
@@ -309,7 +333,7 @@ export const useHiveMatch = (userData) => {
 
     return {
         status, partnerInfo, messages, myVideoRef, partnerVideoRef, chatScrollRef, isPeerConnected,
-        activeTopic, selectedCategory, isGeneratingTheme,
-        startSearch, stopSearch, skipMatch, sendMessage, generateNewTopic
+        activeTopic, myTopics, isGeneratingTheme,
+        startSearch, stopSearch, skipMatch, sendMessage, generateNewTopic, toggleTopic
     };
 };
