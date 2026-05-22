@@ -12,7 +12,7 @@ export const useHiveMatch = (userData) => {
     const [isPeerConnected, setIsPeerConnected] = useState(false);
 
     const [myTopics, setMyTopics] = useState([]); 
-    const [partnerTopics, setPartnerTopics] = useState([]); // 🟢 Tracks stranger's topics
+    const [partnerTopics, setPartnerTopics] = useState([]);
     const [activeTopic, setActiveTopic] = useState("Waiting for a match to begin discussion...");
     const [isGeneratingTheme, setIsGeneratingTheme] = useState(false);
 
@@ -39,7 +39,8 @@ export const useHiveMatch = (userData) => {
                 credential: "xzob+5weO8l2PMt9"
             }
         ],
-        iceTransportPolicy: 'relay' // Force TURN usage for better connectivity in restrictive networks
+        // 🟢 Forces strict relay to bypass same-Wi-Fi firewall blocks
+        iceTransportPolicy: 'relay'
     });
 
     useEffect(() => {
@@ -149,6 +150,26 @@ export const useHiveMatch = (userData) => {
         }
     }, [myTopics, status, isPeerConnected]);
 
+    // DYNAMIC AI TRIGGER: Watches for intersections and generates themes automatically
+    useEffect(() => {
+        if (status === "connected" && isPeerConnected && isCallerRef.current) {
+            const matches = myTopics.filter(t => partnerTopics.includes(t));
+            
+            if (matches.length > 0) {
+                const topMatch = matches[0];
+                if (topMatch !== lastGeneratedRef.current) {
+                    lastGeneratedRef.current = topMatch;
+                    generateNewTopic(topMatch);
+                }
+            } else if (!lastGeneratedRef.current && partnerTopics.length > 0) {
+                const fallback = myTopics[Math.floor(Math.random() * myTopics.length)];
+                lastGeneratedRef.current = fallback;
+                generateNewTopic(fallback);
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [myTopics, partnerTopics, status, isPeerConnected]);
+
     useEffect(() => {
         if (!socket) return;
 
@@ -162,6 +183,9 @@ export const useHiveMatch = (userData) => {
         };
 
         const handleCallIncoming = (data) => {
+            // 🟢 SIGNAL ECHO GUARD
+            if (isCallerRef.current) return; 
+
             if (!connectionRef.current) {
                 answerWebRTC(data.signal, data.from);
             } else {
@@ -174,7 +198,16 @@ export const useHiveMatch = (userData) => {
         };
 
         const handleCallAccepted = (signalData) => {
-            if (connectionRef.current) connectionRef.current.signal(signalData);
+            // 🟢 SIGNAL ECHO GUARD
+            if (!isCallerRef.current) return; 
+
+            if (connectionRef.current) {
+                try {
+                    connectionRef.current.signal(signalData);
+                } catch {
+                    console.warn("Trickle accept ignored");
+                }
+            }
         };
 
         const handleCallEnded = () => {
@@ -227,19 +260,7 @@ export const useHiveMatch = (userData) => {
                 }]);
             }
             else if (parsed.type === "topics_sync") {
-                // 🟢 BUG FIXED: Both users now correctly save the partner's topics for the UI!
                 setPartnerTopics(parsed.topics);
-
-                if (isCallerRef.current) {
-                    const match = myTopicsRef.current.find(t => parsed.topics.includes(t));
-                    const finalTopic = match || myTopicsRef.current[Math.floor(Math.random() * myTopicsRef.current.length)];
-                    
-                    // Generate new AI prompt only if the topic actually changed
-                    if (finalTopic !== lastGeneratedRef.current) {
-                        lastGeneratedRef.current = finalTopic;
-                        generateNewTopic(finalTopic);
-                    }
-                }
             }
         } catch (err) {
             console.error("Failed to parse peer data", err);
