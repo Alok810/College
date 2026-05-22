@@ -138,7 +138,19 @@ export const useHiveMatch = (userData) => {
             if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 50);
         };
 
-        const handleCallIncoming = (data) => answerWebRTC(data.signal, data.from);
+        const handleCallIncoming = (data) => {
+            if (!connectionRef.current) {
+                // 1. First signal (The initial Offer) -> Build the connection!
+                answerWebRTC(data.signal, data.from);
+            } else {
+                // 2. Subsequent signals (Trickle Candidates) -> Add instantly to the existing connection
+                try {
+                    connectionRef.current.signal(data.signal);
+                } catch (err) {
+                    console.warn("Trickle signal ignored (connection closed)");
+                }
+            }
+        };
 
         const handleCallAccepted = (signalData) => {
             if (connectionRef.current) connectionRef.current.signal(signalData);
@@ -242,7 +254,7 @@ export const useHiveMatch = (userData) => {
         peer.signal(incomingSignal);
         connectionRef.current = peer;
     };
-    
+
     const sendMessage = (text) => {
         if (!text.trim() || !connectionRef.current) return;
         setMessages(prev => [...prev, { text, sender: "You" }]);
