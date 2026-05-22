@@ -4,7 +4,6 @@ import { useHiveMatch } from "../../hooks/useHiveMatch";
 import rigyaLogo from "../../assets/rigya.png";
 import { useAuth } from "../../context/AuthContext";
 
-// 🟢 EXPANDED TOPICS: Mixed tech, strategy, arts, and general discussion
 const TOPIC_CATEGORIES = [
     "Cybersecurity", "Web Development",
     "Chess Strategies", "Anime Debates",
@@ -91,8 +90,9 @@ export default function HiveMatch() {
                                     </div>
 
                                     <div className="relative shrink-0 w-full md:w-auto min-w-[180px]">
+                                        {/* 🟢 UNLOCKED: Dropdown button always works */}
                                         <div 
-                                            onClick={() => hive.status !== "connected" && setIsDropdownOpen(!isDropdownOpen)}
+                                            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                                             className={`flex items-center justify-between bg-indigo-50 border ${isDropdownOpen ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-indigo-200 hover:bg-indigo-100'} py-2 px-4 rounded-xl cursor-pointer transition-all min-h-[42px] w-full`}
                                         >
                                             <span className="text-indigo-700 text-xs md:text-sm font-bold">
@@ -104,7 +104,7 @@ export default function HiveMatch() {
                                             </div>
                                         </div>
 
-                                        {isDropdownOpen && hive.status !== "connected" && (
+                                        {isDropdownOpen && (
                                             <>
                                                 <div className="fixed inset-0 z-40" onClick={() => setIsDropdownOpen(false)}></div>
                                                 
@@ -155,21 +155,20 @@ export default function HiveMatch() {
                                         {hive.myTopics.map(topic => (
                                             <div key={topic} className="flex items-center gap-1.5 bg-indigo-600 text-white text-[12px] font-bold px-3 py-1.5 rounded-lg shadow-sm">
                                                 {topic}
-                                                {hive.status !== "connected" && (
-                                                    <button 
-                                                        onClick={() => hive.toggleTopic(topic)}
-                                                        className="hover:text-indigo-200 transition-colors focus:outline-none ml-1"
-                                                    >
-                                                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                                                    </button>
-                                                )}
+                                                {/* 🟢 UNLOCKED: "X" Remove button is always active */}
+                                                <button 
+                                                    onClick={() => hive.toggleTopic(topic)}
+                                                    className="hover:text-indigo-200 transition-colors focus:outline-none ml-1"
+                                                >
+                                                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                                                </button>
                                             </div>
                                         ))}
                                     </div>
                                 </div>
                             )}
 
-                            {/* PART 2: THE TALKING POINTS DISPLAY CARD */}
+                            {/* PART 2: THE AI GUIDE DISPLAY CARD */}
                             <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden p-4 lg:p-6 min-h-[300px]">
                                 <div className="absolute -left-10 -bottom-10 text-purple-500/5"><Sparkles size={200} /></div>
 
@@ -216,10 +215,9 @@ export default function HiveMatch() {
                             </div>
                         </div>
 
-                        {/* 🟢 COLUMN 3: CHAT BOX (Restructured for Sticky Topic) */}
+                        {/* 🟢 COLUMN 3: CHAT BOX */}
                         <div className="bg-white rounded-2xl shadow-sm border border-blue-100 flex flex-col overflow-hidden shrink-0 w-full lg:w-auto lg:flex-[3]">
                             
-                            {/* 🟢 STICKY CHAT HEADER (Renamed to Discussion Topic) */}
                             <div className="shrink-0 p-4 sm:p-5 border-b border-gray-50 z-10 bg-white">
                                 {typeof hive.activeTopic === "object" ? (
                                     <div className="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-md relative overflow-hidden text-white border border-indigo-400/50">
@@ -244,7 +242,6 @@ export default function HiveMatch() {
                                 )}
                             </div>
 
-                            {/* 🟢 SCROLLABLE MESSAGE AREA */}
                             <div ref={hive.chatScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar bg-slate-50/30">
                                 {hive.messages.map((msg, i) => {
                                     if (msg.system) {
@@ -274,7 +271,6 @@ export default function HiveMatch() {
                                 })}
                             </div>
 
-                            {/* INPUT AREA */}
                             <div className="shrink-0 p-3 bg-white border-t border-gray-100 flex flex-col gap-2 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
                                 <form onSubmit={handleSend} className="flex items-stretch gap-2">
                                     <input

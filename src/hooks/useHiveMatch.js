@@ -11,7 +11,6 @@ export const useHiveMatch = (userData) => {
     const [roomCode, setRoomCode] = useState(null);
     const [isPeerConnected, setIsPeerConnected] = useState(false);
 
-    // 🟢 INITIAL STATE IS NOW EMPTY: Forces user to select before matching
     const [myTopics, setMyTopics] = useState([]); 
     const [activeTopic, setActiveTopic] = useState("Waiting for a match to begin discussion...");
     const [isGeneratingTheme, setIsGeneratingTheme] = useState(false);
@@ -49,8 +48,8 @@ export const useHiveMatch = (userData) => {
         return () => newSocket.disconnect();
     }, [userData?.id, userData?._id]);
 
+    // 🟢 UNLOCKED: Users can now toggle topics at any time
     const toggleTopic = (topic) => {
-        if (status === "connected") return; // Lock selections during a live call
         setMyTopics(prev => {
             if (prev.includes(topic)) return prev.filter(t => t !== topic);
             if (prev.length < 3) return [...prev, topic];
@@ -59,7 +58,6 @@ export const useHiveMatch = (userData) => {
     };
 
     const startSearch = async () => {
-        // 🟢 SAFETY BLOCK: Refuse to connect if no topic is selected
         if (myTopics.length === 0) return; 
 
         setStatus("searching");
@@ -90,7 +88,7 @@ export const useHiveMatch = (userData) => {
     };
 
     const skipMatch = () => {
-        // 🟢 If they cleared all topics while searching, kick them back to the landing page
+        // If they cleared all topics mid-call and try to skip, halt the search safely
         if (myTopics.length === 0) {
             stopSearch();
             return;
@@ -228,7 +226,8 @@ export const useHiveMatch = (userData) => {
 
     const initiateWebRTC = (room) => {
         if (!streamRef.current) return;
-        const peer = new Peer({ initiator: true, trickle: false, stream: streamRef.current, config: getIceServers() });
+        // ⚡ SET TRICKLE TO TRUE
+        const peer = new Peer({ initiator: true, trickle: true, stream: streamRef.current, config: getIceServers() });
         peer.on("signal", (data) => socket.emit("call-user", { userToCall: room, signalData: data, from: room, name: userData.name }));
         bindPeerEvents(peer, room);
         connectionRef.current = peer;
@@ -236,13 +235,14 @@ export const useHiveMatch = (userData) => {
 
     const answerWebRTC = (incomingSignal, room) => {
         if (!streamRef.current) return;
-        const peer = new Peer({ initiator: false, trickle: false, stream: streamRef.current, config: getIceServers() });
+        // ⚡ SET TRICKLE TO TRUE
+        const peer = new Peer({ initiator: false, trickle: true, stream: streamRef.current, config: getIceServers() });
         peer.on("signal", (data) => socket.emit("answer-call", { signal: data, to: room }));
         bindPeerEvents(peer, room);
         peer.signal(incomingSignal);
         connectionRef.current = peer;
     };
-
+    
     const sendMessage = (text) => {
         if (!text.trim() || !connectionRef.current) return;
         setMessages(prev => [...prev, { text, sender: "You" }]);
