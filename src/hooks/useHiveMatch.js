@@ -49,8 +49,16 @@ export const useHiveMatch = (userData) => {
 
         const newSocket = io(AISHE_BACKEND_URL, {
             auth: { userId: userId },
-            transports: ["websocket"]
+            // 🟢 Allow HTTP polling to wake the server, then upgrade to WebSockets
+            transports: ["polling", "websocket"], 
+            // 🟢 Give Render 60 full seconds to wake up before throwing a timeout error
+            timeout: 60000, 
+            // 🟢 If it drops, automatically keep knocking on the door
+            reconnection: true,
+            reconnectionAttempts: 10,
+            reconnectionDelay: 3000
         });
+        
         newSocket.on("connect_error", (err) => console.error("🔌 TalkHive Socket Error:", err.message));
 
         setSocket(newSocket);
@@ -81,9 +89,9 @@ export const useHiveMatch = (userData) => {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
             streamRef.current = stream;
             if (myVideoRef.current) myVideoRef.current.srcObject = stream;
-        } catch (err) {
-            console.error("Camera access denied:", err);
-            if (err.name === "NotReadableError") {
+        } catch (error) {
+            console.error("Camera access denied:", error);
+            if (error.name === "NotReadableError") {
                 alert("Camera is already in use by another tab or application! Please close it and try again.");
             }
         }
@@ -262,8 +270,8 @@ export const useHiveMatch = (userData) => {
             else if (parsed.type === "topics_sync") {
                 setPartnerTopics(parsed.topics);
             }
-        } catch (err) {
-            console.error("Failed to parse peer data", err);
+        } catch (error) {
+            console.error("Failed to parse peer data", error);
         }
     };
 
@@ -279,7 +287,7 @@ export const useHiveMatch = (userData) => {
 
         peer.on("data", handlePeerData);
 
-        peer.on("error", (err) => console.error("WebRTC Error:", err));
+        peer.on("error", (error) => console.error("WebRTC Error:", error));
         peer.on("close", () => {
             setIsPeerConnected(false);
             if (status === "connected") {
