@@ -12,7 +12,7 @@ export const useHiveMatch = (userData) => {
     const [isPeerConnected, setIsPeerConnected] = useState(false);
 
     const [myTopics, setMyTopics] = useState([]); 
-    const [partnerTopics, setPartnerTopics] = useState([]); // 🟢 NEW: Tracks stranger's topics
+    const [partnerTopics, setPartnerTopics] = useState([]); // 🟢 Tracks stranger's topics
     const [activeTopic, setActiveTopic] = useState("Waiting for a match to begin discussion...");
     const [isGeneratingTheme, setIsGeneratingTheme] = useState(false);
 
@@ -22,7 +22,7 @@ export const useHiveMatch = (userData) => {
     const connectionRef = useRef(null);
     const streamRef = useRef(null);
     const isCallerRef = useRef(false);
-    const lastGeneratedRef = useRef(null); // 🟢 Prevents infinite AI generation loops
+    const lastGeneratedRef = useRef(null); 
 
     const myTopicsRef = useRef(myTopics);
     useEffect(() => {
@@ -137,7 +137,7 @@ export const useHiveMatch = (userData) => {
         streamRef.current = null;
     };
 
-    // 🟢 SYNC TOPICS MID-CALL: If I click a topic during a call, send it instantly
+    // Broadcast our topics instantly when we change them mid-call
     useEffect(() => {
         if (status === "connected" && isPeerConnected && connectionRef.current) {
             try {
@@ -147,27 +147,6 @@ export const useHiveMatch = (userData) => {
             }
         }
     }, [myTopics, status, isPeerConnected]);
-
-    // 🟢 DYNAMIC AI TRIGGER: Watches for intersections and generates themes automatically
-    useEffect(() => {
-        if (status === "connected" && isPeerConnected && isCallerRef.current) {
-            const matches = myTopics.filter(t => partnerTopics.includes(t));
-            
-            if (matches.length > 0) {
-                const topMatch = matches[0];
-                if (topMatch !== lastGeneratedRef.current) {
-                    lastGeneratedRef.current = topMatch;
-                    generateNewTopic(topMatch);
-                }
-            } else if (!lastGeneratedRef.current && partnerTopics.length > 0) {
-                // If we connect and have ZERO matches, pick a random topic from my list as a fallback
-                const fallback = myTopics[Math.floor(Math.random() * myTopics.length)];
-                lastGeneratedRef.current = fallback;
-                generateNewTopic(fallback);
-            }
-        }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [myTopics, partnerTopics, status, isPeerConnected]);
 
     useEffect(() => {
         if (!socket) return;
@@ -240,15 +219,26 @@ export const useHiveMatch = (userData) => {
             }
             else if (parsed.type === "topic") {
                 setActiveTopic(parsed.topic);
-                lastGeneratedRef.current = parsed.category; // Sync the safety ref
+                lastGeneratedRef.current = parsed.category; 
                 setMessages(prev => [...prev, {
                     system: true,
                     text: `Discussion matched on: ${parsed.category}`
                 }]);
             }
             else if (parsed.type === "topics_sync") {
-                // 🟢 NEW: Instantly update the UI with stranger's live topics
+                // 🟢 BUG FIXED: Both users now correctly save the partner's topics for the UI!
                 setPartnerTopics(parsed.topics);
+
+                if (isCallerRef.current) {
+                    const match = myTopicsRef.current.find(t => parsed.topics.includes(t));
+                    const finalTopic = match || myTopicsRef.current[Math.floor(Math.random() * myTopicsRef.current.length)];
+                    
+                    // Generate new AI prompt only if the topic actually changed
+                    if (finalTopic !== lastGeneratedRef.current) {
+                        lastGeneratedRef.current = finalTopic;
+                        generateNewTopic(finalTopic);
+                    }
+                }
             }
         } catch (err) {
             console.error("Failed to parse peer data", err);
@@ -382,7 +372,7 @@ export const useHiveMatch = (userData) => {
 
     return {
         status, partnerInfo, messages, myVideoRef, partnerVideoRef, chatScrollRef, isPeerConnected,
-        activeTopic, myTopics, partnerTopics, isGeneratingTheme, // 🟢 Exported partnerTopics
+        activeTopic, myTopics, partnerTopics, isGeneratingTheme, 
         startSearch, stopSearch, skipMatch, sendMessage, generateNewTopic, toggleTopic
     };
 };

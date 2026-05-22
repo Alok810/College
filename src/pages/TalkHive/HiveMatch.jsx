@@ -98,7 +98,9 @@ export default function HiveMatch() {
                                             className={`flex items-center justify-between bg-indigo-50 border ${isDropdownOpen ? 'border-indigo-400 ring-2 ring-indigo-500/20' : 'border-indigo-200 hover:bg-indigo-100'} py-2 px-4 rounded-xl cursor-pointer transition-all min-h-[42px] w-full`}
                                         >
                                             <span className="text-indigo-700 text-xs md:text-sm font-bold">
-                                                {hive.myTopics.length === 0 ? "Select Topics..." : `${hive.myTopics.length} Topic${hive.myTopics.length > 1 ? 's' : ''} Selected`}
+                                                {hive.status === "connected" 
+                                                    ? "Change Topic" 
+                                                    : hive.myTopics.length === 0 ? "Select Topics..." : `${hive.myTopics.length} Topic${hive.myTopics.length > 1 ? 's' : ''} Selected`}
                                             </span>
                                             
                                             <div className="text-indigo-500 transition-transform ml-2 shrink-0">
@@ -113,30 +115,37 @@ export default function HiveMatch() {
                                                 <div className="absolute top-full right-0 mt-2 w-full min-w-[240px] bg-white border border-indigo-100 shadow-xl rounded-xl p-2 z-50 flex flex-col gap-1">
                                                     <div className="flex justify-between items-center px-2 py-1.5 mb-1 border-b border-gray-100">
                                                         <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">
-                                                            {hive.status === "connected" ? "Live Sync Active" : "Select up to 3"}
+                                                            {hive.status === "connected" ? "Generate New Topic" : "Select up to 3"}
                                                         </span>
-                                                        <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{hive.myTopics.length}/3</span>
+                                                        {hive.status !== "connected" && (
+                                                            <span className="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full">{hive.myTopics.length}/3</span>
+                                                        )}
                                                     </div>
                                                     
                                                     {TOPIC_CATEGORIES.map(category => {
                                                         const isSelected = hive.myTopics.includes(category);
-                                                        const maxReached = !isSelected && hive.myTopics.length >= 3;
+                                                        const maxReached = hive.status !== "connected" && !isSelected && hive.myTopics.length >= 3;
                                                         return (
                                                             <button
                                                                 key={category}
                                                                 onClick={(e) => {
                                                                     e.stopPropagation();
-                                                                    hive.toggleTopic(category);
+                                                                    if (hive.status === "connected") {
+                                                                        hive.generateNewTopic(category);
+                                                                        setIsDropdownOpen(false);
+                                                                    } else {
+                                                                        hive.toggleTopic(category);
+                                                                    }
                                                                 }}
-                                                                disabled={maxReached}
+                                                                disabled={hive.status === "connected" ? hive.isGeneratingTheme : maxReached}
                                                                 className={`text-left px-3 py-2 rounded-lg text-sm font-bold transition-all flex items-center justify-between ${
-                                                                    isSelected 
+                                                                    (isSelected && hive.status !== "connected") 
                                                                         ? "bg-indigo-50 text-indigo-700" 
                                                                         : "text-slate-600 hover:bg-slate-50 disabled:opacity-40 disabled:hover:bg-transparent disabled:cursor-not-allowed"
                                                                 }`}
                                                             >
                                                                 {category}
-                                                                {isSelected && (
+                                                                {(isSelected && hive.status !== "connected") && (
                                                                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-600"><path d="M20 6 9 17l-5-5"/></svg>
                                                                 )}
                                                             </button>
@@ -172,12 +181,12 @@ export default function HiveMatch() {
                                             const isPartners = hive.partnerTopics?.includes(topic);
                                             const isMatch = isMine && isPartners;
 
-                                            // 🟢 Determine Pill Colors
-                                            let colorClasses = "bg-indigo-600 text-white shadow-indigo-500/30"; // Default: Mine
+                                            // Determine Pill Colors
+                                            let colorClasses = "bg-indigo-600 text-white shadow-indigo-500/30 border-indigo-600 border"; 
                                             if (hive.status === "connected") {
-                                                if (isMatch) colorClasses = "bg-emerald-500 text-white shadow-emerald-500/30 border-emerald-600 border";
-                                                else if (isMine) colorClasses = "bg-indigo-600 text-white shadow-indigo-500/30 border-indigo-700 border";
-                                                else if (isPartners) colorClasses = "bg-fuchsia-500 text-white shadow-fuchsia-500/30 border-fuchsia-600 border";
+                                                if (isMatch) colorClasses = "bg-emerald-500 text-white shadow-emerald-500/30 border-emerald-500 border";
+                                                else if (isMine) colorClasses = "bg-indigo-600 text-white shadow-indigo-500/30 border-indigo-600 border";
+                                                else if (isPartners) colorClasses = "bg-fuchsia-500 text-white shadow-fuchsia-500/30 border-fuchsia-500 border";
                                             }
 
                                             return (
@@ -189,7 +198,6 @@ export default function HiveMatch() {
                                                     className={`flex items-center gap-1.5 text-[12px] font-bold px-3 py-1.5 rounded-lg shadow-sm transition-all hover:-translate-y-0.5 disabled:hover:translate-y-0 disabled:opacity-60 ${colorClasses}`}
                                                 >
                                                     {topic}
-                                                    {/* Show X only for My topics, or Plus for Partner's topics I haven't added */}
                                                     {isMine ? (
                                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" className="opacity-70 hover:opacity-100"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                                                     ) : (
@@ -281,7 +289,7 @@ export default function HiveMatch() {
                                     if (msg.system) {
                                         return (
                                             <div key={i} className="flex justify-center my-4">
-                                                <span className="bg-indigo-50 text-indigo-500 border border-indigo-100 font-bold text-[10px] uppercase tracking-widest py-1 rounded-full text-center px-4">
+                                                <span className="bg-indigo-50 text-indigo-500 border border-indigo-100 font-bold text-[10px] uppercase tracking-widest px-3 py-1 rounded-full text-center px-4">
                                                     {msg.text}
                                                 </span>
                                             </div>
