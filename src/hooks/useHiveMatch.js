@@ -38,7 +38,8 @@ export const useHiveMatch = (userData) => {
                 username: "66a3e974302727873303cd22",
                 credential: "xzob+5weO8l2PMt9"
             }
-        ]
+        ],
+        iceTransportPolicy: 'relay' // Force TURN usage for better connectivity in restrictive networks
     });
 
     useEffect(() => {
