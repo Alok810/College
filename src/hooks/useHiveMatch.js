@@ -22,6 +22,12 @@ export const useHiveMatch = (userData) => {
     const streamRef = useRef(null);
     const isCallerRef = useRef(false);
 
+    // 🟢 THE CLOSURE FIX: We use a Ref to ensure the WebRTC events always see your latest topics
+    const myTopicsRef = useRef(myTopics);
+    useEffect(() => {
+        myTopicsRef.current = myTopics;
+    }, [myTopics]);
+
     const getIceServers = () => ({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
@@ -48,7 +54,6 @@ export const useHiveMatch = (userData) => {
         return () => newSocket.disconnect();
     }, [userData?.id, userData?._id]);
 
-    // 🟢 UNLOCKED: Users can now toggle topics at any time
     const toggleTopic = (topic) => {
         setMyTopics(prev => {
             if (prev.includes(topic)) return prev.filter(t => t !== topic);
@@ -88,7 +93,6 @@ export const useHiveMatch = (userData) => {
     };
 
     const skipMatch = () => {
-        // If they cleared all topics mid-call and try to skip, halt the search safely
         if (myTopics.length === 0) {
             stopSearch();
             return;
@@ -138,16 +142,15 @@ export const useHiveMatch = (userData) => {
             if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 50);
         };
 
+        // 🟢 LIGHTNING FAST FIX: Trickle ICE Handler
         const handleCallIncoming = (data) => {
             if (!connectionRef.current) {
-                // 1. First signal (The initial Offer) -> Build the connection!
                 answerWebRTC(data.signal, data.from);
             } else {
-                // 2. Subsequent signals (Trickle Candidates) -> Add instantly to the existing connection
                 try {
                     connectionRef.current.signal(data.signal);
                 } catch (err) {
-                    console.warn("Trickle signal ignored (connection closed)");
+                    console.warn("Trickle signal ignored");
                 }
             }
         };
@@ -204,8 +207,9 @@ export const useHiveMatch = (userData) => {
             }
             else if (parsed.type === "topics_sync") {
                 if (isCallerRef.current) {
-                    const match = myTopics.find(t => parsed.topics.includes(t));
-                    const finalTopic = match || myTopics[Math.floor(Math.random() * myTopics.length)];
+                    // 🟢 CLOSURE BUG FIXED: Now uses the Ref to reliably check topics
+                    const match = myTopicsRef.current.find(t => parsed.topics.includes(t));
+                    const finalTopic = match || myTopicsRef.current[Math.floor(Math.random() * myTopicsRef.current.length)];
                     generateNewTopic(finalTopic);
                 }
             }
@@ -221,7 +225,7 @@ export const useHiveMatch = (userData) => {
         });
 
         peer.on("connect", () => {
-            peer.send(JSON.stringify({ type: "topics_sync", topics: myTopics }));
+            peer.send(JSON.stringify({ type: "topics_sync", topics: myTopicsRef.current }));
         });
 
         peer.on("data", handlePeerData);
@@ -238,7 +242,6 @@ export const useHiveMatch = (userData) => {
 
     const initiateWebRTC = (room) => {
         if (!streamRef.current) return;
-        // ⚡ SET TRICKLE TO TRUE
         const peer = new Peer({ initiator: true, trickle: true, stream: streamRef.current, config: getIceServers() });
         peer.on("signal", (data) => socket.emit("call-user", { userToCall: room, signalData: data, from: room, name: userData.name }));
         bindPeerEvents(peer, room);
@@ -247,7 +250,6 @@ export const useHiveMatch = (userData) => {
 
     const answerWebRTC = (incomingSignal, room) => {
         if (!streamRef.current) return;
-        // ⚡ SET TRICKLE TO TRUE
         const peer = new Peer({ initiator: false, trickle: true, stream: streamRef.current, config: getIceServers() });
         peer.on("signal", (data) => socket.emit("answer-call", { signal: data, to: room }));
         bindPeerEvents(peer, room);
@@ -266,7 +268,7 @@ export const useHiveMatch = (userData) => {
         if (status === "idle") return;
 
         setIsGeneratingTheme(true);
-        setActiveTopic("AI is analyzing your matched interests...");
+        setActiveTopic("AI is analyzing the topic...");
 
         try {
             const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
@@ -316,7 +318,7 @@ export const useHiveMatch = (userData) => {
             setIsGeneratingTheme(false);
 
             if (status === "connected") {
-                setMessages(prev => [...prev, { system: true, text: `Discussion matched on: ${category}` }]);
+                setMessages(prev => [...prev, { system: true, text: `Discussion changed to: ${category}` }]);
             }
 
             if (connectionRef.current) {
