@@ -169,7 +169,7 @@ export default function HiveMatch() {
                                 </div>
                             )}
 
-                            {/* 🟢 PART 2: UPDATED AI GUIDE DISPLAY CARD (No Question Here Anymore) */}
+                            {/* PART 2: THE TALKING POINTS DISPLAY CARD */}
                             <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden p-4 lg:p-6 min-h-[300px]">
                                 <div className="absolute -left-10 -bottom-10 text-purple-500/5"><Sparkles size={200} /></div>
 
@@ -216,34 +216,36 @@ export default function HiveMatch() {
                             </div>
                         </div>
 
-                        {/* 🟢 COLUMN 3: CHAT BOX */}
+                        {/* 🟢 COLUMN 3: CHAT BOX (Restructured for Sticky Topic) */}
                         <div className="bg-white rounded-2xl shadow-sm border border-blue-100 flex flex-col overflow-hidden shrink-0 w-full lg:w-auto lg:flex-[3]">
-                            <div ref={hive.chatScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar bg-slate-50/30">
-                                
-                                {/* 🟢 DYNAMIC CHAT HEADER: Rules vs Icebreaker */}
+                            
+                            {/* 🟢 STICKY CHAT HEADER (Renamed to Discussion Topic) */}
+                            <div className="shrink-0 p-4 sm:p-5 border-b border-gray-50 z-10 bg-white">
                                 {typeof hive.activeTopic === "object" ? (
-                                    <div className="mb-6 p-5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-md relative overflow-hidden text-white border border-indigo-400/50">
+                                    <div className="p-4 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-md relative overflow-hidden text-white border border-indigo-400/50">
                                         <div className="absolute -right-4 -top-4 text-white/10"><MessageSquare size={80} /></div>
-                                        <h3 className="font-black text-[11px] uppercase tracking-widest mb-2 flex items-center gap-1.5 opacity-90 relative z-10">
-                                            <Sparkles size={14} /> Icebreaker Question
+                                        <h3 className="font-black text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1.5 opacity-90 relative z-10">
+                                            <Sparkles size={12} /> Discussion Topic
                                         </h3>
-                                        <p className="text-[15px] font-bold leading-relaxed relative z-10 text-white shadow-sm drop-shadow-sm">
+                                        <p className="text-[14px] font-bold leading-relaxed relative z-10 text-white drop-shadow-sm">
                                             "{hive.activeTopic.question}"
                                         </p>
                                     </div>
                                 ) : (
-                                    <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                        <h3 className="text-gray-900 font-black text-lg mb-2">Welcome to Hive Match.</h3>
-                                        <div className="text-[13px] text-gray-600 space-y-1.5 font-medium">
-                                            <p className="text-rose-600 font-bold flex items-center gap-1.5 mb-2">
-                                                <ShieldCheck size={16} /> Campus verified users only
+                                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100">
+                                        <h3 className="text-gray-900 font-black text-sm mb-2 uppercase tracking-wide">Welcome Student.</h3>
+                                        <div className="text-[12px] text-gray-600 space-y-1 font-medium">
+                                            <p className="text-rose-600 font-bold flex items-center gap-1.5 mb-1">
+                                                <ShieldCheck size={14} /> Campus verified only
                                             </p>
-                                            <p>• No nudity, hate speech, or harassment</p>
                                             <p>• Keep it professional.</p>
                                         </div>
                                     </div>
                                 )}
+                            </div>
 
+                            {/* 🟢 SCROLLABLE MESSAGE AREA */}
+                            <div ref={hive.chatScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar bg-slate-50/30">
                                 {hive.messages.map((msg, i) => {
                                     if (msg.system) {
                                         return (
@@ -272,6 +274,7 @@ export default function HiveMatch() {
                                 })}
                             </div>
 
+                            {/* INPUT AREA */}
                             <div className="shrink-0 p-3 bg-white border-t border-gray-100 flex flex-col gap-2 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
                                 <form onSubmit={handleSend} className="flex items-stretch gap-2">
                                     <input
