@@ -12,6 +12,7 @@ export const useHiveMatch = (userData) => {
     const [isPeerConnected, setIsPeerConnected] = useState(false);
 
     const [myTopics, setMyTopics] = useState([]); 
+    const [partnerTopics, setPartnerTopics] = useState([]); // 🟢 NEW: Tracks stranger's topics
     const [activeTopic, setActiveTopic] = useState("Waiting for a match to begin discussion...");
     const [isGeneratingTheme, setIsGeneratingTheme] = useState(false);
 
@@ -21,8 +22,8 @@ export const useHiveMatch = (userData) => {
     const connectionRef = useRef(null);
     const streamRef = useRef(null);
     const isCallerRef = useRef(false);
+    const lastGeneratedRef = useRef(null); // 🟢 Prevents infinite AI generation loops
 
-    // 🟢 THE CLOSURE FIX: We use a Ref to ensure the WebRTC events always see your latest topics
     const myTopicsRef = useRef(myTopics);
     useEffect(() => {
         myTopicsRef.current = myTopics;
@@ -67,6 +68,8 @@ export const useHiveMatch = (userData) => {
 
         setStatus("searching");
         setPartnerInfo(null);
+        setPartnerTopics([]);
+        lastGeneratedRef.current = null;
         setMessages([]);
         setRoomCode(null);
         setIsPeerConnected(false);
@@ -101,6 +104,8 @@ export const useHiveMatch = (userData) => {
         const targetRoom = roomCode;
         setStatus("searching");
         setPartnerInfo(null);
+        setPartnerTopics([]);
+        lastGeneratedRef.current = null;
         setRoomCode(null);
         setIsPeerConnected(false);
         setActiveTopic("Waiting for a match to begin discussion...");
@@ -120,6 +125,8 @@ export const useHiveMatch = (userData) => {
 
     const cleanupMedia = () => {
         setIsPeerConnected(false);
+        setPartnerTopics([]);
+        lastGeneratedRef.current = null;
         if (streamRef.current) streamRef.current.getTracks().forEach(track => track.stop());
         if (myVideoRef.current) myVideoRef.current.srcObject = null;
         if (partnerVideoRef.current) partnerVideoRef.current.srcObject = null;
@@ -129,6 +136,38 @@ export const useHiveMatch = (userData) => {
         }
         streamRef.current = null;
     };
+
+    // 🟢 SYNC TOPICS MID-CALL: If I click a topic during a call, send it instantly
+    useEffect(() => {
+        if (status === "connected" && isPeerConnected && connectionRef.current) {
+            try {
+                connectionRef.current.send(JSON.stringify({ type: "topics_sync", topics: myTopics }));
+            } catch {
+                console.warn("Could not sync topics");
+            }
+        }
+    }, [myTopics, status, isPeerConnected]);
+
+    // 🟢 DYNAMIC AI TRIGGER: Watches for intersections and generates themes automatically
+    useEffect(() => {
+        if (status === "connected" && isPeerConnected && isCallerRef.current) {
+            const matches = myTopics.filter(t => partnerTopics.includes(t));
+            
+            if (matches.length > 0) {
+                const topMatch = matches[0];
+                if (topMatch !== lastGeneratedRef.current) {
+                    lastGeneratedRef.current = topMatch;
+                    generateNewTopic(topMatch);
+                }
+            } else if (!lastGeneratedRef.current && partnerTopics.length > 0) {
+                // If we connect and have ZERO matches, pick a random topic from my list as a fallback
+                const fallback = myTopics[Math.floor(Math.random() * myTopics.length)];
+                lastGeneratedRef.current = fallback;
+                generateNewTopic(fallback);
+            }
+        }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [myTopics, partnerTopics, status, isPeerConnected]);
 
     useEffect(() => {
         if (!socket) return;
@@ -142,14 +181,13 @@ export const useHiveMatch = (userData) => {
             if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 50);
         };
 
-        // 🟢 LIGHTNING FAST FIX: Trickle ICE Handler
         const handleCallIncoming = (data) => {
             if (!connectionRef.current) {
                 answerWebRTC(data.signal, data.from);
             } else {
                 try {
                     connectionRef.current.signal(data.signal);
-                } catch (err) {
+                } catch {
                     console.warn("Trickle signal ignored");
                 }
             }
@@ -162,6 +200,8 @@ export const useHiveMatch = (userData) => {
         const handleCallEnded = () => {
             setMessages(prev => [...prev, { text: "Stranger disconnected. Finding a new match...", system: true }]);
             setIsPeerConnected(false);
+            setPartnerTopics([]);
+            lastGeneratedRef.current = null;
 
             if (partnerVideoRef.current) partnerVideoRef.current.srcObject = null;
             if (connectionRef.current) {
@@ -200,18 +240,15 @@ export const useHiveMatch = (userData) => {
             }
             else if (parsed.type === "topic") {
                 setActiveTopic(parsed.topic);
+                lastGeneratedRef.current = parsed.category; // Sync the safety ref
                 setMessages(prev => [...prev, {
                     system: true,
                     text: `Discussion matched on: ${parsed.category}`
                 }]);
             }
             else if (parsed.type === "topics_sync") {
-                if (isCallerRef.current) {
-                    // 🟢 CLOSURE BUG FIXED: Now uses the Ref to reliably check topics
-                    const match = myTopicsRef.current.find(t => parsed.topics.includes(t));
-                    const finalTopic = match || myTopicsRef.current[Math.floor(Math.random() * myTopicsRef.current.length)];
-                    generateNewTopic(finalTopic);
-                }
+                // 🟢 NEW: Instantly update the UI with stranger's live topics
+                setPartnerTopics(parsed.topics);
             }
         } catch (err) {
             console.error("Failed to parse peer data", err);
@@ -260,7 +297,6 @@ export const useHiveMatch = (userData) => {
     const sendMessage = (text) => {
         if (!text.trim() || !connectionRef.current) return;
         setMessages(prev => [...prev, { text, sender: "You" }]);
-
         connectionRef.current.send(JSON.stringify({ type: "chat", text }));
     };
 
@@ -308,8 +344,7 @@ export const useHiveMatch = (userData) => {
             let newTheme;
             try {
                 newTheme = JSON.parse(aiText);
-            // eslint-disable-next-line no-unused-vars
-            } catch (err) {
+            } catch {
                 console.error("Failed to parse JSON from Gemini:", aiText);
                 throw new Error("Invalid JSON structure returned.");
             }
@@ -347,7 +382,7 @@ export const useHiveMatch = (userData) => {
 
     return {
         status, partnerInfo, messages, myVideoRef, partnerVideoRef, chatScrollRef, isPeerConnected,
-        activeTopic, myTopics, isGeneratingTheme,
+        activeTopic, myTopics, partnerTopics, isGeneratingTheme, // 🟢 Exported partnerTopics
         startSearch, stopSearch, skipMatch, sendMessage, generateNewTopic, toggleTopic
     };
 };
