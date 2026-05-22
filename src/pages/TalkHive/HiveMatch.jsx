@@ -169,7 +169,7 @@ export default function HiveMatch() {
                                 </div>
                             )}
 
-                            {/* PART 2: THE AI GUIDE DISPLAY CARD */}
+                            {/* 🟢 PART 2: UPDATED AI GUIDE DISPLAY CARD (No Question Here Anymore) */}
                             <div className="bg-gradient-to-br from-indigo-50 via-white to-purple-50 rounded-2xl shadow-sm border border-indigo-100 flex-1 flex flex-col items-center justify-center relative overflow-hidden p-4 lg:p-6 min-h-[300px]">
                                 <div className="absolute -left-10 -bottom-10 text-purple-500/5"><Sparkles size={200} /></div>
 
@@ -190,13 +190,7 @@ export default function HiveMatch() {
                                                 </div>
                                             ) : (
                                                 <div className="flex flex-col h-full relative">
-                                                    <div className="absolute -top-6 -left-2 text-6xl text-indigo-100 font-serif leading-none select-none opacity-60">"</div>
-
-                                                    <h3 className="text-xl md:text-2xl font-black text-slate-800 leading-tight tracking-tight relative z-10 mb-4 text-center shrink-0 pb-3 border-b border-indigo-50">
-                                                        {hive.activeTopic.question}
-                                                    </h3>
-
-                                                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3 mt-2">
+                                                    <div className="flex-1 overflow-y-auto custom-scrollbar pr-2 space-y-3">
                                                         {hive.activeTopic.sections?.map((section, idx) => (
                                                             <div key={idx} className="bg-gradient-to-r from-indigo-50/50 to-purple-50/50 border border-indigo-50 rounded-xl p-4 hover:shadow-sm transition-all text-left">
                                                                 <h4 className="text-[11px] font-black uppercase tracking-widest text-indigo-600 mb-2 flex items-center gap-1.5">
@@ -225,16 +219,30 @@ export default function HiveMatch() {
                         {/* 🟢 COLUMN 3: CHAT BOX */}
                         <div className="bg-white rounded-2xl shadow-sm border border-blue-100 flex flex-col overflow-hidden shrink-0 w-full lg:w-auto lg:flex-[3]">
                             <div ref={hive.chatScrollRef} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4 custom-scrollbar bg-slate-50/30">
-                                <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
-                                    <h3 className="text-gray-900 font-black text-lg mb-2">Welcome to Hive Match.</h3>
-                                    <div className="text-[13px] text-gray-600 space-y-1.5 font-medium">
-                                        <p className="text-rose-600 font-bold flex items-center gap-1.5 mb-2">
-                                            <ShieldCheck size={16} /> Campus verified users only
+                                
+                                {/* 🟢 DYNAMIC CHAT HEADER: Rules vs Icebreaker */}
+                                {typeof hive.activeTopic === "object" ? (
+                                    <div className="mb-6 p-5 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-md relative overflow-hidden text-white border border-indigo-400/50">
+                                        <div className="absolute -right-4 -top-4 text-white/10"><MessageSquare size={80} /></div>
+                                        <h3 className="font-black text-[11px] uppercase tracking-widest mb-2 flex items-center gap-1.5 opacity-90 relative z-10">
+                                            <Sparkles size={14} /> Icebreaker Question
+                                        </h3>
+                                        <p className="text-[15px] font-bold leading-relaxed relative z-10 text-white shadow-sm drop-shadow-sm">
+                                            "{hive.activeTopic.question}"
                                         </p>
-                                        <p>• No nudity, hate speech, or harassment</p>
-                                        <p>• Keep it professional.</p>
                                     </div>
-                                </div>
+                                ) : (
+                                    <div className="mb-6 p-4 bg-white rounded-2xl border border-gray-100 shadow-sm">
+                                        <h3 className="text-gray-900 font-black text-lg mb-2">Welcome to Hive Match.</h3>
+                                        <div className="text-[13px] text-gray-600 space-y-1.5 font-medium">
+                                            <p className="text-rose-600 font-bold flex items-center gap-1.5 mb-2">
+                                                <ShieldCheck size={16} /> Campus verified users only
+                                            </p>
+                                            <p>• No nudity, hate speech, or harassment</p>
+                                            <p>• Keep it professional.</p>
+                                        </div>
+                                    </div>
+                                )}
 
                                 {hive.messages.map((msg, i) => {
                                     if (msg.system) {
@@ -303,7 +311,7 @@ export default function HiveMatch() {
                     </div>
                 </div>
             ) : (
-                /* 🟢 UPDATED LANDING PAGE WITH INLINE TOPIC SELECTION */
+                /* 🟢 LANDING PAGE */
                 <div className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-4xl mx-auto">
                     <div className="animate-in slide-in-from-bottom-6 duration-700 flex flex-col items-center w-full">
                         <div className="inline-flex items-center gap-2 px-5 py-2 bg-white text-indigo-600 rounded-full text-xs font-black uppercase tracking-widest mb-8 shadow-sm border border-blue-50">
@@ -317,7 +325,6 @@ export default function HiveMatch() {
                             <span className="text-indigo-500 font-bold">Select up to 3 topics below to begin.</span>
                         </p>
 
-                        {/* 🟢 Landing Page Topic Pills */}
                         <div className="flex flex-wrap justify-center gap-2.5 mb-10 max-w-3xl">
                             {TOPIC_CATEGORIES.map(category => {
                                 const isSelected = hive.myTopics.includes(category);
@@ -340,7 +347,6 @@ export default function HiveMatch() {
                             })}
                         </div>
 
-                        {/* 🟢 Dynamic Start Button */}
                         <button 
                             onClick={hive.startSearch} 
                             disabled={hive.myTopics.length === 0}
