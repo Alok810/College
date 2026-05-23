@@ -38,8 +38,7 @@ export const useHiveMatch = (userData) => {
                 username: "66a3e974302727873303cd22",
                 credential: "xzob+5weO8l2PMt9"
             }
-        ],
-        iceTransportPolicy: 'relay'
+        ]
     });
 
     useEffect(() => {
@@ -144,11 +143,12 @@ export const useHiveMatch = (userData) => {
     };
 
     useEffect(() => {
-        if (status === "connected" && isPeerConnected && connectionRef.current) {
+        // SAFETY CHECK: Only send if the peer explicitly says the data channel is fully open
+        if (status === "connected" && isPeerConnected && connectionRef.current && connectionRef.current.connected) {
             try {
                 connectionRef.current.send(JSON.stringify({ type: "topics_sync", topics: myTopics }));
             } catch {
-                console.warn("Could not sync topics");
+                console.warn("Could not sync topics mid-call");
             }
         }
     }, [myTopics, status, isPeerConnected]);
@@ -275,11 +275,15 @@ export const useHiveMatch = (userData) => {
     const bindPeerEvents = (peer, room) => {
         peer.on("stream", (remoteStream) => {
             if (partnerVideoRef.current) partnerVideoRef.current.srcObject = remoteStream;
-            setIsPeerConnected(true);
+            setIsPeerConnected(true); // This triggers the AI generation!
         });
 
         peer.on("connect", () => {
-            peer.send(JSON.stringify({ type: "topics_sync", topics: myTopicsRef.current }));
+            try {
+                peer.send(JSON.stringify({ type: "topics_sync", topics: myTopicsRef.current }));
+            } catch (e) {
+                console.warn("Initial topic sync delayed");
+            }
         });
 
         peer.on("data", handlePeerData);
