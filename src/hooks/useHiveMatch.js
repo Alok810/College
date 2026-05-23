@@ -39,7 +39,6 @@ export const useHiveMatch = (userData) => {
                 credential: "xzob+5weO8l2PMt9"
             }
         ],
-        // 🟢 Forces strict relay to bypass same-Wi-Fi firewall blocks
         iceTransportPolicy: 'relay'
     });
 
@@ -49,11 +48,8 @@ export const useHiveMatch = (userData) => {
 
         const newSocket = io(AISHE_BACKEND_URL, {
             auth: { userId: userId },
-            // 🟢 Allow HTTP polling to wake the server, then upgrade to WebSockets
             transports: ["polling", "websocket"], 
-            // 🟢 Give Render 60 full seconds to wake up before throwing a timeout error
             timeout: 60000, 
-            // 🟢 If it drops, automatically keep knocking on the door
             reconnection: true,
             reconnectionAttempts: 10,
             reconnectionDelay: 3000
@@ -75,14 +71,6 @@ export const useHiveMatch = (userData) => {
 
     const startSearch = async () => {
         if (myTopics.length === 0) return; 
-
-        if (!socket || !socket.connected) {
-        console.error("CRITICAL ERROR: Socket is not connected to the backend!");
-        alert("Connection to server failed. Please refresh the page.");
-        return;
-    }
-    
-    console.log("Sending search request to backend with ID:", userData?.id);
 
         setStatus("searching");
         setPartnerInfo(null);
@@ -155,7 +143,6 @@ export const useHiveMatch = (userData) => {
         streamRef.current = null;
     };
 
-    // Broadcast our topics instantly when we change them mid-call
     useEffect(() => {
         if (status === "connected" && isPeerConnected && connectionRef.current) {
             try {
@@ -166,7 +153,6 @@ export const useHiveMatch = (userData) => {
         }
     }, [myTopics, status, isPeerConnected]);
 
-    // DYNAMIC AI TRIGGER: Watches for intersections and generates themes automatically
     useEffect(() => {
         if (status === "connected" && isPeerConnected && isCallerRef.current) {
             const matches = myTopics.filter(t => partnerTopics.includes(t));
@@ -194,12 +180,16 @@ export const useHiveMatch = (userData) => {
             setPartnerInfo(partnerInfo);
             setRoomCode(roomCode);
             setStatus("connected");
+            
             socket.emit("join-pod", roomCode);
-            if (isCaller) setTimeout(() => initiateWebRTC(roomCode), 50);
+            
+            // 🟢 THE RACE CONDITION FIX: Wait 1.5 seconds to ensure BOTH users have fully joined the room!
+            if (isCaller) {
+                setTimeout(() => initiateWebRTC(roomCode), 1500);
+            }
         };
 
         const handleCallIncoming = (data) => {
-            // 🟢 SIGNAL ECHO GUARD
             if (isCallerRef.current) return; 
 
             if (!connectionRef.current) {
@@ -214,7 +204,6 @@ export const useHiveMatch = (userData) => {
         };
 
         const handleCallAccepted = (signalData) => {
-            // 🟢 SIGNAL ECHO GUARD
             if (!isCallerRef.current) return; 
 
             if (connectionRef.current) {
