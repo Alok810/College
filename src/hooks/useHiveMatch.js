@@ -76,6 +76,14 @@ export const useHiveMatch = (userData) => {
     const startSearch = async () => {
         if (myTopics.length === 0) return; 
 
+        if (!socket || !socket.connected) {
+        console.error("CRITICAL ERROR: Socket is not connected to the backend!");
+        alert("Connection to server failed. Please refresh the page.");
+        return;
+    }
+    
+    console.log("Sending search request to backend with ID:", userData?.id);
+
         setStatus("searching");
         setPartnerInfo(null);
         setPartnerTopics([]);
