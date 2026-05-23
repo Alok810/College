@@ -1,11 +1,36 @@
-import React, { useState, useMemo } from 'react';
-import { Search, Eye, EyeOff, CalendarClock, Pencil, Trash2 } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Search, Eye, EyeOff, CalendarClock, Pencil, Trash2, Download } from 'lucide-react';
 
 export const ManageRecordsTab = ({ users, results, batches, branches, semesters, handleDelete, triggerEditFromResult, currentPage, totalPages, setCurrentPage }) => {
     const [manageSearch, setManageSearch] = useState('');
     const [manageBatch, setManageBatch] = useState('');
     const [manageBranch, setManageBranch] = useState('');
     const [manageSemester, setManageSemester] = useState('');
+    const [isInitialized, setIsInitialized] = useState(false);
+
+    // 🟢 NEW: Auto-select the most recently published result's filters
+    useEffect(() => {
+        if (!isInitialized && results.length > 0 && users.length > 0) {
+            const publishedResults = results.filter(r => r.isPublished);
+            
+            if (publishedResults.length > 0) {
+                // Sort by timestamp (if available) to find the absolute newest, fallback to array order
+                const latestResult = publishedResults.sort((a, b) => {
+                    const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                    const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                    return dateB - dateA; // Descending
+                })[0];
+
+                const studentObj = users.find(u => u._id === (latestResult.student._id || latestResult.student));
+                if (studentObj) {
+                    setManageBatch(studentObj.batch || '');
+                    setManageBranch(studentObj.branch || '');
+                    setManageSemester(latestResult.semester || '');
+                }
+            }
+            setIsInitialized(true);
+        }
+    }, [results, users, isInitialized]);
 
     const filteredResults = useMemo(() => {
         const userMap = new Map();
@@ -40,19 +65,109 @@ export const ManageRecordsTab = ({ users, results, batches, branches, semesters,
         return filtered;
     }, [results, users, manageSearch, manageBatch, manageBranch, manageSemester]);
 
+    const handleDownloadCSV = () => {
+        if (filteredResults.length === 0) return;
+
+        const subjectCodes = new Set();
+        filteredResults.forEach(r => {
+            if (r.subjects && Array.isArray(r.subjects)) {
+                r.subjects.forEach(sub => subjectCodes.add(sub.subjectCode));
+            }
+        });
+        const uniqueSubjects = Array.from(subjectCodes).sort();
+
+        const headers = ["Name", "Registration No", "SGPA", "Remarks", "Total Theory", "Total Practical", "Grand Total"];
+        
+        uniqueSubjects.forEach(code => {
+            headers.push(`${code}_INT`, `${code}_FIN`, `${code}_Grade`);
+        });
+        
+        const csvRows = [headers.join(",")];
+
+        filteredResults.forEach(result => {
+            const studentObj = users.find(u => u._id === (result.student._id || result.student)) || {};
+            
+            const subMap = new Map();
+            if (result.subjects && Array.isArray(result.subjects)) {
+                result.subjects.forEach(sub => subMap.set(sub.subjectCode, sub));
+            }
+
+            const row = [
+                `"${studentObj.name || 'Unknown'}"`,
+                `"${studentObj.registrationNo || 'N/A'}"`,
+                `"${result.sgpa ? result.sgpa.toFixed(2) : '0.00'}"`,
+                `"${result.remarks || 'N/A'}"`,
+                `"${result.totalTheory || '0'}"`,
+                `"${result.totalPractical || '0'}"`,
+                `"${result.grandTotal || '0'}"`
+            ];
+
+            uniqueSubjects.forEach(code => {
+                const sub = subMap.get(code);
+                if (sub) {
+                    row.push(
+                        `"${sub.terInt || '-'}"`, 
+                        `"${sub.finExt || '-'}"`, 
+                        `"${sub.grade || '-'}"`
+                    );
+                } else {
+                    row.push('""', '""', '""');
+                }
+            });
+
+            csvRows.push(row.join(","));
+        });
+
+        const csvString = csvRows.join("\n");
+        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
+        const url = window.URL.createObjectURL(blob);
+        
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = `Rigya_Results_${manageBatch}_${manageBranch}_${manageSemester}.csv`;
+        link.style.display = "none";
+        document.body.appendChild(link);
+        link.click();
+        
+        document.body.removeChild(link);
+        window.URL.revokeObjectURL(url);
+    };
+
     return (
         <div className="w-full flex flex-col">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 mb-4 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
-                <select className="p-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm" value={manageBatch} onChange={e => setManageBatch(e.target.value)}><option value="">All Batches</option>{batches.map(b => <option key={b} value={b}>{b}</option>)}</select>
-                <select className="p-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm" value={manageBranch} onChange={e => setManageBranch(e.target.value)}>
+            
+            {/* 🟢 UPDATED: Flex row holding all filters and the Export button */}
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
+                <select className="flex-1 min-w-[130px] p-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm transition-colors focus:border-indigo-400" value={manageBatch} onChange={e => setManageBatch(e.target.value)}>
+                    <option value="">All Batches</option>
+                    {batches.map(b => <option key={b} value={b}>{b}</option>)}
+                </select>
+                
+                <select className="flex-1 min-w-[130px] p-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm transition-colors focus:border-indigo-400" value={manageBranch} onChange={e => setManageBranch(e.target.value)}>
                     <option value="">All Branches</option>
                     {branches.map(b => <option key={b.value} value={b.value}>{b.label}</option>)}
                 </select>
-                <select className="p-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm col-span-2 lg:col-span-1" value={manageSemester} onChange={e => setManageSemester(e.target.value)}><option value="">All Semesters</option>{semesters.map(s => <option key={s} value={s}>{s}</option>)}</select>
-                <div className="relative col-span-2 lg:col-span-1">
+                
+                <select className="flex-1 min-w-[130px] p-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm transition-colors focus:border-indigo-400" value={manageSemester} onChange={e => setManageSemester(e.target.value)}>
+                    <option value="">All Semesters</option>
+                    {semesters.map(s => <option key={s} value={s}>{s}</option>)}
+                </select>
+                
+                <div className="flex-1 min-w-[180px] relative">
                     <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                    <input type="text" placeholder="Search Name/Reg..." value={manageSearch} onChange={e => setManageSearch(e.target.value)} className="w-full p-2.5 pl-9 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm" />
+                    <input type="text" placeholder="Search Name/Reg..." value={manageSearch} onChange={e => setManageSearch(e.target.value)} className="w-full p-2.5 pl-9 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm transition-colors focus:border-indigo-400" />
                 </div>
+                
+                {/* EXPORT BUTTON IN THE SAME ROW */}
+                {manageBatch && manageBranch && manageSemester && filteredResults.length > 0 && (
+                    <button 
+                        onClick={handleDownloadCSV} 
+                        className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-all active:scale-95 text-xs sm:text-sm whitespace-nowrap"
+                    >
+                        <Download size={16} />
+                        Export CSV
+                    </button>
+                )}
             </div>
 
             <div className="w-full flex flex-col pb-0">
