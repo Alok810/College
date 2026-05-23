@@ -29,15 +29,12 @@ export const useHiveMatch = (userData) => {
         myTopicsRef.current = myTopics;
     }, [myTopics]);
 
+    // 🟢 SECRET 1: Copied exactly from Focus Pod
     const getIceServers = () => ({
         iceServers: [
             { urls: 'stun:stun.l.google.com:19302' },
-            { urls: 'stun:global.stun.twilio.com:3478' },
-            {
-                urls: "turn:global.relay.metered.ca:80", 
-                username: "66a3e974302727873303cd22",
-                credential: "xzob+5weO8l2PMt9"
-            }
+            { urls: 'stun:stun1.l.google.com:19302' },
+            { urls: 'stun:global.stun.twilio.com:3478' }
         ]
     });
 
@@ -143,7 +140,6 @@ export const useHiveMatch = (userData) => {
     };
 
     useEffect(() => {
-        // SAFETY CHECK: Only send if the peer explicitly says the data channel is fully open
         if (status === "connected" && isPeerConnected && connectionRef.current && connectionRef.current.connected) {
             try {
                 connectionRef.current.send(JSON.stringify({ type: "topics_sync", topics: myTopics }));
@@ -183,7 +179,6 @@ export const useHiveMatch = (userData) => {
             
             socket.emit("join-pod", roomCode);
             
-            // 🟢 THE RACE CONDITION FIX: Wait 1.5 seconds to ensure BOTH users have fully joined the room!
             if (isCaller) {
                 setTimeout(() => initiateWebRTC(roomCode), 1500);
             }
@@ -191,26 +186,18 @@ export const useHiveMatch = (userData) => {
 
         const handleCallIncoming = (data) => {
             if (isCallerRef.current) return; 
-
-            if (!connectionRef.current) {
-                answerWebRTC(data.signal, data.from);
-            } else {
-                try {
-                    connectionRef.current.signal(data.signal);
-                } catch {
-                    console.warn("Trickle signal ignored");
-                }
-            }
+            // 🟢 Simplified for trickle: false
+            answerWebRTC(data.signal, data.from);
         };
 
         const handleCallAccepted = (signalData) => {
             if (!isCallerRef.current) return; 
-
+            // 🟢 Simplified for trickle: false
             if (connectionRef.current) {
                 try {
                     connectionRef.current.signal(signalData);
                 } catch {
-                    console.warn("Trickle accept ignored");
+                    console.warn("Accept ignored");
                 }
             }
         };
@@ -275,15 +262,18 @@ export const useHiveMatch = (userData) => {
     const bindPeerEvents = (peer, room) => {
         peer.on("stream", (remoteStream) => {
             if (partnerVideoRef.current) partnerVideoRef.current.srcObject = remoteStream;
-            setIsPeerConnected(true); // This triggers the AI generation!
+            setIsPeerConnected(true); 
         });
 
         peer.on("connect", () => {
-            try {
-                peer.send(JSON.stringify({ type: "topics_sync", topics: myTopicsRef.current }));
-            } catch (e) {
-                console.warn("Initial topic sync delayed");
-            }
+            // 🟢 SECRET 2: Copied exactly from Focus Pod (800ms delay)
+            setTimeout(() => {
+                try {
+                    peer.send(JSON.stringify({ type: "topics_sync", topics: myTopicsRef.current }));
+                } catch (e) {
+                    console.warn("Initial topic sync delayed");
+                }
+            }, 800);
         });
 
         peer.on("data", handlePeerData);
@@ -298,17 +288,19 @@ export const useHiveMatch = (userData) => {
         });
     };
 
+    // 🟢 SECRET 3: Copied exactly from Focus Pod (trickle: false)
     const initiateWebRTC = (room) => {
         if (!streamRef.current) return;
-        const peer = new Peer({ initiator: true, trickle: true, stream: streamRef.current, config: getIceServers() });
+        const peer = new Peer({ initiator: true, trickle: false, stream: streamRef.current, config: getIceServers() });
         peer.on("signal", (data) => socket.emit("call-user", { userToCall: room, signalData: data, from: room, name: userData.name }));
         bindPeerEvents(peer, room);
         connectionRef.current = peer;
     };
 
+    // 🟢 SECRET 3: Copied exactly from Focus Pod (trickle: false)
     const answerWebRTC = (incomingSignal, room) => {
         if (!streamRef.current) return;
-        const peer = new Peer({ initiator: false, trickle: true, stream: streamRef.current, config: getIceServers() });
+        const peer = new Peer({ initiator: false, trickle: false, stream: streamRef.current, config: getIceServers() });
         peer.on("signal", (data) => socket.emit("answer-call", { signal: data, to: room }));
         bindPeerEvents(peer, room);
         peer.signal(incomingSignal);
