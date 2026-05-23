@@ -14,7 +14,10 @@ export const EnterMarksTab = ({
     const fileInputRef = useRef(null);
     const [csvLoading, setCsvLoading] = useState(false);
 
-    const filteredStudents = users.filter(user => user.userType === 'Student' && (!uploadBatch || user.batch === uploadBatch) && (!uploadBranch || user.branch === uploadBranch));
+    // Sort students by Registration Number (Numeric Ascending)
+    const filteredStudents = users
+        .filter(user => user.userType === 'Student' && (!uploadBatch || user.batch === uploadBatch) && (!uploadBranch || user.branch === uploadBranch))
+        .sort((a, b) => (a.registrationNo || '').localeCompare(b.registrationNo || '', undefined, { numeric: true }));
 
     const recalculateAllTotals = (currentMarks, blueprint) => {
         let tTheory = 0; let tPractical = 0; let sumCredits = 0; let sumPoints = 0; let hasFail = false;
@@ -69,14 +72,37 @@ export const EnterMarksTab = ({
         }
     };
 
-    const handleMarkChange = (code, field, value) => {
-        const newMarks = { ...studentMarks, [code]: { ...studentMarks[code], [field]: value } };
-        setStudentMarks(newMarks); recalculateAllTotals(newMarks, activeBlueprint);
+    // 🟢 UPDATED: Allow typos to exist in state so the UI can turn red
+    const handleMarkChange = (sub, field, value) => {
+        let cleanValue = value;
+
+        if (cleanValue !== '') {
+            const numValue = parseFloat(cleanValue);
+            if (numValue < 0) {
+                cleanValue = '0'; // Prevent negative numbers
+            }
+        }
+
+        const newMarks = { ...studentMarks, [sub.subjectCode]: { ...studentMarks[sub.subjectCode], [field]: cleanValue } };
+        setStudentMarks(newMarks); 
+        recalculateAllTotals(newMarks, activeBlueprint);
     };
 
     const submitFinalResult = (e) => {
         e.preventDefault();
         if (!activeBlueprint) return;
+
+        // 🟢 NEW: Submit Blocker. Scans all inputs and aborts if any are over the limit.
+        let hasErrors = false;
+        activeBlueprint.subjects.forEach(sub => {
+            const marks = studentMarks[sub.subjectCode] || { finExt: '', terInt: '' };
+            if (marks.finExt !== '' && parseFloat(marks.finExt) > parseFloat(sub.extFull)) hasErrors = true;
+            if (marks.terInt !== '' && parseFloat(marks.terInt) > parseFloat(sub.intFull)) hasErrors = true;
+        });
+
+        if (hasErrors) {
+            return alert("⚠️ Action Blocked: One or more marks exceed the maximum allowed limit. Please fix the highlighted fields (in red) before saving.");
+        }
         
         const finalSubjects = activeBlueprint.subjects.map(sub => {
             const marks = studentMarks[sub.subjectCode];
@@ -95,18 +121,16 @@ export const EnterMarksTab = ({
         
         const payload = { student: selectedStudent, semester: uploadSemester, sgpa: calculatedTotals.sgpa, totalTheory: calculatedTotals.tTheory, totalPractical: calculatedTotals.tPractical, grandTotal: calculatedTotals.gTotal, remarks: calculatedTotals.remarks, subjects: finalSubjects };
 
-        // Keep it published if we are editing a published record. Make it a draft if it's brand new.
         const existingRecord = existingResultId ? results.find(r => r._id === existingResultId) : null;
         const isLive = existingRecord ? existingRecord.isPublished : false;
         payload.isPublished = isLive; 
 
         handleUpload(payload, existingResultId !== null && isEditMode, existingResultId);
         
-        // Conditional Routing
         if (existingResultId) {
-            handleTabChange('manage'); // Sends you right back to your records
+            handleTabChange('manage'); 
         } else {
-            handleTabChange('publish'); // Sends fresh drafts to the publish queue
+            handleTabChange('publish'); 
             setPublishBatch(uploadBatch);
             setPublishBranch(uploadBranch);
             setPublishSemester(uploadSemester);
@@ -117,7 +141,6 @@ export const EnterMarksTab = ({
         setExistingResultId(null);
     };
 
-    // 🟢 UPDATED: Reads the CSV file first to remove the visual header row if it exists
     const handleCSVUpload = async (event) => {
         const file = event.target.files[0];
         if (!file || !uploadBatch || !uploadBranch || !uploadSemester) {
@@ -132,19 +155,15 @@ export const EnterMarksTab = ({
                 const text = e.target.result;
                 let lines = text.split(/\r?\n/);
                 
-                // If the very first cell is empty AND the second row contains "RegistrationNo",
-                // we know they are using the new 2-row template. We remove the top visual row!
                 if (lines.length > 1 && !lines[0].includes('RegistrationNo') && lines[1].includes('RegistrationNo')) {
                     lines.shift();
                 }
                 
-                // Recombine into a clean CSV string
                 const processableCSV = lines.join('\n');
 
                 const blueprint = await getCourseBlueprint(uploadBatch, uploadBranch, uploadSemester);
                 if (!blueprint || !blueprint.subjects) throw new Error("Blueprint not found for this class.");
 
-                // Pass the cleaned string instead of the raw file
                 Papa.parse(processableCSV, {
                     header: true, 
                     skipEmptyLines: true, 
@@ -174,8 +193,14 @@ export const EnterMarksTab = ({
 
                                 const finalSubjects = blueprint.subjects.map(sub => {
                                     const cleanCode = String(sub.subjectCode).trim();
-                                    const finExt = row[`${cleanCode}_FIN`] || '';
-                                    const terInt = row[`${cleanCode}_INT`] || '';
+                                    
+                                    // For bulk CSV, we still force-cap the limit because bulk editing typos is hard
+                                    let finExt = row[`${cleanCode}_FIN`] || '';
+                                    let terInt = row[`${cleanCode}_INT`] || '';
+                                    
+                                    if (finExt !== '' && parseFloat(finExt) > parseFloat(sub.extFull)) finExt = sub.extFull.toString();
+                                    if (terInt !== '' && parseFloat(terInt) > parseFloat(sub.intFull)) terInt = sub.intFull.toString();
+
                                     const { total, grade, point } = calculateDynamicGrade(finExt, terInt, sub);
 
                                     if (sub.type === 'Theory') tTheory += parseFloat(total);
@@ -233,7 +258,6 @@ export const EnterMarksTab = ({
             }
         };
 
-        // Execute the reader
         reader.readAsText(file);
     };
 
@@ -324,8 +348,14 @@ export const EnterMarksTab = ({
                                 </thead>
                                 <tbody className="divide-y divide-slate-100">
                                     {activeBlueprint.subjects.map(sub => {
-                                        const marks = studentMarks[sub.subjectCode];
+                                        const marks = studentMarks[sub.subjectCode] || { finExt: '', terInt: '' };
+                                        
+                                        // 🟢 NEW: Calculate if the current values are invalid
+                                        const isFinInvalid = marks.finExt !== '' && parseFloat(marks.finExt) > parseFloat(sub.extFull);
+                                        const isIntInvalid = marks.terInt !== '' && parseFloat(marks.terInt) > parseFloat(sub.intFull);
+                                        
                                         const { total, grade } = calculateDynamicGrade(marks.finExt, marks.terInt, sub);
+                                        
                                         return (
                                             <tr key={sub.subjectCode} className="hover:bg-slate-50/50 transition-colors">
                                                 <td className="p-4">
@@ -338,8 +368,36 @@ export const EnterMarksTab = ({
                                                         </div>
                                                     </div>
                                                 </td>
-                                                <td className="p-4"><input type="number" placeholder={`/${sub.extFull}`} className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-center font-bold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all" value={marks.finExt} onChange={(e) => handleMarkChange(sub.subjectCode, 'finExt', e.target.value)} disabled={existingResultId && !isEditMode} /></td>
-                                                <td className="p-4"><input type="number" placeholder={`/${sub.intFull}`} className="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 text-center font-bold text-slate-800 disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all" value={marks.terInt} onChange={(e) => handleMarkChange(sub.subjectCode, 'terInt', e.target.value)} disabled={existingResultId && !isEditMode} /></td>
+                                                <td className="p-4">
+                                                    <input 
+                                                        type="number" 
+                                                        min="0" 
+                                                        placeholder={`/${sub.extFull}`} 
+                                                        className={`w-full p-2.5 border rounded-lg outline-none focus:ring-2 text-center font-bold disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all ${
+                                                            isFinInvalid 
+                                                            ? 'bg-rose-50 border-rose-500 text-rose-600 focus:border-rose-500 focus:ring-rose-200' 
+                                                            : 'border-slate-300 text-slate-800 focus:border-indigo-500 focus:ring-indigo-100'
+                                                        }`}
+                                                        value={marks.finExt} 
+                                                        onChange={(e) => handleMarkChange(sub, 'finExt', e.target.value)} 
+                                                        disabled={existingResultId && !isEditMode} 
+                                                    />
+                                                </td>
+                                                <td className="p-4">
+                                                    <input 
+                                                        type="number" 
+                                                        min="0" 
+                                                        placeholder={`/${sub.intFull}`} 
+                                                        className={`w-full p-2.5 border rounded-lg outline-none focus:ring-2 text-center font-bold disabled:bg-slate-100 disabled:text-slate-400 disabled:cursor-not-allowed transition-all ${
+                                                            isIntInvalid 
+                                                            ? 'bg-rose-50 border-rose-500 text-rose-600 focus:border-rose-500 focus:ring-rose-200' 
+                                                            : 'border-slate-300 text-slate-800 focus:border-indigo-500 focus:ring-indigo-100'
+                                                        }`}
+                                                        value={marks.terInt} 
+                                                        onChange={(e) => handleMarkChange(sub, 'terInt', e.target.value)} 
+                                                        disabled={existingResultId && !isEditMode} 
+                                                    />
+                                                </td>
                                                 <td className="p-4 text-center">
                                                     <div className="flex flex-col items-center justify-center">
                                                         <span className="font-black text-slate-900 text-lg leading-none">{total}</span>

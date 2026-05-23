@@ -1,26 +1,61 @@
-import React, { useState, useMemo } from 'react';
-import { publishBatchResults } from '../../api';
+import React, { useState, useEffect } from 'react';
+import { publishBatchResults, getAllResultsForAdmin } from '../../api';
 import { FileArchive, UploadCloud, CheckCircle2, Loader2, CalendarClock, Eye, EyeOff } from 'lucide-react';
 
 export const ReviewPublishTab = ({ 
-    users, results, batches, branches, semesters, displayMessage, fetchAdminData, handleTabChange,
+    users, batches, branches, semesters, displayMessage, fetchAdminData, handleTabChange,
     publishBatch, setPublishBatch, publishBranch, setPublishBranch, publishSemester, setPublishSemester 
 }) => {
     const [bulkPublishLoading, setBulkPublishLoading] = useState(false);
     const [scheduleDate, setScheduleDate] = useState('');
+    
+    // NEW STATES: Handle fetching the unpaginated drafts locally
+    const [pendingDraftsForPublish, setPendingDraftsForPublish] = useState([]);
+    const [isFetchingDrafts, setIsFetchingDrafts] = useState(false);
 
-    const pendingDraftsForPublish = useMemo(() => {
-        if (!publishBatch || !publishBranch || !publishSemester) return [];
-        const userMap = new Map();
-        users.forEach(u => userMap.set(u._id, u));
+    // 🟢 FETCH & SORT ON REGISTRATION NUMBER (NUMERIC ASCENDING)
+    useEffect(() => {
+        const loadDrafts = async () => {
+            if (publishBatch && publishBranch && publishSemester) {
+                setIsFetchingDrafts(true);
+                try {
+                    const data = await getAllResultsForAdmin(1, 1000); 
+                    const allResults = data.results || data; 
 
-        return results.filter(r => {
-            if (r.isPublished) return false;
-            if (r.semester !== publishSemester) return false;
-            const studentObj = userMap.get(r.student._id || r.student);
-            return studentObj && studentObj.batch === publishBatch && studentObj.branch === publishBranch;
-        });
-    }, [results, users, publishBatch, publishBranch, publishSemester]);
+                    const userMap = new Map();
+                    users.forEach(u => userMap.set(u._id, u));
+
+                    // 1. Filter down to drafts matching the class criteria
+                    const drafts = allResults.filter(r => {
+                        if (r.isPublished) return false;
+                        if (r.semester !== publishSemester) return false;
+                        const studentObj = userMap.get(r.student._id || r.student);
+                        return studentObj && studentObj.batch === publishBatch && studentObj.branch === publishBranch;
+                    });
+
+                    // 2. Sort drafts dynamically by student registration number (Increasing/Numeric Ascending)
+                    drafts.sort((a, b) => {
+                        const studentA = userMap.get(a.student._id || a.student);
+                        const studentB = userMap.get(b.student._id || b.student);
+                        const regA = studentA?.registrationNo || '';
+                        const regB = studentB?.registrationNo || '';
+                        return regA.localeCompare(regB, undefined, { numeric: true });
+                    });
+
+                    setPendingDraftsForPublish(drafts);
+                } catch (error) {
+                    console.error("Failed to load drafts:", error);
+                    displayMessage("Failed to load pending drafts.");
+                } finally {
+                    setIsFetchingDrafts(false);
+                }
+            } else {
+                setPendingDraftsForPublish([]);
+            }
+        };
+
+        loadDrafts();
+    }, [publishBatch, publishBranch, publishSemester, users, displayMessage]);
 
     const handleBulkPublish = async (forceInstant = false) => {
         if (!publishBatch || !publishBranch || !publishSemester) return alert("Please select a Batch, Branch, and Semester to publish.");
@@ -44,7 +79,8 @@ export const ReviewPublishTab = ({
                 });
 
                 displayMessage(data.message);
-                await fetchAdminData();
+                await fetchAdminData(); // Refresh global data for the Manage tab
+                setPendingDraftsForPublish([]); // Clear local drafts
                 setScheduleDate('');
                 handleTabChange('manage');
             } catch (error) {
@@ -83,7 +119,11 @@ export const ReviewPublishTab = ({
                     <h3 className="font-extrabold text-slate-800 flex items-center gap-2 text-sm sm:text-base">
                         <FileArchive size={18} className="text-amber-500" /> Pending Drafts to Publish
                     </h3>
-                    <span className="bg-amber-100 text-amber-800 text-xs font-black px-3 py-1 rounded-full w-max">{pendingDraftsForPublish.length} Found</span>
+                    {isFetchingDrafts ? (
+                        <span className="bg-slate-100 text-slate-500 text-xs font-black px-3 py-1 rounded-full w-max flex items-center gap-1"><Loader2 size={12} className="animate-spin"/> Fetching...</span>
+                    ) : (
+                        <span className="bg-amber-100 text-amber-800 text-xs font-black px-3 py-1 rounded-full w-max">{pendingDraftsForPublish.length} Found</span>
+                    )}
                 </div>
 
                 <div className="p-3 sm:p-4 pb-0">
@@ -91,6 +131,11 @@ export const ReviewPublishTab = ({
                         <div className="flex flex-col items-center justify-center text-slate-400 py-10">
                             <UploadCloud size={40} className="mb-3 opacity-50" />
                             <p className="font-medium text-sm text-center px-4">Select a Batch, Branch, and Semester above to view drafts.</p>
+                        </div>
+                    ) : isFetchingDrafts ? (
+                        <div className="flex flex-col items-center justify-center text-indigo-400 py-10">
+                            <Loader2 size={40} className="mb-3 opacity-50 animate-spin" />
+                            <p className="font-medium text-sm text-center px-4">Searching database for drafts...</p>
                         </div>
                     ) : pendingDraftsForPublish.length === 0 ? (
                         <div className="flex flex-col items-center justify-center text-emerald-500 py-10">

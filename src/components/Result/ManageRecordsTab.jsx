@@ -1,45 +1,73 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { Search, Eye, EyeOff, CalendarClock, Pencil, Trash2, Download } from 'lucide-react';
+import { Search, Eye, EyeOff, CalendarClock, Pencil, Trash2, Download, Loader2 } from 'lucide-react';
+import { getAllResultsForAdmin } from '../../api'; 
 
-export const ManageRecordsTab = ({ users, results, batches, branches, semesters, handleDelete, triggerEditFromResult, currentPage, totalPages, setCurrentPage }) => {
+export const ManageRecordsTab = ({ users, batches, branches, semesters, handleDelete, triggerEditFromResult }) => {
     const [manageSearch, setManageSearch] = useState('');
     const [manageBatch, setManageBatch] = useState('');
     const [manageBranch, setManageBranch] = useState('');
     const [manageSemester, setManageSemester] = useState('');
     const [isInitialized, setIsInitialized] = useState(false);
 
-    // 🟢 NEW: Auto-select the most recently published result's filters
+    // 🟢 NEW STATES: Independent Data & Client-Side Pagination
+    const [allRecords, setAllRecords] = useState([]);
+    const [isFetching, setIsFetching] = useState(true);
+    const [localPage, setLocalPage] = useState(1);
+    const itemsPerPage = 50; // How many to show per page
+
+    // 🟢 THE FIX: Fetch a massive unpaginated list on mount
     useEffect(() => {
-        if (!isInitialized && results.length > 0 && users.length > 0) {
-            const publishedResults = results.filter(r => r.isPublished);
-            
-            if (publishedResults.length > 0) {
-                // Sort by timestamp (if available) to find the absolute newest, fallback to array order
-                const latestResult = publishedResults.sort((a, b) => {
-                    const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
-                    const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
-                    return dateB - dateA; // Descending
-                })[0];
+        const fetchAllData = async () => {
+            setIsFetching(true);
+            try {
+                // Fetch up to 5000 records to bypass the server's small pagination limit
+                const data = await getAllResultsForAdmin(1, 5000); 
+                const fetchedResults = data.results || data;
+                setAllRecords(fetchedResults);
 
-                const studentObj = users.find(u => u._id === (latestResult.student._id || latestResult.student));
-                if (studentObj) {
-                    setManageBatch(studentObj.batch || '');
-                    setManageBranch(studentObj.branch || '');
-                    setManageSemester(latestResult.semester || '');
+                // Auto-select filters based on the latest published result
+                const publishedResults = fetchedResults.filter(r => r.isPublished);
+                if (!isInitialized && publishedResults.length > 0 && users.length > 0) {
+                    const latestResult = publishedResults.sort((a, b) => {
+                        const dateA = new Date(a.updatedAt || a.createdAt || 0).getTime();
+                        const dateB = new Date(b.updatedAt || b.createdAt || 0).getTime();
+                        return dateB - dateA;
+                    })[0];
+
+                    const studentObj = users.find(u => u._id === (latestResult.student._id || latestResult.student));
+                    if (studentObj) {
+                        setManageBatch(studentObj.batch || '');
+                        setManageBranch(studentObj.branch || '');
+                        setManageSemester(latestResult.semester || '');
+                    }
+                    setIsInitialized(true);
                 }
+            } catch (error) {
+                console.error("Failed to load master records list:", error);
+            } finally {
+                setIsFetching(false);
             }
-            setIsInitialized(true);
-        }
-    }, [results, users, isInitialized]);
+        };
 
+        if (users.length > 0) {
+            fetchAllData();
+        }
+    }, [users, isInitialized]);
+
+    // Reset pagination to Page 1 whenever a filter is changed
+    useEffect(() => {
+        setLocalPage(1);
+    }, [manageSearch, manageBatch, manageBranch, manageSemester]);
+
+    // 🟢 Filter against ALL database records, not just page 1
     const filteredResults = useMemo(() => {
         const userMap = new Map();
         users.forEach(u => userMap.set(u._id, u));
 
-        let filtered = results.filter(r => {
-            if (!r.isPublished) return false;
-
+        let filtered = allRecords.filter(r => {
+            // We want to see published AND drafts in the manage tab, so we don't filter out isPublished=false here
             const studentObj = userMap.get(r.student._id || r.student);
+            
             if (manageSearch) {
                 const searchLower = manageSearch.toLowerCase();
                 const nameMatch = studentObj?.name?.toLowerCase().includes(searchLower);
@@ -59,11 +87,21 @@ export const ManageRecordsTab = ({ users, results, batches, branches, semesters,
             if (studentA.batch !== studentB.batch) return (studentB.batch || '').localeCompare(studentA.batch || '');
             if (studentA.branch !== studentB.branch) return (studentA.branch || '').localeCompare(studentB.branch || '');
             if (a.semester !== b.semester) return (a.semester || '').localeCompare(b.semester || '');
-            return (studentA.registrationNo || '').localeCompare(studentB.registrationNo || '');
+            return (studentA.registrationNo || '').localeCompare(studentB.registrationNo || '', undefined, { numeric: true });
         });
 
         return filtered;
-    }, [results, users, manageSearch, manageBatch, manageBranch, manageSemester]);
+    }, [allRecords, users, manageSearch, manageBatch, manageBranch, manageSemester]);
+
+    // 🟢 Apply Client-Side Slicing for Pagination
+    const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
+    const paginatedResults = filteredResults.slice((localPage - 1) * itemsPerPage, localPage * itemsPerPage);
+
+    // Intercept delete to quickly remove it from the local list for an instant UI update
+    const executeDelete = async (id) => {
+        handleDelete(id); // Call parent delete
+        setAllRecords(prev => prev.filter(r => r._id !== id)); // Instantly remove from view
+    };
 
     const handleDownloadCSV = () => {
         if (filteredResults.length === 0) return;
@@ -84,6 +122,7 @@ export const ManageRecordsTab = ({ users, results, batches, branches, semesters,
         
         const csvRows = [headers.join(",")];
 
+        // 🟢 Exporting uses filteredResults (ALL matches), NOT paginatedResults!
         filteredResults.forEach(result => {
             const studentObj = users.find(u => u._id === (result.student._id || result.student)) || {};
             
@@ -135,8 +174,6 @@ export const ManageRecordsTab = ({ users, results, batches, branches, semesters,
 
     return (
         <div className="w-full flex flex-col">
-            
-            {/* 🟢 UPDATED: Flex row holding all filters and the Export button */}
             <div className="flex flex-wrap items-center gap-2 sm:gap-3 mb-4 bg-slate-50 p-3 sm:p-4 rounded-xl border border-slate-200">
                 <select className="flex-1 min-w-[130px] p-2.5 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm transition-colors focus:border-indigo-400" value={manageBatch} onChange={e => setManageBatch(e.target.value)}>
                     <option value="">All Batches</option>
@@ -158,7 +195,6 @@ export const ManageRecordsTab = ({ users, results, batches, branches, semesters,
                     <input type="text" placeholder="Search Name/Reg..." value={manageSearch} onChange={e => setManageSearch(e.target.value)} className="w-full p-2.5 pl-9 border border-slate-300 rounded-lg text-xs sm:text-sm outline-none bg-white font-bold text-slate-700 shadow-sm transition-colors focus:border-indigo-400" />
                 </div>
                 
-                {/* EXPORT BUTTON IN THE SAME ROW */}
                 {manageBatch && manageBranch && manageSemester && filteredResults.length > 0 && (
                     <button 
                         onClick={handleDownloadCSV} 
@@ -171,13 +207,18 @@ export const ManageRecordsTab = ({ users, results, batches, branches, semesters,
             </div>
 
             <div className="w-full flex flex-col pb-0">
-                <div className="flex flex-col gap-3 pb-0">
-                    {filteredResults.length === 0 ? (
+                <div className="flex flex-col gap-3 pb-0 min-h-[300px]">
+                    {isFetching ? (
+                        <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200 text-indigo-400">
+                            <Loader2 className="w-10 h-10 mb-3 animate-spin" />
+                            <p className="font-medium text-sm">Fetching complete records database...</p>
+                        </div>
+                    ) : paginatedResults.length === 0 ? (
                         <div className="flex flex-col items-center justify-center py-20 bg-white rounded-2xl border border-dashed border-slate-200">
                             <Search className="w-10 h-10 text-slate-300 mb-3" />
                             <p className="text-slate-500 font-medium text-sm">No records found matching filters.</p>
                         </div>
-                    ) : filteredResults.map(result => {
+                    ) : paginatedResults.map(result => {
                         const studentObj = users.find(u => u._id === (result.student._id || result.student));
                         return (
                             <div key={result._id} className="p-4 sm:p-5 bg-white rounded-xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4 hover:border-indigo-300 hover:shadow-md transition-all">
@@ -207,18 +248,18 @@ export const ManageRecordsTab = ({ users, results, batches, branches, semesters,
 
                                 <div className="flex w-full md:w-auto gap-2 mt-2 md:mt-0 pt-3 md:pt-0 border-t md:border-0 border-slate-100 flex-shrink-0">
                                     <button onClick={() => triggerEditFromResult(result)} className="flex-1 md:flex-none px-4 py-2.5 bg-indigo-50 text-indigo-600 font-bold rounded-lg border border-indigo-100 hover:bg-indigo-100 hover:border-indigo-300 text-xs flex items-center justify-center gap-1.5 transition-all"><Pencil size={14} /> Edit</button>
-                                    <button onClick={() => handleDelete(result._id)} className="flex-1 md:flex-none px-4 py-2.5 bg-rose-50 text-rose-600 font-bold rounded-lg border border-rose-100 hover:bg-rose-100 hover:border-rose-300 text-xs flex items-center justify-center gap-1.5 transition-all"><Trash2 size={14} /> Delete</button>
+                                    <button onClick={() => executeDelete(result._id)} className="flex-1 md:flex-none px-4 py-2.5 bg-rose-50 text-rose-600 font-bold rounded-lg border border-rose-100 hover:bg-rose-100 hover:border-rose-300 text-xs flex items-center justify-center gap-1.5 transition-all"><Trash2 size={14} /> Delete</button>
                                 </div>
                             </div>
                         )
                     })}
                 </div>
 
-                {totalPages > 1 && (
-                    <div className="flex justify-between sm:justify-center items-center gap-2 sm:gap-4 pt-4 pb-0 bg-transparent mt-0">
-                        <button onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))} disabled={currentPage === 1} className="px-4 py-2 bg-white text-slate-600 font-bold text-xs rounded-lg border border-slate-200 disabled:opacity-50 hover:bg-slate-50 transition-all shadow-sm">Previous</button>
-                        <span className="font-bold text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">Page {currentPage} of {totalPages}</span>
-                        <button onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))} disabled={currentPage === totalPages} className="px-4 py-2 bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold text-xs rounded-lg disabled:opacity-50 hover:bg-indigo-100 transition-all shadow-sm">Next Page</button>
+                {totalPages > 1 && !isFetching && (
+                    <div className="flex justify-between sm:justify-center items-center gap-2 sm:gap-4 pt-6 pb-2 bg-transparent">
+                        <button onClick={() => setLocalPage(prev => Math.max(prev - 1, 1))} disabled={localPage === 1} className="px-4 py-2 bg-white text-slate-600 font-bold text-xs rounded-lg border border-slate-200 disabled:opacity-50 hover:bg-slate-50 transition-all shadow-sm">Previous</button>
+                        <span className="font-bold text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">Page {localPage} of {totalPages}</span>
+                        <button onClick={() => setLocalPage(prev => Math.min(prev + 1, totalPages))} disabled={localPage === totalPages} className="px-4 py-2 bg-indigo-50 text-indigo-600 border border-indigo-200 font-bold text-xs rounded-lg disabled:opacity-50 hover:bg-indigo-100 transition-all shadow-sm">Next Page</button>
                     </div>
                 )}
             </div>
