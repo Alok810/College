@@ -25,16 +25,19 @@ const Result = () => {
     setTimeout(() => setMessage(''), 3000);
   }, []);
 
-  const fetchData = useCallback(async (page = 1) => {
+  const fetchData = useCallback(async () => {
+    // Hard block! If there is no user logged in, stop immediately.
     if (!authData) return; 
 
     try {
       if (isOfficial) {
-        const resultsResponse = await getAllResultsForAdmin(page); 
+        // 🟢 FIX 1: Fetch up to 5000 results instead of just page 1
+        const resultsResponse = await getAllResultsForAdmin(1, 5000); 
         setResults(resultsResponse.results || resultsResponse);
-        if (resultsResponse.pagination) setTotalPages(resultsResponse.pagination.totalPages);
+        if (resultsResponse.pagination) setTotalPages(1);
 
-        const usersResponse = await getAdminUsers(page);
+        // 🟢 FIX 2: Fetch up to 5000 users so no student is left behind
+        const usersResponse = await getAdminUsers(1, 5000);
         setUsers(usersResponse.users || usersResponse);
 
         try {
@@ -46,10 +49,11 @@ const Result = () => {
         
       } else {
         try {
-          const data = await getClassResultsForStudents(page);
+          // 🟢 FIX 3: Fetch up to 5000 class results for the student rankings
+          const data = await getClassResultsForStudents(1, 5000);
           setResults(data.results || data);
           setUsers(data.users || []);
-          if (data.pagination) setTotalPages(data.pagination.totalPages);
+          if (data.pagination) setTotalPages(1);
         } catch (e) {
           console.error("Failed to fetch class results:", e);
           const myResults = await getMyResults();

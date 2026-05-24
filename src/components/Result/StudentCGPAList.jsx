@@ -1,8 +1,8 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Search, ArrowUpDown, ChevronDown, ChevronUp, Users } from 'lucide-react';
 import { useAuth } from '../../context/AuthContext'; 
 
-const StudentCGPAList = ({ results, users, batches = [], branches = [], currentPage, totalPages, setCurrentPage }) => {
+const StudentCGPAList = ({ results = [], users = [], batches = [], branches = [] }) => {
   const { authData } = useAuth(); 
   
   // Check if user is an admin/institute
@@ -14,28 +14,50 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
   const [sortOrder, setSortOrder] = useState('cgpaDesc');
   const [expandedStudentId, setExpandedStudentId] = useState(null);
 
+  // 🟢 Local Pagination State
+  const [localPage, setLocalPage] = useState(1);
+  const itemsPerPage = 50; 
+
   const toggleExpand = (studentId) => setExpandedStudentId(prev => prev === studentId ? null : studentId);
 
   // 1. Group and calculate CGPAs
   const studentCGPAs = useMemo(() => {
     const map = new Map();
     
-    results.forEach(r => {
-      const sId = r.student._id || r.student;
+    (results || []).forEach(r => {
+      // 🟢 Prevent students from seeing unpublished drafts
+      if (!isOfficial && r.isPublished === false) return;
+
+      const sId = r.student?._id || r.student;
+      if (!sId) return;
       
-      // Get student object (fallback to authData if it's the logged-in student)
+      // Get student object safely
       let studentObj = users.find(u => u._id === sId);
       if (!studentObj && sId === authData?._id) studentObj = authData;
 
-      if (studentObj) {
-        if (!map.has(sId)) {
-          map.set(sId, { student: studentObj, totalPoints: 0, totalCredits: 0, semesters: [] });
-        }
-        const sData = map.get(sId);
-        const credits = r.subjects?.reduce((sum, sub) => sum + (parseFloat(sub.credits) || 0), 0) || 0;
-        sData.totalCredits += credits;
-        sData.totalPoints += (r.sgpa || 0) * credits;
-        sData.semesters.push({ name: r.semester, sgpa: r.sgpa, remarks: r.remarks });
+      // 🟢 FIX 1: If student isn't in the `users` array, pull the populated data from the result object
+      if (!studentObj && r.student && typeof r.student === 'object' && r.student.name) {
+        studentObj = r.student;
+      }
+
+      // 🟢 FIX 2: Absolute fallback to prevent silent dropping of records
+      if (!studentObj) {
+        studentObj = { _id: sId, name: 'Unknown Student', registrationNo: 'N/A', batch: 'N/A', branch: 'N/A' };
+      }
+
+      if (!map.has(sId)) {
+        map.set(sId, { student: studentObj, totalPoints: 0, totalCredits: 0, semesters: [] });
+      }
+      const sData = map.get(sId);
+      
+      let semesterCredits = r.subjects?.reduce((sum, sub) => sum + (parseFloat(sub.credits) || 0), 0) || 0;
+      if (semesterCredits === 0) semesterCredits = 1; // Fallback if CSV had no credits
+
+      sData.totalCredits += semesterCredits;
+      sData.totalPoints += (parseFloat(r.sgpa) || 0) * semesterCredits;
+      
+      if (!sData.semesters.find(s => s.name === r.semester)) {
+          sData.semesters.push({ name: r.semester, sgpa: parseFloat(r.sgpa) || 0, remarks: r.remarks });
       }
     });
 
@@ -43,17 +65,15 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
       ...data,
       cgpa: data.totalCredits > 0 ? (data.totalPoints / data.totalCredits).toFixed(2) : "0.00"
     }));
-  }, [results, users, authData]);
+  }, [results, users, authData, isOfficial]);
 
   // 2. Filter based on role and search terms
   const filteredStudentCGPAs = useMemo(() => {
     return studentCGPAs.filter(item => {
-      // Students ONLY see peers from same Batch & Branch
       if (!isOfficial) {
         if (item.student?.batch !== authData?.batch || item.student?.branch !== authData?.branch) return false;
       }
 
-      // Search bar filter
       if (manageSearch) {
         const searchLower = manageSearch.toLowerCase();
         const nameMatch = item.student.name?.toLowerCase().includes(searchLower);
@@ -61,7 +81,6 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
         if (!nameMatch && !regMatch) return false;
       }
       
-      // Admin dropdown filters
       if (isOfficial) {
         if (manageBatch && item.student?.batch !== manageBatch) return false;
         if (manageBranch && item.student?.branch !== manageBranch) return false;
@@ -83,13 +102,22 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
     return sorted;
   }, [filteredStudentCGPAs, sortOrder]);
 
+  // 4. Reset pagination to Page 1 if any filter changes
+  useEffect(() => {
+    setLocalPage(1);
+  }, [manageSearch, manageBatch, manageBranch, sortOrder]);
+
+  // 5. Apply Client-Side Slicing for Pagination
+  const computedTotalPages = Math.ceil(sortedAndFilteredCGPAs.length / itemsPerPage) || 1;
+  const paginatedCGPAs = sortedAndFilteredCGPAs.slice((localPage - 1) * itemsPerPage, localPage * itemsPerPage);
+
   return (
     <div className="flex-1 flex flex-col min-h-0 w-full gap-4">
       
-      {/* 🟢 HEADER & FILTERS */}
+      {/* HEADER & FILTERS */}
       <div className="bg-white shadow-sm rounded-[1.5rem] p-4 sm:p-5 border border-slate-100 flex flex-col flex-shrink-0 z-10">
         
-        {/* Dynamic Wrapper: Row for students, Column for Admins */}
+        {/* Dynamic Wrapper */}
         <div className={`flex flex-col ${!isOfficial ? 'lg:flex-row lg:items-center lg:justify-between gap-4' : 'border-b border-slate-100 pb-4 mb-4 gap-3'}`}>
 
           {/* Title Area */}
@@ -105,7 +133,7 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
             </div>
           </div>
 
-          {/* STUDENT FILTERS (Inline on Right) */}
+          {/* STUDENT FILTERS */}
           {!isOfficial && (
             <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto">
               <div className="relative w-full sm:w-64">
@@ -125,7 +153,7 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
           )}
         </div>
 
-        {/* ADMIN FILTERS (Stacked Grid underneath the line) */}
+        {/* ADMIN FILTERS */}
         {isOfficial && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
             <div className="relative lg:col-span-1">
@@ -158,15 +186,18 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
       {/* LIST CONTAINER */}
       <div className="flex-1 overflow-y-auto custom-scrollbar pr-1 flex flex-col min-h-0">
         <div className="flex flex-col gap-3 sm:gap-4 pb-4 w-full">
-          {sortedAndFilteredCGPAs.length === 0 ? (
+          {paginatedCGPAs.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 bg-white rounded-xl shadow-sm border border-slate-100">
               <Users className="w-12 h-12 text-slate-300 mb-3" />
               <p className="text-slate-500 font-medium text-sm">No records found matching your criteria.</p>
             </div>
           ) : (
-            sortedAndFilteredCGPAs.map(({ student, cgpa, semesters }, index) => {
+            paginatedCGPAs.map(({ student, cgpa, semesters }, index) => {
               const isExpanded = expandedStudentId === student._id;
               const isMe = student._id === authData?._id;
+              
+              // Rank Number calculation
+              const globalIndex = index + (localPage - 1) * itemsPerPage;
 
               return (
                 <div key={student._id} className={`bg-white rounded-xl border hover:border-indigo-300 hover:shadow-md transition-all cursor-default overflow-hidden flex-shrink-0 ${isMe ? 'border-indigo-400 shadow-sm bg-indigo-50/20' : 'border-slate-200'}`}>
@@ -174,16 +205,16 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
                   <div className="p-3 sm:p-5 flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-0">
                     <div className="flex items-center justify-between w-full md:w-auto md:flex-1">
                       <div className="flex items-center gap-2 sm:gap-4 text-left min-w-0">
-                        <span className={`text-base sm:text-lg font-black w-6 sm:w-8 text-center flex-shrink-0 ${index < 3 && sortOrder === 'cgpaDesc' ? 'text-emerald-500' : 'text-slate-400'}`}>
-                          #{index + 1 + ((currentPage || 1) - 1) * 50}
+                        <span className={`text-base sm:text-lg font-black w-6 sm:w-8 text-center flex-shrink-0 ${globalIndex < 3 && sortOrder === 'cgpaDesc' ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          #{globalIndex + 1}
                         </span>
                         <div className="flex flex-col min-w-0">
                           <h4 className="font-extrabold text-slate-900 text-sm sm:text-xl truncate flex items-center gap-2">
-                            <span className="truncate">{student.name || 'Unknown Student'}</span>
+                            <span className="truncate">{student.name}</span>
                             {isMe && <span className="bg-indigo-600 text-white text-[9px] px-2 py-0.5 rounded-full uppercase tracking-wider flex-shrink-0">You</span>}
                           </h4>
                           <span className="text-[10px] sm:text-sm font-bold text-slate-500 mt-0.5 sm:mt-1 truncate">
-                            Reg: {student.registrationNo || 'N/A'} {isOfficial && `• ${student.branch} (${student.batch})`}
+                            Reg: {student.registrationNo} {isOfficial && `• ${student.branch} (${student.batch})`}
                           </span>
                         </div>
                       </div>
@@ -225,22 +256,22 @@ const StudentCGPAList = ({ results, users, batches = [], branches = [], currentP
           )}
         </div>
 
-        {/* PAGINATION */}
-        {totalPages > 1 && setCurrentPage && (
+        {/* 🟢 LOCAL PAGINATION CONTROLS */}
+        {computedTotalPages > 1 && (
           <div className="flex justify-between sm:justify-center items-center gap-2 sm:gap-4 pt-2 sm:pt-4 pb-4 mt-0">
             <button 
-              onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
-              disabled={currentPage === 1}
+              onClick={() => setLocalPage(prev => Math.max(prev - 1, 1))}
+              disabled={localPage === 1}
               className="px-3 sm:px-4 py-2 bg-white text-slate-600 font-bold text-xs rounded-lg border border-slate-200 disabled:opacity-50 hover:bg-slate-50 transition-all shadow-sm"
             >
               Previous
             </button>
             <span className="font-bold text-[10px] sm:text-xs text-slate-500 whitespace-nowrap">
-              Page {currentPage} of {totalPages}
+              Page {localPage} of {computedTotalPages}
             </span>
             <button 
-              onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
-              disabled={currentPage === totalPages}
+              onClick={() => setLocalPage(prev => Math.min(prev + 1, computedTotalPages))}
+              disabled={localPage === computedTotalPages}
               className="px-3 sm:px-4 py-2 bg-white text-indigo-600 border border-slate-200 font-bold text-xs rounded-lg disabled:opacity-50 hover:bg-indigo-50 hover:border-indigo-200 transition-all shadow-sm"
             >
               Next Page
