@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, EyeOff, CalendarClock, Pencil, Trash2, Download, Loader2 } from 'lucide-react';
 import { getAllResultsForAdmin } from '../../api'; 
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 export const ManageRecordsTab = ({ users, batches, branches, semesters, handleDelete, triggerEditFromResult }) => {
     const [manageSearch, setManageSearch] = useState('');
@@ -9,23 +11,21 @@ export const ManageRecordsTab = ({ users, batches, branches, semesters, handleDe
     const [manageSemester, setManageSemester] = useState('');
     const [isInitialized, setIsInitialized] = useState(false);
 
-    // 🟢 NEW STATES: Independent Data & Client-Side Pagination
+    // Independent Data & Client-Side Pagination
     const [allRecords, setAllRecords] = useState([]);
     const [isFetching, setIsFetching] = useState(true);
     const [localPage, setLocalPage] = useState(1);
-    const itemsPerPage = 50; // How many to show per page
+    const itemsPerPage = 50; 
 
-    // 🟢 THE FIX: Fetch a massive unpaginated list on mount
+    // Fetch master list on mount
     useEffect(() => {
         const fetchAllData = async () => {
             setIsFetching(true);
             try {
-                // Fetch up to 5000 records to bypass the server's small pagination limit
                 const data = await getAllResultsForAdmin(1, 5000); 
                 const fetchedResults = data.results || data;
                 setAllRecords(fetchedResults);
 
-                // Auto-select filters based on the latest published result
                 const publishedResults = fetchedResults.filter(r => r.isPublished);
                 if (!isInitialized && publishedResults.length > 0 && users.length > 0) {
                     const latestResult = publishedResults.sort((a, b) => {
@@ -59,13 +59,12 @@ export const ManageRecordsTab = ({ users, batches, branches, semesters, handleDe
         setLocalPage(1);
     }, [manageSearch, manageBatch, manageBranch, manageSemester]);
 
-    // 🟢 Filter against ALL database records, not just page 1
+    // Filter against ALL database records
     const filteredResults = useMemo(() => {
         const userMap = new Map();
         users.forEach(u => userMap.set(u._id, u));
 
         let filtered = allRecords.filter(r => {
-            // We want to see published AND drafts in the manage tab, so we don't filter out isPublished=false here
             const studentObj = userMap.get(r.student._id || r.student);
             
             if (manageSearch) {
@@ -93,36 +92,71 @@ export const ManageRecordsTab = ({ users, batches, branches, semesters, handleDe
         return filtered;
     }, [allRecords, users, manageSearch, manageBatch, manageBranch, manageSemester]);
 
-    // 🟢 Apply Client-Side Slicing for Pagination
+    // Apply Client-Side Slicing for Pagination
     const totalPages = Math.ceil(filteredResults.length / itemsPerPage) || 1;
     const paginatedResults = filteredResults.slice((localPage - 1) * itemsPerPage, localPage * itemsPerPage);
 
-    // Intercept delete to quickly remove it from the local list for an instant UI update
     const executeDelete = async (id) => {
-        handleDelete(id); // Call parent delete
-        setAllRecords(prev => prev.filter(r => r._id !== id)); // Instantly remove from view
+        handleDelete(id); 
+        setAllRecords(prev => prev.filter(r => r._id !== id)); 
     };
 
-    const handleDownloadCSV = () => {
+    const handleDownloadExcel = async () => {
         if (filteredResults.length === 0) return;
 
-        const subjectCodes = new Set();
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Results');
+
+        // 1. Gather Unique Subjects & Names
+        const subjectMap = new Map();
         filteredResults.forEach(r => {
             if (r.subjects && Array.isArray(r.subjects)) {
-                r.subjects.forEach(sub => subjectCodes.add(sub.subjectCode));
+                r.subjects.forEach(sub => {
+                    if (!subjectMap.has(sub.subjectCode)) {
+                        subjectMap.set(sub.subjectCode, sub.subjectName || sub.subjectCode);
+                    }
+                });
             }
         });
-        const uniqueSubjects = Array.from(subjectCodes).sort();
+        const uniqueSubjects = Array.from(subjectMap.keys()).sort();
 
-        const headers = ["Name", "Registration No", "SGPA", "Remarks", "Total Theory", "Total Practical", "Grand Total"];
-        
+        // 2. CREATE SUPER HEADER (Row 1 - Merged Subject Names)
+        const superHeader = ["Student Details", "", "", "", "", "", ""]; // 7 empty slots for the base columns
         uniqueSubjects.forEach(code => {
-            headers.push(`${code}_INT`, `${code}_FIN`, `${code}_Grade`);
+            const fullName = subjectMap.get(code);
+            superHeader.push(`${fullName} (${code})`); // First column gets the name
+            superHeader.push("", "", ""); // Next 3 columns get empty strings to be merged
+        });
+        const row1 = worksheet.addRow(superHeader);
+
+        // Merge Base Columns
+        worksheet.mergeCells(1, 1, 1, 7); 
+        row1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
+        row1.getCell(1).font = { bold: true, size: 12 };
+
+        // Merge Subject Columns
+        uniqueSubjects.forEach((code, index) => {
+            const startCol = 8 + (index * 4); // 7 base cols, so first subject starts at col 8
+            const endCol = startCol + 3;
+            worksheet.mergeCells(1, startCol, 1, endCol);
+            
+            const cell = row1.getCell(startCol);
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.font = { bold: true, size: 11 };
+        });
+
+        // 3. CREATE STANDARD HEADERS (Row 2 - Sub Headers)
+        const headers = ["Name", "Registration No", "SGPA", "Remarks", "Total Theory", "Total Practical", "Grand Total"];
+        uniqueSubjects.forEach(code => {
+            // Simplified headers since the Subject Name is now above them
+            headers.push(`INT`, `FIN`, `Total`, `Grade`);
         });
         
-        const csvRows = [headers.join(",")];
+        const row2 = worksheet.addRow(headers);
+        row2.font = { bold: true };
+        row2.alignment = { horizontal: 'center', vertical: 'middle' };
 
-        // 🟢 Exporting uses filteredResults (ALL matches), NOT paginatedResults!
+        // 4. ADD DATA ROWS
         filteredResults.forEach(result => {
             const studentObj = users.find(u => u._id === (result.student._id || result.student)) || {};
             
@@ -132,44 +166,81 @@ export const ManageRecordsTab = ({ users, batches, branches, semesters, handleDe
             }
 
             const row = [
-                `"${studentObj.name || 'Unknown'}"`,
-                `"${studentObj.registrationNo || 'N/A'}"`,
-                `"${result.sgpa ? result.sgpa.toFixed(2) : '0.00'}"`,
-                `"${result.remarks || 'N/A'}"`,
-                `"${result.totalTheory || '0'}"`,
-                `"${result.totalPractical || '0'}"`,
-                `"${result.grandTotal || '0'}"`
+                studentObj.name || 'Unknown',
+                studentObj.registrationNo || 'N/A',
+                result.sgpa ? parseFloat(result.sgpa.toFixed(2)) : 0,
+                result.remarks || 'N/A',
+                parseFloat(result.totalTheory || 0),
+                parseFloat(result.totalPractical || 0),
+                parseFloat(result.grandTotal || 0)
             ];
 
             uniqueSubjects.forEach(code => {
                 const sub = subMap.get(code);
                 if (sub) {
+                    const intScore = parseFloat(sub.terInt) || 0;
+                    const finScore = parseFloat(sub.finExt) || 0;
+                    const subjectTotal = intScore + finScore;
+
                     row.push(
-                        `"${sub.terInt || '-'}"`, 
-                        `"${sub.finExt || '-'}"`, 
-                        `"${sub.grade || '-'}"`
+                        sub.terInt !== undefined && sub.terInt !== '' ? intScore : '-',
+                        sub.finExt !== undefined && sub.finExt !== '' ? finScore : '-',
+                        subjectTotal,
+                        sub.grade || '-'
                     );
                 } else {
-                    row.push('""', '""', '""');
+                    row.push('-', '-', '-', '-');
                 }
             });
 
-            csvRows.push(row.join(","));
+            worksheet.addRow(row);
         });
 
-        const csvString = csvRows.join("\n");
-        const blob = new Blob([csvString], { type: "text/csv;charset=utf-8;" });
-        const url = window.URL.createObjectURL(blob);
+        // 5. STYLING & COLORS
+        const colorPalette = ['FFD9E1F2', 'FFE2EFDA', 'FFFFF2CC', 'FFFCE4D6', 'FFE6E6E6', 'FFD5A6BD', 'FFC9DAF8'];
+        const baseColumnCount = 7;
         
-        const link = document.createElement("a");
-        link.href = url;
-        link.download = `Rigya_Results_${manageBatch}_${manageBranch}_${manageSemester}.csv`;
-        link.style.display = "none";
-        document.body.appendChild(link);
-        link.click();
+        uniqueSubjects.forEach((code, index) => {
+            const startCol = baseColumnCount + (index * 4) + 1;
+            const hexColor = colorPalette[index % colorPalette.length];
+
+            // Color the merged Super Header cell
+            row1.getCell(startCol).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: hexColor }
+            };
+
+            // Color the individual columns below it
+            for (let i = 0; i < 4; i++) {
+                const col = worksheet.getColumn(startCol + i);
+                col.width = 10; 
+                col.eachCell((cell, rowNumber) => {
+                    // Skip row 1 because it's merged and styled above
+                    if (rowNumber > 1) {
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: hexColor }
+                        };
+                        // Center align the data rows (Row 3 and below)
+                        if (rowNumber > 2) {
+                            cell.alignment = { horizontal: 'center' };
+                        }
+                    }
+                });
+            }
+        });
+
+        // Fix base column widths
+        worksheet.getColumn(1).width = 25; 
+        worksheet.getColumn(2).width = 20; 
+
+        // 6. GENERATE AND SAVE
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
         
-        document.body.removeChild(link);
-        window.URL.revokeObjectURL(url);
+        saveAs(blob, `Rigya_Results_${manageBatch}_${manageBranch}_${manageSemester}.xlsx`);
     };
 
     return (
@@ -197,11 +268,11 @@ export const ManageRecordsTab = ({ users, batches, branches, semesters, handleDe
                 
                 {manageBatch && manageBranch && manageSemester && filteredResults.length > 0 && (
                     <button 
-                        onClick={handleDownloadCSV} 
+                        onClick={handleDownloadExcel} 
                         className="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-lg font-bold shadow-sm transition-all active:scale-95 text-xs sm:text-sm whitespace-nowrap"
                     >
                         <Download size={16} />
-                        Export CSV
+                        Export Excel
                     </button>
                 )}
             </div>

@@ -1,5 +1,6 @@
 import React, { useRef, useState } from 'react';
 import Papa from 'papaparse';
+import ExcelJS from 'exceljs'; // 🟢 Added ExcelJS for reading uploads
 import { getCourseBlueprint, bulkUploadResults } from '../../api';
 import { calculateDynamicGrade } from './resultUtils';
 import { Calculator, FileSpreadsheet, UploadCloud, Lock, CheckCircle2, Loader2, Unlock } from 'lucide-react';
@@ -14,7 +15,6 @@ export const EnterMarksTab = ({
     const fileInputRef = useRef(null);
     const [csvLoading, setCsvLoading] = useState(false);
 
-    // Sort students by Registration Number (Numeric Ascending)
     const filteredStudents = users
         .filter(user => user.userType === 'Student' && (!uploadBatch || user.batch === uploadBatch) && (!uploadBranch || user.branch === uploadBranch))
         .sort((a, b) => (a.registrationNo || '').localeCompare(b.registrationNo || '', undefined, { numeric: true }));
@@ -53,7 +53,6 @@ export const EnterMarksTab = ({
                 data.subjects.forEach(sub => {
                     const cleanSubCode = String(sub.subjectCode).trim();
                     const exSub = existingResult.subjects.find(s => String(s.subjectCode).trim() === cleanSubCode);
-                    
                     initialMarks[sub.subjectCode] = { 
                         finExt: exSub && exSub.finExt !== undefined ? exSub.finExt : '', 
                         terInt: exSub && exSub.terInt !== undefined ? exSub.terInt : '' 
@@ -72,17 +71,12 @@ export const EnterMarksTab = ({
         }
     };
 
-    // 🟢 UPDATED: Allow typos to exist in state so the UI can turn red
     const handleMarkChange = (sub, field, value) => {
         let cleanValue = value;
-
         if (cleanValue !== '') {
             const numValue = parseFloat(cleanValue);
-            if (numValue < 0) {
-                cleanValue = '0'; // Prevent negative numbers
-            }
+            if (numValue < 0) cleanValue = '0'; 
         }
-
         const newMarks = { ...studentMarks, [sub.subjectCode]: { ...studentMarks[sub.subjectCode], [field]: cleanValue } };
         setStudentMarks(newMarks); 
         recalculateAllTotals(newMarks, activeBlueprint);
@@ -92,7 +86,6 @@ export const EnterMarksTab = ({
         e.preventDefault();
         if (!activeBlueprint) return;
 
-        // 🟢 NEW: Submit Blocker. Scans all inputs and aborts if any are over the limit.
         let hasErrors = false;
         activeBlueprint.subjects.forEach(sub => {
             const marks = studentMarks[sub.subjectCode] || { finExt: '', terInt: '' };
@@ -108,22 +101,15 @@ export const EnterMarksTab = ({
             const marks = studentMarks[sub.subjectCode];
             const { total, grade } = calculateDynamicGrade(marks.finExt, marks.terInt, sub);
             return { 
-                subjectCode: String(sub.subjectCode).trim(), 
-                subjectName: sub.subjectName, 
-                type: sub.type, 
-                credits: sub.credits, 
-                finExt: marks.finExt, 
-                terInt: marks.terInt, 
-                total: total.toString(), 
-                grade: grade 
+                subjectCode: String(sub.subjectCode).trim(), subjectName: sub.subjectName, 
+                type: sub.type, credits: sub.credits, finExt: marks.finExt, terInt: marks.terInt, 
+                total: total.toString(), grade: grade 
             };
         });
         
         const payload = { student: selectedStudent, semester: uploadSemester, sgpa: calculatedTotals.sgpa, totalTheory: calculatedTotals.tTheory, totalPractical: calculatedTotals.tPractical, grandTotal: calculatedTotals.gTotal, remarks: calculatedTotals.remarks, subjects: finalSubjects };
-
         const existingRecord = existingResultId ? results.find(r => r._id === existingResultId) : null;
-        const isLive = existingRecord ? existingRecord.isPublished : false;
-        payload.isPublished = isLive; 
+        payload.isPublished = existingRecord ? existingRecord.isPublished : false; 
 
         handleUpload(payload, existingResultId !== null && isEditMode, existingResultId);
         
@@ -131,134 +117,172 @@ export const EnterMarksTab = ({
             handleTabChange('manage'); 
         } else {
             handleTabChange('publish'); 
-            setPublishBatch(uploadBatch);
-            setPublishBranch(uploadBranch);
-            setPublishSemester(uploadSemester);
+            setPublishBatch(uploadBatch); setPublishBranch(uploadBranch); setPublishSemester(uploadSemester);
         }
 
-        setActiveBlueprint(null); 
-        setSelectedStudent(''); 
-        setExistingResultId(null);
+        setActiveBlueprint(null); setSelectedStudent(''); setExistingResultId(null);
     };
 
-    const handleCSVUpload = async (event) => {
+    // 🟢 NEW: Core Processor extracted so both CSV and Excel can share it
+    const processExtractedData = async (parsedData, blueprint) => {
+        try {
+            const bulkPayload = [];
+            let skippedCount = 0;
+            const studentMap = new Map();
+            
+            filteredStudents.forEach(s => {
+                if (s.registrationNo) studentMap.set(String(s.registrationNo).trim(), s);
+            });
+
+            for (let row of parsedData) {
+                const regNo = String(row['RegistrationNo'] || '').trim();
+                if (!regNo) continue;
+                const student = studentMap.get(regNo);
+
+                if (!student) {
+                    console.warn(`⚠️ Skipped: Student ${regNo} not found in ${uploadBranch} ${uploadBatch}.`);
+                    skippedCount++; continue;
+                }
+
+                let tTheory = 0; let tPractical = 0; let sumCredits = 0; let sumPoints = 0; let hasFail = false;
+
+                const finalSubjects = blueprint.subjects.map(sub => {
+                    const cleanCode = String(sub.subjectCode).trim();
+                    let finExt = row[`${cleanCode}_FIN`] || '';
+                    let terInt = row[`${cleanCode}_INT`] || '';
+                    
+                    if (finExt !== '' && parseFloat(finExt) > parseFloat(sub.extFull)) finExt = sub.extFull.toString();
+                    if (terInt !== '' && parseFloat(terInt) > parseFloat(sub.intFull)) terInt = sub.intFull.toString();
+
+                    const { total, grade, point } = calculateDynamicGrade(finExt, terInt, sub);
+
+                    if (sub.type === 'Theory') tTheory += parseFloat(total);
+                    if (sub.type === 'Practical') tPractical += parseFloat(total);
+                    if (grade === 'F') hasFail = true;
+                    sumCredits += sub.credits; sumPoints += (sub.credits * point);
+
+                    return { subjectCode: cleanCode, subjectName: sub.subjectName, type: sub.type, credits: sub.credits, finExt, terInt, total: total.toString(), grade };
+                });
+
+                const sgpa = sumCredits > 0 ? (sumPoints / sumCredits).toFixed(2) : 0;
+                const remarks = hasFail ? 'PROMOTED' : 'PASSED';
+
+                bulkPayload.push({
+                    student: student._id, semester: uploadSemester, sgpa,
+                    totalTheory: tTheory, totalPractical: tPractical, grandTotal: tTheory + tPractical,
+                    remarks, subjects: finalSubjects, isPublished: false
+                });
+            }
+
+            if (bulkPayload.length === 0) {
+                alert(`Upload Failed: Found 0 matching students.\n\n(We had to skip ${skippedCount} rows because those Registration Numbers don't exist in the database yet).`);
+                return;
+            }
+
+            const overwritingCount = bulkPayload.filter(newDraft =>
+                results.some(existing => (existing.student._id || existing.student) === newDraft.student && existing.semester === uploadSemester && existing.isPublished === true)
+            ).length;
+
+            if (overwritingCount > 0) {
+                const confirmMsg = `⚠️ WARNING: ${overwritingCount} students in this file already have LIVE published results for ${uploadSemester}.\n\nUploading this will OVERWRITE their live records and turn them back into Drafts. Do you wish to continue?`;
+                if (!window.confirm(confirmMsg)) return;
+            }
+
+            const response = await bulkUploadResults({ results: bulkPayload });
+            displayMessage(response.message || `Uploaded ${bulkPayload.length} drafts!`);
+            await fetchAdminData();
+
+            handleTabChange('publish');
+            setPublishBatch(uploadBatch); setPublishBranch(uploadBranch); setPublishSemester(uploadSemester);
+
+        } finally {
+            setCsvLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
+    };
+
+    // 🟢 UPDATED: Omni-Loader handles both CSV and Excel seamlessly
+    const handleFileUpload = async (event) => {
         const file = event.target.files[0];
         if (!file || !uploadBatch || !uploadBranch || !uploadSemester) {
-            return alert("Please select Batch, Branch, and Semester first before uploading CSV.");
+            return alert("Please select Batch, Branch, and Semester first before uploading.");
         }
 
         setCsvLoading(true);
+        const fileName = file.name.toLowerCase();
+        const isExcel = fileName.endsWith('.xlsx') || fileName.endsWith('.xls');
 
-        const reader = new FileReader();
-        reader.onload = async (e) => {
-            try {
-                const text = e.target.result;
-                let lines = text.split(/\r?\n/);
-                
-                if (lines.length > 1 && !lines[0].includes('RegistrationNo') && lines[1].includes('RegistrationNo')) {
-                    lines.shift();
-                }
-                
-                const processableCSV = lines.join('\n');
+        try {
+            const blueprint = await getCourseBlueprint(uploadBatch, uploadBranch, uploadSemester);
+            if (!blueprint || !blueprint.subjects) throw new Error("Blueprint not found for this class.");
 
-                const blueprint = await getCourseBlueprint(uploadBatch, uploadBranch, uploadSemester);
-                if (!blueprint || !blueprint.subjects) throw new Error("Blueprint not found for this class.");
+            if (isExcel) {
+                // EXCEL PARSING
+                const arrayBuffer = await file.arrayBuffer();
+                const workbook = new ExcelJS.Workbook();
+                await workbook.xlsx.load(arrayBuffer);
+                const worksheet = workbook.worksheets[0];
 
-                Papa.parse(processableCSV, {
-                    header: true, 
-                    skipEmptyLines: true, 
-                    transformHeader: header => header.trim(),
-                    complete: async function (parsedResults) {
-                        try {
-                            const csvData = parsedResults.data;
-                            const bulkPayload = [];
-                            let skippedCount = 0;
+                // Dynamically find the header row containing "RegistrationNo"
+                let headerRowNumber = 1;
+                worksheet.eachRow((row, rowNum) => {
+                    const rowVals = row.values;
+                    if (rowVals.some(v => String(v).includes('RegistrationNo'))) {
+                        headerRowNumber = rowNum;
+                    }
+                });
 
-                            const studentMap = new Map();
-                            filteredStudents.forEach(s => {
-                                if (s.registrationNo) studentMap.set(String(s.registrationNo).trim(), s);
-                            });
+                const headers = worksheet.getRow(headerRowNumber).values;
+                const parsedData = [];
 
-                            for (let row of csvData) {
-                                const regNo = String(row['RegistrationNo'] || '').trim();
-                                if (!regNo) continue;
-                                const student = studentMap.get(regNo);
-
-                                if (!student) {
-                                    console.warn(`⚠️ Skipped: Student ${regNo} not found in ${uploadBranch} ${uploadBatch}.`);
-                                    skippedCount++; continue;
+                worksheet.eachRow((row, rowNum) => {
+                    if (rowNum > headerRowNumber) {
+                        const rowData = {};
+                        row.values.forEach((val, colIndex) => {
+                            const header = headers[colIndex];
+                            if (header) {
+                                let cleanVal = val;
+                                // Extract formula results or rich text if Excel formatted it weirdly
+                                if (val && typeof val === 'object') {
+                                    cleanVal = val.result !== undefined ? val.result : (val.text || '');
                                 }
-
-                                let tTheory = 0; let tPractical = 0; let sumCredits = 0; let sumPoints = 0; let hasFail = false;
-
-                                const finalSubjects = blueprint.subjects.map(sub => {
-                                    const cleanCode = String(sub.subjectCode).trim();
-                                    
-                                    // For bulk CSV, we still force-cap the limit because bulk editing typos is hard
-                                    let finExt = row[`${cleanCode}_FIN`] || '';
-                                    let terInt = row[`${cleanCode}_INT`] || '';
-                                    
-                                    if (finExt !== '' && parseFloat(finExt) > parseFloat(sub.extFull)) finExt = sub.extFull.toString();
-                                    if (terInt !== '' && parseFloat(terInt) > parseFloat(sub.intFull)) terInt = sub.intFull.toString();
-
-                                    const { total, grade, point } = calculateDynamicGrade(finExt, terInt, sub);
-
-                                    if (sub.type === 'Theory') tTheory += parseFloat(total);
-                                    if (sub.type === 'Practical') tPractical += parseFloat(total);
-                                    if (grade === 'F') hasFail = true;
-                                    sumCredits += sub.credits; sumPoints += (sub.credits * point);
-
-                                    return { subjectCode: cleanCode, subjectName: sub.subjectName, type: sub.type, credits: sub.credits, finExt, terInt, total: total.toString(), grade };
-                                });
-
-                                const sgpa = sumCredits > 0 ? (sumPoints / sumCredits).toFixed(2) : 0;
-                                const remarks = hasFail ? 'PROMOTED' : 'PASSED';
-
-                                bulkPayload.push({
-                                    student: student._id, semester: uploadSemester, sgpa,
-                                    totalTheory: tTheory, totalPractical: tPractical, grandTotal: tTheory + tPractical,
-                                    remarks, subjects: finalSubjects, isPublished: false
-                                });
+                                rowData[String(header).trim()] = String(cleanVal !== null && cleanVal !== undefined ? cleanVal : '').trim();
                             }
-
-                            if (bulkPayload.length === 0) {
-                                return alert(`Upload Failed: Found 0 matching students.\n\n(We had to skip ${skippedCount} rows because those Registration Numbers don't exist in the ${uploadBranch} ${uploadBatch} database yet).`);
-                            }
-
-                            const overwritingCount = bulkPayload.filter(newDraft =>
-                                results.some(existing => (existing.student._id || existing.student) === newDraft.student && existing.semester === uploadSemester && existing.isPublished === true)
-                            ).length;
-
-                            if (overwritingCount > 0) {
-                                const confirmMsg = `⚠️ WARNING: ${overwritingCount} students in this CSV already have LIVE published results for ${uploadSemester}.\n\nUploading this CSV will OVERWRITE their live records and turn them back into Drafts. Do you wish to continue?`;
-                                if (!window.confirm(confirmMsg)) {
-                                    setCsvLoading(false);
-                                    if (fileInputRef.current) fileInputRef.current.value = "";
-                                    return;
-                                }
-                            }
-
-                            const response = await bulkUploadResults({ results: bulkPayload });
-                            displayMessage(response.message || `Uploaded ${bulkPayload.length} drafts!`);
-                            await fetchAdminData();
-
-                            handleTabChange('publish');
-                            setPublishBatch(uploadBatch); setPublishBranch(uploadBranch); setPublishSemester(uploadSemester);
-
-                        } catch (e) {
-                            alert("Error processing CSV: " + e.message);
-                        } finally {
-                            setCsvLoading(false);
-                            if (fileInputRef.current) fileInputRef.current.value = "";
+                        });
+                        
+                        if (rowData['RegistrationNo']) {
+                            parsedData.push(rowData);
                         }
                     }
                 });
-            } catch (error) {
-                alert(error.message); setCsvLoading(false);
-            }
-        };
 
-        reader.readAsText(file);
+                await processExtractedData(parsedData, blueprint);
+
+            } else {
+                // CSV PARSING (Fallback)
+                const reader = new FileReader();
+                reader.onload = async (e) => {
+                    const text = e.target.result;
+                    let lines = text.split(/\r?\n/);
+                    // Skip super headers if CSV was saved from our advanced Excel template
+                    if (lines.length > 1 && !lines[0].includes('RegistrationNo') && lines[1].includes('RegistrationNo')) {
+                        lines.shift();
+                    }
+                    
+                    Papa.parse(lines.join('\n'), {
+                        header: true, skipEmptyLines: true, transformHeader: h => h.trim(),
+                        complete: async function (parsedResults) {
+                            await processExtractedData(parsedResults.data, blueprint);
+                        }
+                    });
+                };
+                reader.readAsText(file);
+            }
+        } catch (error) {
+            alert("Error processing file: " + error.message);
+            setCsvLoading(false);
+            if (fileInputRef.current) fileInputRef.current.value = "";
+        }
     };
 
     return (
@@ -268,7 +292,7 @@ export const EnterMarksTab = ({
                     <div className="flex justify-center mb-6 overflow-x-auto pb-2 custom-scrollbar">
                         <div className="bg-slate-200 p-1.5 rounded-xl inline-flex shadow-inner">
                             <button onClick={() => { setEntryMethod('manual'); setSelectedStudent(''); }} className={`px-4 sm:px-6 py-2.5 rounded-lg text-sm font-black transition-all whitespace-nowrap ${entryMethod === 'manual' ? 'bg-white text-indigo-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-300/50'}`}>Single Student (Manual)</button>
-                            <button onClick={() => { setEntryMethod('csv'); setSelectedStudent(''); }} className={`px-4 sm:px-6 py-2.5 rounded-lg text-sm font-black transition-all whitespace-nowrap ${entryMethod === 'csv' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-300/50'}`}>Whole Class (CSV)</button>
+                            <button onClick={() => { setEntryMethod('csv'); setSelectedStudent(''); }} className={`px-4 sm:px-6 py-2.5 rounded-lg text-sm font-black transition-all whitespace-nowrap ${entryMethod === 'csv' ? 'bg-white text-emerald-600 shadow-sm' : 'text-slate-500 hover:text-slate-700 hover:bg-slate-300/50'}`}>Whole Class (Excel / CSV)</button>
                         </div>
                     </div>
 
@@ -307,12 +331,13 @@ export const EnterMarksTab = ({
                             </button>
                         ) : (
                             <div className="w-full sm:w-2/3 relative animate-in fade-in zoom-in-95 duration-200">
-                                <input type="file" accept=".csv" ref={fileInputRef} onChange={handleCSVUpload} className="hidden" id="csv-upload" />
+                                {/* 🟢 ALLOW BOTH EXCEL AND CSV */}
+                                <input type="file" accept=".csv, .xlsx, .xls" ref={fileInputRef} onChange={handleFileUpload} className="hidden" id="csv-upload" />
                                 <label htmlFor="csv-upload" className={`w-full py-4 ${csvLoading ? 'bg-slate-300 text-slate-500' : 'bg-emerald-600 hover:bg-emerald-700 text-white'} font-extrabold rounded-xl transition-all text-sm shadow-md cursor-pointer flex items-center justify-center gap-2`}>
                                     {csvLoading ? <Loader2 size={20} className="animate-spin" /> : <FileSpreadsheet size={20} />}
-                                    {csvLoading ? 'Processing CSV...' : 'Select & Upload CSV File'}
+                                    {csvLoading ? 'Processing Data...' : 'Upload Excel / CSV File'}
                                 </label>
-                                <p className="text-[10px] font-bold text-slate-400 mt-3 mb-0">Format: RegistrationNo, SubCode_FIN, SubCode_INT, etc.</p>
+                                <p className="text-[10px] font-bold text-slate-400 mt-3 mb-0">Upload the Template generated in Step 1.</p>
                             </div>
                         )}
                     </div>
@@ -350,7 +375,6 @@ export const EnterMarksTab = ({
                                     {activeBlueprint.subjects.map(sub => {
                                         const marks = studentMarks[sub.subjectCode] || { finExt: '', terInt: '' };
                                         
-                                        // 🟢 NEW: Calculate if the current values are invalid
                                         const isFinInvalid = marks.finExt !== '' && parseFloat(marks.finExt) > parseFloat(sub.extFull);
                                         const isIntInvalid = marks.terInt !== '' && parseFloat(marks.terInt) > parseFloat(sub.intFull);
                                         

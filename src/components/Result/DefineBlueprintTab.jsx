@@ -1,6 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { saveCourseBlueprint, getCourseBlueprint } from '../../api';
 import { Settings, CheckCircle2, Loader2, Pencil, Plus, Trash2, FileSpreadsheet, Download } from 'lucide-react';
+// 🟢 NEW IMPORTS FOR EXCEL
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 export const DefineBlueprintTab = ({ batches, branches, semesters, displayMessage }) => {
     const [targetBatch, setTargetBatch] = useState('');
@@ -67,33 +70,86 @@ export const DefineBlueprintTab = ({ batches, branches, semesters, displayMessag
         }
     };
 
-    const downloadCSVTemplate = () => {
+    // 🟢 REPLACED: New Excel Template Generator
+    const downloadExcelTemplate = async () => {
         if (blueprintSubjects.length === 0) return alert("Please add subjects to the blueprint first!");
 
-        const titleRow = ['']; // Empty cell over RegistrationNo
-        const dataRow = ['RegistrationNo'];
+        const workbook = new ExcelJS.Workbook();
+        const worksheet = workbook.addWorksheet('Data Entry Template');
 
+        // 1. Create Super Header (Row 1 - Merged Subject Names)
+        const superHeader = ["Student Details"]; 
         blueprintSubjects.forEach(sub => {
             const cleanCode = String(sub.subjectCode).trim();
-            const safeName = sub.subjectName ? `"${sub.subjectName.replace(/"/g, '""')}"` : cleanCode;
-            
-            titleRow.push(safeName); // Name goes above INT
-            titleRow.push('');       // Empty space above FIN
+            const fullName = sub.subjectName ? `${sub.subjectName} (${cleanCode})` : cleanCode;
+            superHeader.push(fullName); 
+            superHeader.push(""); // Empty cell for merging
+        });
+        const row1 = worksheet.addRow(superHeader);
 
-            dataRow.push(`${cleanCode}_INT`); // INT first
-            dataRow.push(`${cleanCode}_FIN`); // FIN second
+        // Merge Subject Columns in Row 1
+        blueprintSubjects.forEach((sub, index) => {
+            const startCol = 2 + (index * 2); // RegNo is Col 1, so subjects start at Col 2, taking 2 cols each
+            const endCol = startCol + 1;
+            worksheet.mergeCells(1, startCol, 1, endCol);
+            
+            const cell = row1.getCell(startCol);
+            cell.alignment = { horizontal: 'center', vertical: 'middle' };
+            cell.font = { bold: true, size: 12 };
         });
 
-        const csvContent = titleRow.join(',') + '\n' + dataRow.join(',') + '\n';
+        row1.getCell(1).font = { bold: true, size: 12 };
+        row1.getCell(1).alignment = { horizontal: 'center', vertical: 'middle' };
 
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const link = document.createElement('a');
-        link.setAttribute('href', url);
-        link.setAttribute('download', `${targetBranch}_${targetBatch}_${targetSemester}_Template.csv`.replace(/\s+/g, '_'));
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        // 2. Create Standard Headers (Row 2 - Data Keys)
+        const dataHeader = ["RegistrationNo"];
+        blueprintSubjects.forEach(sub => {
+            const cleanCode = String(sub.subjectCode).trim();
+            dataHeader.push(`${cleanCode}_INT`, `${cleanCode}_FIN`);
+        });
+        
+        const row2 = worksheet.addRow(dataHeader);
+        row2.font = { bold: true };
+        row2.alignment = { horizontal: 'center', vertical: 'middle' };
+
+        // 3. Styling & Colors (Matching the Manage Tab)
+        const colorPalette = ['FFD9E1F2', 'FFE2EFDA', 'FFFFF2CC', 'FFFCE4D6', 'FFE6E6E6', 'FFD5A6BD', 'FFC9DAF8'];
+
+        worksheet.getColumn(1).width = 22; // RegNo Column Width
+
+        blueprintSubjects.forEach((sub, index) => {
+            const startCol = 2 + (index * 2);
+            const hexColor = colorPalette[index % colorPalette.length];
+
+            // Color the merged Super Header cell
+            row1.getCell(startCol).fill = {
+                type: 'pattern',
+                pattern: 'solid',
+                fgColor: { argb: hexColor }
+            };
+
+            // Color the INT and FIN columns below it
+            for (let i = 0; i < 2; i++) {
+                const col = worksheet.getColumn(startCol + i);
+                col.width = 15; 
+                col.eachCell((cell, rowNumber) => {
+                    // Start coloring from Row 2 downwards
+                    if (rowNumber > 1) {
+                        cell.fill = {
+                            type: 'pattern',
+                            pattern: 'solid',
+                            fgColor: { argb: hexColor }
+                        };
+                        cell.alignment = { horizontal: 'center' };
+                    }
+                });
+            }
+        });
+
+        // Generate and Save File
+        const buffer = await workbook.xlsx.writeBuffer();
+        const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+        saveAs(blob, `Template_${targetBranch}_${targetBatch}_${targetSemester}.xlsx`.replace(/\s+/g, '_'));
     };
 
     return (
@@ -101,7 +157,6 @@ export const DefineBlueprintTab = ({ batches, branches, semesters, displayMessag
             <div className="w-full space-y-4">
                 <div className="flex flex-col lg:flex-row lg:items-end gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
                     
-                    {/* 🟢 THE FIX: Coordinated colorful dropdowns with rounded-xl and bold text */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 w-full flex-1">
                         <div className="flex flex-col gap-1.5">
                             <span className="font-black text-blue-600 text-[10px] uppercase tracking-wider">Batch:</span>
@@ -143,11 +198,11 @@ export const DefineBlueprintTab = ({ batches, branches, semesters, displayMessag
                     <div className="flex flex-col sm:flex-row gap-3 w-full lg:w-auto mt-2 lg:mt-0">
                         {blueprintSubjects.length > 0 && (
                             <button
-                                onClick={downloadCSVTemplate}
-                                className="px-5 py-2.5 rounded-xl font-bold text-sm bg-white border border-indigo-200 text-indigo-600 hover:bg-indigo-50 shadow-sm transition flex items-center justify-center gap-2 h-[42px]"
-                                title="Download CSV template for entering marks"
+                                onClick={downloadExcelTemplate}
+                                className="px-5 py-2.5 rounded-xl font-bold text-sm bg-white border border-emerald-200 text-emerald-700 hover:bg-emerald-50 shadow-sm transition flex items-center justify-center gap-2 h-[42px]"
+                                title="Download Excel template for entering marks"
                             >
-                                <Download size={16} /> CSV Template
+                                <Download size={16} /> Excel Template
                             </button>
                         )}
 
