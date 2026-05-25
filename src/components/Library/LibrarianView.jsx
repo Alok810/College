@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, memo } from 'react';
-import { Clock, DollarSign, UserPlus, Search, BookOpen, Download, ClipboardList } from 'lucide-react';
+import { Clock, IndianRupee, UserPlus, Search, BookOpen, Download, ClipboardList } from 'lucide-react';
 import { getFineLedger, exportFineLedger } from '../../api';
 import { LibraryHeader, BookList, ReturnedBookList } from './LibraryShared.jsx';
 import { isOverdue, CATEGORIES } from './libraryUtils.js';
@@ -71,13 +71,13 @@ const AnalyticsOverview = memo(({ books, borrowedBooks }) => {
           <div className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col gap-2 relative overflow-hidden group">
             <span className="text-[10px] sm:text-xs font-black text-slate-400 uppercase tracking-wider relative z-10">Pending Fines</span>
             <div className="flex items-end gap-2 relative z-10">
-              <span className="text-3xl sm:text-4xl font-black text-amber-500 leading-none">${totalPendingFines.toFixed(2)}</span>
+              <span className="text-3xl sm:text-4xl font-black text-amber-500 leading-none">₹{totalPendingFines.toFixed(2)}</span>
             </div>
           </div>
           <div className="bg-gradient-to-br from-emerald-500 to-teal-600 p-4 sm:p-5 rounded-2xl border border-emerald-600 shadow-sm flex flex-col gap-2 relative overflow-hidden group">
             <span className="text-[10px] sm:text-xs font-black text-emerald-100 uppercase tracking-wider relative z-10">Total Revenue</span>
             <div className="flex items-end gap-2 relative z-10">
-              <span className="text-3xl sm:text-4xl font-black text-white leading-none">${totalRevenue.toFixed(2)}</span>
+              <span className="text-3xl sm:text-4xl font-black text-white leading-none">₹{totalRevenue.toFixed(2)}</span>
             </div>
           </div>
         </div>
@@ -106,7 +106,7 @@ const AnalyticsOverview = memo(({ books, borrowedBooks }) => {
                       <td className="px-6 py-4 font-bold text-slate-900">{entry?.user?.name || 'Unknown'}</td>
                       <td className="px-6 py-4 text-xs truncate max-w-[200px]">{entry?.book?.title || 'Unknown'}</td>
                       <td className="px-6 py-4 text-rose-500 font-bold">{entry?.daysOverdue || 0} days</td>
-                      <td className="px-6 py-4 text-right font-black text-emerald-600">${entry?.amount?.toFixed(2) || '0.00'}</td>
+                      <td className="px-6 py-4 text-right font-black text-emerald-600">₹{entry?.amount?.toFixed(2) || '0.00'}</td>
                     </tr>
                   ))
                 )}
@@ -170,7 +170,7 @@ const AddBookForm = memo(({ handleSubmit, formRef, gradientButton, editBook, set
             </select>
           </div>
           <div>
-            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Price ($)</label>
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">Price (₹)</label>
             <input type="number" name="price" placeholder="0.00" className="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl focus:border-purple-400 outline-none text-sm font-bold text-slate-800" required />
           </div>
         </div>
@@ -413,9 +413,9 @@ export const LibrarianDashboard = memo(({
                     </div>
                     <div className="flex flex-col items-start sm:items-end gap-2 w-full">
                       <button onClick={() => handleReturn(record._id, overdue ? fine : 0)} className={`w-full sm:w-auto px-5 py-2.5 font-black rounded-xl active:scale-95 transition-all text-xs shadow-sm border flex items-center justify-center gap-1.5 ${overdue ? 'bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100' : 'bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100'}`}>
-                        {overdue ? <><DollarSign size={14}/> Collect Fine & Return</> : 'Mark Returned'}
+                        {overdue ? <><IndianRupee size={14}/> Collect Fine & Return</> : 'Mark Returned'}
                       </button>
-                      {overdue && <span className="text-xs font-black text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100">Pending Fine: ${fine.toFixed(2)} <span className="text-rose-400 font-bold">({daysOverdue} days)</span></span>}
+                      {overdue && <span className="text-xs font-black text-rose-600 bg-rose-50 px-2 py-1 rounded border border-rose-100">Pending Fine: ₹{fine.toFixed(2)} <span className="text-rose-400 font-bold">({daysOverdue} days)</span></span>}
                     </div>
                   </div>
                 );
