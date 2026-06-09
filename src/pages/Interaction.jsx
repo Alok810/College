@@ -213,11 +213,11 @@ export default function Interaction() {
             <div>
               <label className="block text-slate-600 mb-1 text-[11px] uppercase tracking-wider font-bold">What do you need help with?</label>
               <select name="feedbackType" value={formData.feedbackType} onChange={handleChange} className="w-full border border-indigo-200 bg-indigo-50/50 text-indigo-800 rounded-xl p-3 focus:ring-2 focus:ring-indigo-400 focus:border-indigo-400 outline-none transition-all cursor-pointer text-sm font-bold shadow-sm">
-                <option value="Bug Report">🐛 Report a Bug / Error</option>
-                <option value="Feature Request">✨ Request a New Feature</option>
-                <option value="Technical Issue">🛠️ Technical Issue / Won't Load</option>
-                <option value="General Feedback">💡 General Feedback</option>
-                <option value="Testimonial">⭐ Testimonial / Review</option>
+                <option value="Bug Report">Report a Bug / Error</option>
+                <option value="Feature Request">Request a New Feature</option>
+                <option value="Technical Issue">Technical Issue / Won't Load</option>
+                <option value="General Feedback">General Feedback</option>
+                <option value="Testimonial">Testimonial / Review</option>
               </select>
             </div>
             <div>

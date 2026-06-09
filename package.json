@@ -12,6 +12,7 @@
   "dependencies": {
     "@emoji-mart/data": "^1.2.1",
     "@emoji-mart/react": "^1.1.1",
+    "@react-oauth/google": "^0.13.5",
     "@tailwindcss/vite": "^4.1.12",
     "axios": "^1.14.0",
     "class-variance-authority": "^0.7.1",
