@@ -6,7 +6,7 @@ import { subscribeToOSNotifications } from "../../utils/pushNotifications";
 import { GoogleLogin } from "@react-oauth/google";
 
 // 🟢 CRITICAL ADDITION: Import your configured 'api' instance
-import { api } from "../../services/api"; // <-- Make sure this path is correct for your app!
+import { api } from "../../api";
 
 import EyeIcon from "../../assets/eye.png";
 import HiddenIcon from "../../assets/hidden.png";
