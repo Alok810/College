@@ -1,9 +1,12 @@
 import React from "react";
-import axios from "axios";
+// We removed axios because we are using the central 'api' instance now
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { subscribeToOSNotifications } from "../../utils/pushNotifications";
 import { GoogleLogin } from "@react-oauth/google";
+
+// 🟢 CRITICAL ADDITION: Import your configured 'api' instance
+import { api } from "../../services/api"; // <-- Make sure this path is correct for your app!
 
 import EyeIcon from "../../assets/eye.png";
 import HiddenIcon from "../../assets/hidden.png";
@@ -122,14 +125,8 @@ export default function LoginForm({
         <GoogleLogin
           onSuccess={async (credentialResponse) => {
             try {
-              const { data } = await axios.post(
-                "http://localhost:4000/api/v1/auth/google-login", 
-                { token: credentialResponse.credential }, 
-                {
-                  withCredentials: true,
-                  headers: { "Content-Type": "application/json" },
-                }
-              );
+              // 🟢 This line now works because 'api' is imported!
+              const { data } = await api.post("/auth/google-login", { token: credentialResponse.credential });
 
               if (data.success) {
                 await fetchAuthData();

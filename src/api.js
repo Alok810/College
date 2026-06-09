@@ -5,7 +5,7 @@ const isLocalhost = typeof window !== 'undefined' && (window.location.hostname =
 
 export const BACKEND_URL = isLocalhost 
   ? "http://localhost:4000" 
-  : "https://api.rigya.in"; 
+  : ""; 
 
 // 🟢 The Unified Master Server
 export const AISHE_BACKEND_URL = isLocalhost 
