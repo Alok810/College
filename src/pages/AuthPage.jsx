@@ -273,6 +273,11 @@ export default function AuthPage() {
 
         const response = await registerUser(payload);
         if (response.success) {
+          // 🟢 ADD THIS LINE: Save the token if registration logs them in automatically
+          if (response.token) {
+            localStorage.setItem("token", response.token);
+          }
+          
           alert("Registration successful! You can now log in.");
           setIsSignUp(false);
           resetForm();
@@ -294,6 +299,9 @@ export default function AuthPage() {
         });
         
         if (response.success) {
+          // 🟢 ADD THIS LINE: Save the token for mobile!
+          localStorage.setItem("token", response.token); 
+          
           await fetchAuthData(); 
           setIsAuthenticated(true);
           subscribeToOSNotifications();

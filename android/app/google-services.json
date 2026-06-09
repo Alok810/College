@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "416699925752",
+    "project_id": "rigya-a7a78",
+    "storage_bucket": "rigya-a7a78.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:416699925752:android:2dce1909ced9d6e488670d",
+        "android_client_info": {
+          "package_name": "com.rigya.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyApNcN6riWmQXksi8VC8QAQ6-YL2k9-Kv8"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

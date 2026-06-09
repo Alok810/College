@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Rigya</string>
+    <string name="title_activity_main">Rigya</string>
+    <string name="package_name">com.rigya.app</string>
+    <string name="custom_url_scheme">com.rigya.app</string>
+</resources>

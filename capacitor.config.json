@@ -1,0 +1,10 @@
+{
+  "appId": "com.rigya.app",
+  "appName": "Rigya",
+  "webDir": "dist",
+  "plugins": {
+    "PushNotifications": {
+      "presentationOptions": ["badge", "sound", "alert"]
+    }
+  }
+}

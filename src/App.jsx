@@ -1,5 +1,8 @@
 import React, { useState, useEffect, useRef, Suspense } from "react";
-import { Routes, Route, useLocation } from "react-router-dom";
+// 🟢 1. Added useNavigate to the react-router-dom import
+import { Routes, Route, useLocation, useNavigate } from "react-router-dom";
+// 🟢 2. Imported Capacitor App plugin
+import { App as CapacitorApp } from '@capacitor/app';
 
 import Sidebar from "./components/Sidebar";
 import InstituteHeader from "./pages/InstituteHeader";
@@ -40,33 +43,44 @@ import NotificationSidebar from "./components/NotificationSidebar";
 import InstallPrompt from './components/InstallPrompt';
 import AnnouncementBanner from "./components/AnnouncementBanner";
 import ResumeBuilder from './pages/ResumeBuilder';
+import { subscribeToOSNotifications } from './utils/pushNotifications'; // Ensure this path matches your folder structure
 
 const HelpDesk = React.lazy(() => import('./pages/HelpDesk'));
 
 const AppContent = () => {
   const location = useLocation();
+  const navigate = useNavigate(); // 🟢 3. Initialized navigate for back button routing
   
-  // ✨ The Magic Fix: Added the Focus Pod route here to hide the Sidebar and Header!
   const hideSidebar =
     location.pathname === "/auth" ||
     location.pathname === "/reset-password" ||
     location.pathname === "/resume-builder" ||
     location.pathname === "/helpdesk" ||
     location.pathname === "/TalkHive/focus-pod" ||
-    location.pathname === "/TalkHive/hive-match"; // 🟢 Added this line!
+    location.pathname === "/TalkHive/hive-match";
 
   const isProfilePage = location.pathname.startsWith("/profile");
   const isClubPage = location.pathname.startsWith("/club");
   const isDeptPage = location.pathname.startsWith("/department");
   const isResultPage = location.pathname.startsWith("/result");
   const isLibraryPage = location.pathname.startsWith("/library");
-  const isInteractionPage = location.pathname.startsWith("/interaction")
+  const isInteractionPage = location.pathname.startsWith("/interaction");
 
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
   const [activeMobileModal, setActiveMobileModal] = useState(null);
 
-  const { authData, instituteData, loading } = useAuth();
+  const { authData, instituteData, loading, isAuthenticated } = useAuth();
+  // 🟢 5. SILENTLY ARM PUSH NOTIFICATIONS ON BOOT
+  useEffect(() => {
+    // If the user is logged in, attach the Android Firebase listeners!
+    // Since permission was already granted, the user won't see a popup.
+    if (isAuthenticated) {
+        subscribeToOSNotifications();
+    }
+  }, [isAuthenticated]);
+
+  
   const headerRef = useRef(null);
   const [headerHeight, setHeaderHeight] = useState("0px");
 
@@ -74,6 +88,32 @@ const AppContent = () => {
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isFetching, setIsFetching] = useState(false);
+
+  // 🟢 4. NATIVE ANDROID BACK BUTTON LISTENER
+  useEffect(() => {
+    const handleBackButton = ({ canGoBack }) => {
+      // If a mobile modal is open, close it first!
+      if (activeMobileModal) {
+        setActiveMobileModal(null);
+        return;
+      }
+
+      // If we can go back in the browser history, do it safely via React Router
+      if (canGoBack) {
+        navigate(-1);
+      } else {
+        // If at the root of the app, exit to Android home screen
+        CapacitorApp.exitApp();
+      }
+    };
+
+    CapacitorApp.addListener('backButton', handleBackButton);
+
+    // Cleanup the listener when the component unmounts
+    return () => {
+      CapacitorApp.removeAllListeners();
+    };
+  }, [activeMobileModal, navigate]);
 
   useEffect(() => {
     const handleResize = () => setIsMobile(window.innerWidth < 768);

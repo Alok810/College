@@ -1,21 +1,25 @@
 import axios from "axios";
+import { Capacitor } from '@capacitor/core'; // 🟢 Added this to detect the mobile app
 
 // 🟢 THE BULLETPROOF RUNTIME CHECK
 const isLocalhost = typeof window !== 'undefined' && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1");
+const isNativeApp = Capacitor.isNativePlatform();
 
-export const BACKEND_URL = isLocalhost 
+// If you are developing on your laptop, use local backend. 
+// If you are on Vercel OR on the Android App, use the Live Backend!
+export const BACKEND_URL = (isLocalhost && !isNativeApp) 
   ? "http://localhost:4000" 
-  : ""; 
+  : "https://api.rigya.in"; 
 
 // 🟢 The Unified Master Server  
-export const AISHE_BACKEND_URL = isLocalhost 
+export const AISHE_BACKEND_URL = (isLocalhost && !isNativeApp) 
   ? "http://localhost:8000"
   : "https://aishe.rigya.in";
 
 // 🐝 TalkHive now securely routes through the AISHE Master Server!
 export const TALKHIVE_URL = AISHE_BACKEND_URL;
 
-console.log("🚨 SYSTEM CHECK - IS LOCALHOST?:", isLocalhost);
+console.log("🚨 SYSTEM CHECK - IS NATIVE APP?:", isNativeApp);
 console.log("🚨 SYSTEM CHECK - TARGET URL:", BACKEND_URL);
 console.log("🐝 TALKHIVE ENGINE URL:", TALKHIVE_URL);
 
@@ -24,22 +28,37 @@ export const api = axios.create({
   withCredentials: true,
 });
 
-// ... the rest of your api.js code stays exactly the same
-
-// 🟢 THE GLOBAL SAFETY NET: Auto-Logout on Expired Session
-api.interceptors.response.use(
-  (response) => response, // If the request succeeds, pass it through normally
+// ==========================================
+// 🟢 NEW: REQUEST INTERCEPTOR FOR MOBILE TOKENS
+// ==========================================
+api.interceptors.request.use(
+  (config) => {
+    // Grab the token we saved during login
+    const token = localStorage.getItem("token");
+    if (token) {
+      // Attach it to every single request going to the backend
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+    return config;
+  },
   (error) => {
-    // If the backend says "401 Unauthorized" AND we aren't already on the Auth/Reset page...
+    return Promise.reject(error);
+  }
+);
+
+// ==========================================
+// 🟢 EXISTING: Auto-Logout on Expired Session
+// ==========================================
+api.interceptors.response.use(
+  (response) => response, 
+  (error) => {
     if (error.response && error.response.status === 401) {
       if (window.location.pathname !== '/auth' && window.location.pathname !== '/reset-password') {
         console.warn("Session expired or invalid. Redirecting to login...");
-        
-        // Force the browser to go to the login page
         window.location.href = '/auth'; 
       }
     }
-    return Promise.reject(error); // Pass the error back to the component
+    return Promise.reject(error); 
   }
 );
 

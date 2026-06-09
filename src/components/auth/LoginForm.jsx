@@ -1,11 +1,8 @@
 import React from "react";
-// We removed axios because we are using the central 'api' instance now
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { subscribeToOSNotifications } from "../../utils/pushNotifications";
 import { GoogleLogin } from "@react-oauth/google";
-
-// 🟢 CRITICAL ADDITION: Import your configured 'api' instance
 import { api } from "../../api";
 
 import EyeIcon from "../../assets/eye.png";
@@ -25,7 +22,9 @@ export default function LoginForm({
   const { setIsAuthenticated, fetchAuthData } = useAuth();
 
   return (
-    <div className="flex flex-col gap-4 mt-2">
+    // Added slight adjustments for spacing on mobile vs tablet
+    <div className="flex flex-col gap-4 sm:gap-5 mt-2 w-full max-w-md mx-auto px-2 sm:px-0">
+      
       {/* Email Field */}
       <div>
         <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">
@@ -37,7 +36,8 @@ export default function LoginForm({
           value={formData.email}
           placeholder="e.g., student@institute.edu"
           onChange={handleChange}
-          className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 shadow-sm"
+          // Adjusted padding slightly for mobile, kept standard for sm+
+          className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 shadow-sm text-sm sm:text-base"
           required
         />
       </div>
@@ -49,7 +49,7 @@ export default function LoginForm({
             Password
           </label>
           <p 
-            className="text-xs font-semibold text-purple-600 cursor-pointer hover:text-purple-800 transition-colors" 
+            className="text-xs sm:text-sm font-semibold text-purple-600 cursor-pointer hover:text-purple-800 transition-colors" 
             onClick={() => { setShowForgotPassword(true); resetForm(); }}
           >
             Forgot Password?
@@ -62,26 +62,26 @@ export default function LoginForm({
             value={formData.password}
             placeholder="••••••••"
             onChange={handleChange}
-            className="w-full px-4 py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 pr-12"
+            className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 pr-10 sm:pr-12 text-sm sm:text-base"
             required
           />
           <div 
-            className="absolute right-3 top-1/2 -translate-y-1/2 p-1.5 cursor-pointer hover:bg-gray-200 rounded-full transition-colors"
+            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 cursor-pointer hover:bg-gray-200 rounded-full transition-colors"
             onClick={() => setShowPassword(!showPassword)}
           >
             <img
               src={showPassword ? HiddenIcon : EyeIcon}
               alt="toggle password visibility"
-              className="w-4 h-4 opacity-60"
+              className="w-4 h-4 sm:w-5 sm:h-5 opacity-60"
             />
           </div>
         </div>
       </div>
 
       {/* Security Captcha Box */}
-      <div className="bg-gradient-to-br from-purple-50 to-indigo-50/50 p-3.5 rounded-xl border border-purple-100 shadow-sm w-full">
-        <label className="block text-sm font-medium text-gray-700 mb-2 ml-1">
-          Security Check: Solve <span className="font-bold text-lg text-purple-700 ml-1 drop-shadow-sm">{mathQuestion.question}</span>
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50/50 p-3 sm:p-3.5 rounded-xl border border-purple-100 shadow-sm w-full">
+        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 ml-1">
+          Security Check: Solve <span className="font-bold text-base sm:text-lg text-purple-700 ml-1 drop-shadow-sm">{mathQuestion.question}</span>
         </label>
         <div className="flex gap-2">
           <input
@@ -89,13 +89,13 @@ export default function LoginForm({
             value={formData.captcha}
             placeholder="Enter answer"
             onChange={handleChange}
-            className="flex-1 px-4 py-2 bg-white border border-purple-200 rounded-lg focus:ring-2 focus:ring-inset focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-800 font-medium shadow-inner"
+            className="flex-1 px-3 py-2 sm:px-4 bg-white border border-purple-200 rounded-lg focus:ring-2 focus:ring-inset focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-800 font-medium shadow-inner text-sm sm:text-base"
             required
           />
           <button
             type="button"
             onClick={generateNewCaptcha}
-            className="px-4 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-sm font-bold text-lg flex items-center justify-center flex-shrink-0"
+            className="px-3 sm:px-4 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-sm font-bold text-base sm:text-lg flex items-center justify-center flex-shrink-0"
             title="Get a new question"
           >
             ↻
@@ -106,47 +106,51 @@ export default function LoginForm({
       {/* Submit Button */}
       <button 
         type="submit" 
-        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-[15px] py-3 rounded-xl shadow-md hover:shadow-lg hover:from-purple-700 hover:to-indigo-700 active:scale-[0.98] transition-all mt-1"
+        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-sm sm:text-[15px] py-2.5 sm:py-3 rounded-xl shadow-md hover:shadow-lg hover:from-purple-700 hover:to-indigo-700 active:scale-[0.98] transition-all mt-1 sm:mt-2"
       >
         SIGN IN
       </button>
 
       {/* Modern Divider */}
-      <div className="relative flex items-center mt-2 mb-1">
+      <div className="relative flex items-center mt-2 sm:mt-3 mb-1 sm:mb-2">
         <div className="flex-grow border-t border-gray-200"></div>
-        <span className="flex-shrink-0 mx-4 text-xs font-semibold tracking-wider text-gray-400 uppercase">
+        <span className="flex-shrink-0 mx-3 sm:mx-4 text-[10px] sm:text-xs font-semibold tracking-wider text-gray-400 uppercase">
           or continue with
         </span>
         <div className="flex-grow border-t border-gray-200"></div>
       </div>
 
-      {/* 🟢 OFFICIAL GOOGLE BUTTON (Centered perfectly) */}
+{/* 🟢 OFFICIAL GOOGLE BUTTON */}
       <div className="flex justify-center w-full mt-1 mb-1">
-        <GoogleLogin
-          onSuccess={async (credentialResponse) => {
-            try {
-              // 🟢 This line now works because 'api' is imported!
-              const { data } = await api.post("/auth/google-login", { token: credentialResponse.credential });
+        {/* 👇 Added max-w-full and overflow-hidden to clamp the iframe on mobile */}
+        <div className="w-full sm:w-auto flex justify-center max-w-full overflow-hidden">
+          <GoogleLogin
+            onSuccess={async (credentialResponse) => {
+              try {
+                const { data } = await api.post("/auth/google-login", { token: credentialResponse.credential });
 
-              if (data.success) {
-                await fetchAuthData();
-                setIsAuthenticated(true);
-                subscribeToOSNotifications();
-                navigate("/");
+                if (data.success) {
+                  await fetchAuthData();
+                  setIsAuthenticated(true);
+                  subscribeToOSNotifications();
+                  navigate("/");
+                }
+              } catch (error) {
+                console.error("Google Login Error:", error);
+                alert(error.response?.data?.message || "Account not found. Please register manually first.");
               }
-            } catch (error) {
-              console.error("Google Login Error:", error);
-              alert(error.response?.data?.message || "Account not found. Please register manually first.");
-            }
-          }}
-          onError={() => {
-            alert("Google Login popup was closed or failed.");
-          }}
-          useOneTap={true} 
-          theme="outline"
-          size="large"
-          shape="rectangular"
-        />
+            }}
+            onError={() => {
+              alert("Google Login popup was closed or failed.");
+            }}
+            useOneTap={true} 
+            theme="outline"
+            size="large"
+            shape="rectangular"
+            // Set width to 100% to fill the clamped container
+            width="100%" 
+          />
+        </div>
       </div>
 
     </div>
