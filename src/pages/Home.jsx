@@ -14,18 +14,35 @@ const Home = ({ posts, contentOffset = 0 }) => {
 
   return (
     <div
-      className={`transition-transform duration-500 ${
-        isMobile ? "fixed inset-0 pt-20 overflow-y-auto z-10" : "w-full pt-0"
+      // 🟢 Changed bg-gray-50/30 to bg-transparent so your back gradient shines through with maximum clarity
+      className={`transition-transform duration-500 bg-transparent min-h-screen ${
+        isMobile ? "fixed inset-0 overflow-y-auto z-10 custom-scrollbar" : "w-full pt-0"
       }`}
       style={{ 
         transform: isMobile ? "none" : `translateX(${contentOffset}px)` 
       }}
     >
-      <div className="flex justify-center px-3 md:px-4 w-full">
+      {/* 🟢 FIXED: Adjusted height and padding to include safe-area-inset-top 
+          so it perfectly shields the posts from the floating InstituteHeader */}
+      {isMobile && (
+        <div 
+          className="sticky top-0 left-0 w-full bg-white/70 backdrop-blur-xl z-40 border-b border-gray-100/50 flex items-center justify-center shadow-[0_4px_30px_rgba(0,0,0,0.02)]"
+          style={{
+            height: "calc(env(safe-area-inset-top, 0px) + 68px)",
+            paddingTop: "env(safe-area-inset-top, 0px)"
+          }}
+        >
+          <span className="font-extrabold text-[19px] tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-teal-600">
+            Rigya Feed
+          </span>
+        </div>
+      )}
+
+      <div className={`flex justify-center px-3 md:px-4 w-full ${isMobile ? "pt-4" : ""}`}>
         
-        {/* 🟢 THE FIX: Added md:pb-4 to remove the giant empty gap on laptops/desktops! */}
-        <div className="w-full max-w-2xl mx-auto pb-24 md:pb-4">
-          <div className="space-y-3 md:space-y-4">
+        {/* pb-28 ensures the bottom post isn't hidden behind the new Bottom Navigation Bar */}
+        <div className="w-full max-w-2xl mx-auto pb-28 md:pb-4">
+          <div className="space-y-4 md:space-y-4">
             {posts.map((post) => (
               <PostCard post={post} key={post._id} />
             ))}

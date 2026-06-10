@@ -1,7 +1,9 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MessageSquare, Globe, UsersRound } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+
+// 🟢 Updated path: added an extra ../ to reach the context folder
+import { useAuth } from '../../context/AuthContext';
 
 // --- Helper for Fallback Images ---
 const getAvatar = (user) => {

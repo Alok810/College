@@ -1,19 +1,13 @@
 import React, { useEffect, useState, forwardRef } from "react";
 
-// ✅ 1. Smarter Math: Center it perfectly within the REMAINING empty space
 const calculateLeftOffset = (isSidebarOpen, offset = 0) => {
-  const isMobile = window.innerWidth < 768; // 768px is Tailwind's 'md' breakpoint
-  
+  const isMobile = window.innerWidth < 768; 
   if (isMobile) {
-    // Shift the center point exactly 25px to the right. 
-    // This perfectly balances the gap from the Rigya logo on the left!
     return `calc(50vw + 25px)`; 
   }
-  
   const sidebarWidth = isSidebarOpen ? 256 : 80;
   const windowWidth = window.innerWidth;
   const mainContentWidth = windowWidth - sidebarWidth;
-  
   return `${sidebarWidth + mainContentWidth / 2 + offset}px`;
 };
 
@@ -23,15 +17,14 @@ const InstituteHeader = forwardRef(({
   instituteLogo,
   horizontalOffset = 0,
 }, ref) => {
-  const [leftOffset, setLeftOffset] = useState(() =>
-    calculateLeftOffset(isSidebarOpen, horizontalOffset)
-  );
+  const [leftOffset, setLeftOffset] = useState(() => calculateLeftOffset(isSidebarOpen, horizontalOffset));
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
 
   useEffect(() => {
     const handleResize = () => {
+      setIsMobile(window.innerWidth < 768);
       setLeftOffset(calculateLeftOffset(isSidebarOpen, horizontalOffset));
     };
-
     handleResize(); 
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
@@ -42,15 +35,14 @@ const InstituteHeader = forwardRef(({
   return (
     <div
       ref={ref}
-      // Reduced the left/right padding on mobile (px-3) to give the text even more room
-      className="fixed top-4 z-30 rounded-2xl px-3 py-2 md:px-6 md:py-2 flex items-center gap-2 md:gap-3 transition-all duration-300 shadow-md backdrop-blur-sm"
+      // 🟢 REMOVED the fade-out logic so it always stays visible!
+      className="fixed z-30 rounded-2xl px-3 py-2 md:px-6 md:py-2 flex items-center gap-2 md:gap-3 transition-all duration-300 shadow-md backdrop-blur-sm"
       style={{
+        top: isMobile ? "calc(env(safe-area-inset-top, 0px) + 16px)" : "16px",
         left: leftOffset,
         transform: "translateX(-50%)",
         background: "linear-gradient(to right, rgba(214, 248, 223, 0.9), rgba(227, 224, 250, 0.9), rgba(136, 228, 244, 0.9))",
         width: "max-content",
-        // ✅ 2. Massive width increase! 
-        // 100vw minus 90px guarantees it stretches to the right edge but never hits the Rigya logo
         maxWidth: "calc(100vw - 90px)", 
       }}
     >
@@ -58,7 +50,6 @@ const InstituteHeader = forwardRef(({
         <img
           src={instituteLogo}
           alt={`${instituteName} Logo`}
-          // ✅ Added shrink-0 so the logo doesn't get squeezed if the text is really long
           className="w-8 h-8 md:w-12 md:h-12 object-contain rounded-md mix-blend-multiply shrink-0" 
         />
       ) : (

@@ -208,9 +208,16 @@ const AppContent = () => {
   const contentMarginLeft =
     hideSidebar || isMobile ? "0" : isSidebarOpen ? "16rem" : "5rem";
 
-  const contentPaddingTop = hideSidebar ? "0px" : `calc(${headerHeight} + 2rem)`;
+ const contentPaddingTop = hideSidebar 
+    ? "0px" 
+    : `calc(env(safe-area-inset-top, 0px) + ${headerHeight} + 2rem)`;
+
   const homePageRightPadding = isHomePage ? "lg:pr-80" : "";
-  const maskCutoffLine = hideSidebar ? "0px" : `calc(${contentPaddingTop} - 0.40rem)`;
+
+  // 🟢 Adjusted to align exactly with content padding execution
+  const maskCutoffLine = hideSidebar 
+    ? "0px" 
+    : `calc(env(safe-area-inset-top, 0px) + ${headerHeight} + 2rem)`;
 
   const lockOuterScroll = (isProfilePage || isClubPage || isDeptPage || isResultPage || isLibraryPage || isInteractionPage) && !isMobile;
 
@@ -266,8 +273,9 @@ const AppContent = () => {
             style={{
               paddingTop: contentPaddingTop,
               height: "100%",
-              WebkitMaskImage: hideSidebar ? "none" : `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
-              maskImage: hideSidebar ? "none" : `linear-gradient(to bottom, transparent ${maskCutoffLine}, black ${maskCutoffLine})`,
+              // 🟢 FIXED: Forcing absolute hard-stops from 0px to 100% to eliminate the foggy shroud overlay
+              WebkitMaskImage: hideSidebar ? "none" : `linear-gradient(to bottom, transparent 0px, transparent ${maskCutoffLine}, black ${maskCutoffLine}, black 100%)`,
+              maskImage: hideSidebar ? "none" : `linear-gradient(to bottom, transparent 0px, transparent ${maskCutoffLine}, black ${maskCutoffLine}, black 100%)`,
             }}
           >
             <Routes>
