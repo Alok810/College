@@ -58,7 +58,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                     </h2>
                 </div>
 
-                {/* 💻 WEB & MOBILE VIEW HEADER (No rigid tables!) */}
+                {/* 💻 WEB & MOBILE VIEW HEADER */}
                 <div className="print:hidden bg-gray-50/90 border-b border-gray-300 p-4 md:p-6 backdrop-blur-[2px] flex flex-col md:flex-row items-center justify-between gap-4 w-full min-w-0">
                     
                     {/* MOBILE TITLE */}
@@ -71,7 +71,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                         </span>
                     </div>
 
-                    {/* LEFT: Student Info Box */}
+                    {/* LEFT Student Info Box */}
                     <div className="w-full md:w-1/3 flex flex-row md:flex-col justify-between md:justify-start items-center md:items-start text-left space-y-0 md:space-y-2 order-2 md:order-1 bg-white md:bg-transparent p-3 md:p-0 rounded-lg border md:border-none border-gray-100 shadow-sm md:shadow-none min-w-0">
                         <div className="min-w-0 flex-1">
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Student Name</p>
@@ -79,7 +79,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                         </div>
                         <div className="min-w-0 flex-1 text-right md:text-left">
                             <p className="text-[10px] text-gray-500 font-bold uppercase tracking-wider">Registration No.</p>
-                            <p className="text-sm font-extrabold text-gray-900 uppercase break-all">{registrationNo}</p>
+                            <p className="text-sm font-extrabold text-gray-900 uppercase truncate">{registrationNo}</p>
                         </div>
                     </div>
 
@@ -138,10 +138,10 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                     </table>
                 </div>
 
-                {/* 📋 GRADES (Responsive) */}
+                {/* 📋 GRADES CONTAINER */}
                 <div className="print:border-2 print:border-purple-200 print:rounded-xl print:overflow-hidden bg-white/50 w-full min-w-0">
                     
-                    {/* MOBILE VIEW: Vertical Cards */}
+                    {/* 📱 MOBILE VIEW: Subject Cards */}
                     <div className="block md:hidden print:hidden px-3 py-2 space-y-3 w-full min-w-0">
                         {result.subjects?.map((sub, index) => (
                             <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col gap-2 relative w-full min-w-0">
@@ -151,7 +151,6 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                                 
                                 <div className="pr-10 w-full min-w-0">
                                     <p className="text-[10px] font-bold text-gray-400 uppercase truncate">{sub.subjectCode}</p>
-                                    {/* 🟢 FIXED: Changed text-gray-800 to text-purple-800 for mobile subject name */}
                                     <p className="text-sm font-bold text-purple-800 leading-tight mt-0.5 break-words">{sub.subjectName || '-'}</p>
                                 </div>
 
@@ -177,7 +176,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                         ))}
                     </div>
 
-                    {/* DESKTOP/PRINT VIEW: Standard Table */}
+                    {/* 💻 DESKTOP/PRINT VIEW: Standard Table */}
                     <div className="hidden md:block print:block overflow-x-auto bg-transparent print:overflow-visible w-full max-w-full">
                         <table className="w-full text-left border-collapse min-w-[600px] bg-transparent">
                             <thead>
@@ -209,15 +208,49 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                         </table>
                     </div>
                     
-                    {/* 🔢 TOTALS FOOTER */}
-                    <div className="bg-gray-100/80 print:bg-purple-50/50 border-t-2 border-gray-300 print:border-purple-200 p-3 backdrop-blur-[2px] print:backdrop-blur-none print-break-inside-avoid w-full min-w-0">
-                        <div className="grid grid-cols-3 md:grid-cols-6 gap-1 md:gap-4 text-center divide-x divide-gray-300 print:divide-purple-200 w-full min-w-0">
-                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Theory</p><p className="text-xs sm:text-sm font-extrabold text-gray-900 truncate">{result.totalTheory || '-'}</p></div>
-                            <div className="px-1 hidden md:block print:block min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Practical</p><p className="text-xs sm:text-sm font-extrabold text-gray-900 truncate">{result.totalPractical || '-'}</p></div>
-                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Total</p><p className="text-xs sm:text-sm font-extrabold text-gray-900 truncate">{result.grandTotal || '-'}</p></div>
-                            <div className="px-1 hidden md:block print:block min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Credits</p><p className="text-xs sm:text-sm font-extrabold text-gray-900 truncate">{totalCr || '-'}</p></div>
-                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">SGPA</p><p className="text-sm sm:text-lg font-black text-purple-700 leading-none truncate mt-0.5 sm:mt-0">{result.sgpa?.toFixed(2)}</p></div>
-                            <div className="px-1 col-span-3 md:col-span-1 print:col-span-1 border-none md:border-solid print:border-solid mt-2 md:mt-0 print:mt-0 min-w-0">
+                    {/* 📱 MOBILE VIEW: Totals Footer (With screenshot colors) */}
+                    <div className="block md:hidden print:hidden bg-white border-t border-purple-200 p-4 w-full min-w-0">
+                        <div className="grid grid-cols-3 gap-y-5 text-center w-full min-w-0">
+                            {/* Row 1 */}
+                            <div className="flex flex-col border-r border-purple-200 min-w-0 px-1">
+                                <p className="text-[9px] font-bold text-gray-500 uppercase truncate mb-1">Theory</p>
+                                <p className="text-[13px] font-extrabold text-gray-900 truncate">{result.totalTheory || '-'}</p>
+                            </div>
+                            <div className="flex flex-col border-r border-purple-200 min-w-0 px-1">
+                                <p className="text-[9px] font-bold text-gray-500 uppercase truncate mb-1">Practical</p>
+                                <p className="text-[13px] font-extrabold text-gray-900 truncate">{result.totalPractical || '-'}</p>
+                            </div>
+                            <div className="flex flex-col min-w-0 px-1">
+                                <p className="text-[9px] font-bold text-gray-500 uppercase truncate mb-1">Total</p>
+                                <p className="text-[13px] font-extrabold text-gray-900 truncate">{result.grandTotal || '-'}</p>
+                            </div>
+                            {/* Row 2 */}
+                            <div className="flex flex-col border-r border-purple-200 min-w-0 px-1">
+                                <p className="text-[9px] font-bold text-gray-500 uppercase truncate mb-1">Credits</p>
+                                <p className="text-[13px] font-extrabold text-gray-900 truncate">{totalCr || '-'}</p>
+                            </div>
+                            <div className="flex flex-col border-r border-purple-200 min-w-0 px-1">
+                                <p className="text-[9px] font-bold text-gray-500 uppercase truncate mb-1">SGPA</p>
+                                <p className="text-[15px] font-black text-purple-700 leading-none truncate">{result.sgpa?.toFixed(2)}</p>
+                            </div>
+                            <div className="flex flex-col min-w-0 px-1 items-center justify-start">
+                                <p className="text-[9px] font-bold text-gray-500 uppercase truncate mb-1">Remarks</p>
+                                <span className={`inline-block px-3 py-0.5 rounded text-[10px] font-black uppercase tracking-wider border truncate ${result.remarks === 'PASSED' ? 'bg-transparent text-teal-600 border-teal-200' : 'bg-transparent text-amber-600 border-amber-200'}`}>
+                                    {result.remarks}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* 💻 DESKTOP/PRINT VIEW: Totals Footer (Completely Untouched) */}
+                    <div className="hidden md:block print:block bg-gray-100/80 print:bg-purple-50/50 border-t-2 border-gray-300 print:border-purple-200 p-3 backdrop-blur-[2px] print:backdrop-blur-none print-break-inside-avoid w-full min-w-0">
+                        <div className="grid grid-cols-6 gap-4 text-center divide-x divide-gray-300 print:divide-purple-200 w-full min-w-0">
+                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Theory</p><p className="text-sm font-extrabold text-gray-900 truncate">{result.totalTheory || '-'}</p></div>
+                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Practical</p><p className="text-sm font-extrabold text-gray-900 truncate">{result.totalPractical || '-'}</p></div>
+                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Total</p><p className="text-sm font-extrabold text-gray-900 truncate">{result.grandTotal || '-'}</p></div>
+                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Credits</p><p className="text-sm font-extrabold text-gray-900 truncate">{totalCr || '-'}</p></div>
+                            <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">SGPA</p><p className="text-lg font-black text-purple-700 leading-none truncate mt-0.5">{result.sgpa?.toFixed(2)}</p></div>
+                            <div className="px-1 min-w-0">
                                 <p className="text-[9px] font-bold text-gray-500 uppercase mb-1 truncate">Remarks</p>
                                 <span className={`inline-block px-2 py-0.5 rounded-sm text-[10px] font-black uppercase tracking-wider border truncate ${result.remarks === 'PASSED' ? 'bg-teal-50 text-teal-700 border-teal-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>{result.remarks}</span>
                             </div>
