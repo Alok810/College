@@ -3,8 +3,16 @@
   "appName": "Rigya",
   "webDir": "dist",
   "plugins": {
+    "CapacitorCookies": {
+      "enabled": true
+    },
     "PushNotifications": {
       "presentationOptions": ["badge", "sound", "alert"]
+    },
+    "GoogleAuth": {
+      "scopes": ["profile", "email"],
+      "serverClientId": "762569744606-vjfc9pmmipo6naord6f3aqotscfobfti.apps.googleusercontent.com",
+      "forceCodeForRefreshToken": true
     }
   }
 }

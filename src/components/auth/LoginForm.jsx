@@ -1,9 +1,11 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { subscribeToOSNotifications } from "../../utils/pushNotifications";
-import { GoogleLogin } from "@react-oauth/google";
+import { useGoogleLogin } from "@react-oauth/google"; // 🟢 Changed import to the Hook
 import { api } from "../../api";
+import { Capacitor } from '@capacitor/core';
+import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'; 
 
 import EyeIcon from "../../assets/eye.png";
 import HiddenIcon from "../../assets/hidden.png";
@@ -20,9 +22,74 @@ export default function LoginForm({
 }) {
   const navigate = useNavigate();
   const { setIsAuthenticated, fetchAuthData } = useAuth();
+  
+  const isNativeApp = Capacitor.isNativePlatform();
+
+  useEffect(() => {
+    if (isNativeApp) {
+      GoogleAuth.initialize({
+        clientId: '762569744606-vjfc9pmmipo6naord6f3aqotscfobfti.apps.googleusercontent.com', 
+        scopes: ['profile', 'email'],
+        grantOfflineAccess: true,
+      });
+    }
+  }, [isNativeApp]);
+
+  // 📱 MOBILE LOGIC
+  const handleNativeGoogleLogin = async () => {
+    try {
+      try {
+        await GoogleAuth.signOut();
+      } catch (signOutError) {}
+
+      const googleUser = await GoogleAuth.signIn();
+
+      const { data } = await api.post("/auth/google-login", { 
+        token: googleUser.authentication.idToken // Mobile sends an ID Token
+      });
+
+      if (data.success) {
+        localStorage.setItem("token", data.token);
+        await fetchAuthData();
+        setIsAuthenticated(true);
+        subscribeToOSNotifications();
+        navigate("/");
+      }
+    } catch (error) {
+      console.error("Native Google Login Error:", error);
+      const errorMessage = String(error.message || error).toLowerCase();
+      if (!errorMessage.includes('canceled') && error.type !== 'user_cancelled') {
+        alert("Google Sign-In failed. Please try again.");
+      }
+    }
+  };
+
+  // 💻 WEB LOGIC
+  const handleWebGoogleLogin = useGoogleLogin({
+    onSuccess: async (tokenResponse) => {
+      try {
+        const { data } = await api.post("/auth/google-login", { 
+          token: tokenResponse.access_token // Web sends an Access Token
+        });
+
+        if (data.success) {
+          localStorage.setItem("token", data.token);
+          await fetchAuthData();
+          setIsAuthenticated(true);
+          subscribeToOSNotifications();
+          navigate("/");
+        }
+      } catch (error) {
+        console.error("Web Google Login Error:", error);
+        alert(error.response?.data?.message || "Account not found. Please register manually first.");
+      }
+    },
+    onError: () => {
+      alert("Google Login popup was closed or failed.");
+    }
+  });
 
   return (
-    // Added slight adjustments for spacing on mobile vs tablet
     <div className="flex flex-col gap-4 sm:gap-5 mt-2 w-full max-w-md mx-auto px-2 sm:px-0">
       
       {/* Email Field */}
@@ -36,7 +103,7 @@ export default function LoginForm({
           value={formData.email}
           placeholder="e.g., student@institute.edu"
           onChange={handleChange}
-          // Adjusted padding slightly for mobile, kept standard for sm+
+          autoComplete="email"
           className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 shadow-sm text-sm sm:text-base"
           required
         />
@@ -62,6 +129,7 @@ export default function LoginForm({
             value={formData.password}
             placeholder="••••••••"
             onChange={handleChange}
+            autoComplete="current-password"
             className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 pr-10 sm:pr-12 text-sm sm:text-base"
             required
           />
@@ -120,37 +188,22 @@ export default function LoginForm({
         <div className="flex-grow border-t border-gray-200"></div>
       </div>
 
-{/* 🟢 OFFICIAL GOOGLE BUTTON */}
+      {/* 🟢 THE UNIFIED BUTTON */}
       <div className="flex justify-center w-full mt-1 mb-1">
-        {/* 👇 Added max-w-full and overflow-hidden to clamp the iframe on mobile */}
-        <div className="w-full sm:w-auto flex justify-center max-w-full overflow-hidden">
-          <GoogleLogin
-            onSuccess={async (credentialResponse) => {
-              try {
-                const { data } = await api.post("/auth/google-login", { token: credentialResponse.credential });
-
-                if (data.success) {
-                  await fetchAuthData();
-                  setIsAuthenticated(true);
-                  subscribeToOSNotifications();
-                  navigate("/");
-                }
-              } catch (error) {
-                console.error("Google Login Error:", error);
-                alert(error.response?.data?.message || "Account not found. Please register manually first.");
-              }
-            }}
-            onError={() => {
-              alert("Google Login popup was closed or failed.");
-            }}
-            useOneTap={true} 
-            theme="outline"
-            size="large"
-            shape="rectangular"
-            // Set width to 100% to fill the clamped container
-            width="100%" 
-          />
-        </div>
+        <button
+          type="button"
+          // Smart switch triggers the correct function based on the platform!
+          onClick={isNativeApp ? handleNativeGoogleLogin : handleWebGoogleLogin}
+          className="w-full sm:w-auto flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 active:bg-gray-100 active:translate-y-0 active:shadow-sm transition-all duration-200"
+        >
+          <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
+          </svg>
+          Sign in with Google
+        </button>
       </div>
 
     </div>

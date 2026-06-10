@@ -4,4 +4,5 @@
     <string name="title_activity_main">Rigya</string>
     <string name="package_name">com.rigya.app</string>
     <string name="custom_url_scheme">com.rigya.app</string>
+    <string name="server_client_id">762569744606-vjfc9pmmipo6naord6f3aqotscfobfti.apps.googleusercontent.com</string>
 </resources>

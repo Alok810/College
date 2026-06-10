@@ -7,7 +7,6 @@ import { registerUser, loginUser, sendOtp, verifyOtp, sendPasswordResetLink, get
 import { useAuth } from '../context/AuthContext';
 import { subscribeToOSNotifications } from '../utils/pushNotifications';
 
-// Updated import paths (going up one level to src/components)
 import InstituteSearchBox from "../components/auth/InstituteSearchBox";
 import LoginForm from "../components/auth/LoginForm";
 import RegistrationForm from "../components/auth/RegistrationForm";
@@ -236,7 +235,6 @@ export default function AuthPage() {
     }
 
     if (isSignUp) {
-      // Registration specific validation
       const enteredID = formData.instituteRegistrationNumber.trim();
       const validID = sessionStorage.getItem("validAisheCode");
 
@@ -273,7 +271,6 @@ export default function AuthPage() {
 
         const response = await registerUser(payload);
         if (response.success) {
-          // 🟢 ADD THIS LINE: Save the token if registration logs them in automatically
           if (response.token) {
             localStorage.setItem("token", response.token);
           }
@@ -288,7 +285,6 @@ export default function AuthPage() {
         alert(error.message);
       }
     } else {
-      // Simplified Login Logic
       if (!formData.email || !formData.password) {
         return alert("Please enter your email and password.");
       }
@@ -299,9 +295,7 @@ export default function AuthPage() {
         });
         
         if (response.success) {
-          // 🟢 ADD THIS LINE: Save the token for mobile!
           localStorage.setItem("token", response.token); 
-          
           await fetchAuthData(); 
           setIsAuthenticated(true);
           subscribeToOSNotifications();
@@ -330,9 +324,23 @@ export default function AuthPage() {
     />
   );
 
-  return (
-    <div className="fixed inset-0 flex overflow-hidden" style={{ background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", backgroundAttachment: "fixed" }}>
-      <motion.div className="flex w-full" animate={{ flexDirection: isSignUp ? "row-reverse" : "row" }} transition={{ duration: 0.7, ease: "easeInOut" }} >
+ return (
+    // 🟢 1. SAFE AREA PADDING: Added 'env(safe-area-inset-...)' to the style block.
+    // This pushes the flex container down and up dynamically based on the phone's physical notch/bars!
+    <div 
+      className="fixed inset-0 h-[100dvh] w-full flex overflow-hidden" 
+      style={{ 
+        background: "linear-gradient(to bottom, #d6f8df, rgb(227, 224, 250), #88e4f4)", 
+        backgroundAttachment: "fixed",
+        paddingTop: "env(safe-area-inset-top)",
+        paddingBottom: "env(safe-area-inset-bottom)",
+        paddingLeft: "env(safe-area-inset-left)",
+        paddingRight: "env(safe-area-inset-right)"
+      }}
+    >
+      <motion.div className="flex w-full items-center justify-center h-full" animate={{ flexDirection: isSignUp ? "row-reverse" : "row" }} transition={{ duration: 0.7, ease: "easeInOut" }} >
+        
+        {/* Desktop Side Graphic */}
         <div className="hidden md:flex flex-col justify-center items-center w-1/2 p-10">
           <img src={RigyaIcon} alt="Rigya Logo" className="w-72 mb-6" />
           <blockquote className="italic text-center text-lg leading-relaxed max-w-md bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-teal-600">
@@ -340,7 +348,8 @@ export default function AuthPage() {
           </blockquote>
         </div>
 
-        <div className="flex-1 flex items-center justify-center p-6">
+        {/* Form Container */}
+        <div className="w-full md:w-1/2 flex items-center justify-center p-4 z-10 h-full">
           {showForgotPassword ? (
             <ForgotPasswordForm
               handleForgotPasswordSubmit={handleForgotPasswordSubmit}
@@ -355,19 +364,19 @@ export default function AuthPage() {
             <motion.div
               key={isSignUp ? "signup" : "signin"}
               initial={{ opacity: 0, y: 30 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.6 }}
-              className="w-full max-w-md bg-white shadow-2xl rounded-2xl p-8 flex flex-col min-h-[600px] max-h-[700px] overflow-hidden"
+              className="w-full max-w-md bg-white shadow-2xl rounded-2xl p-5 md:p-8 flex flex-col h-fit max-h-[95dvh] md:max-h-[700px] overflow-hidden"
             >
-              <div className="flex items-center justify-center mb-6">
-                <img src={RigyaIcon} alt="Rigya Logo" className="w-14 mr-2" />
-                <h1 className="text-2xl font-bold text-purple-700">{isSignUp ? "Registration" : "Login"}</h1>
+              <div className="flex items-center justify-center mb-4 sm:mb-6 shrink-0">
+                <img src={RigyaIcon} alt="Rigya Logo" className="w-12 sm:w-14 mr-2" />
+                <h1 className="text-xl sm:text-2xl font-bold text-purple-700">{isSignUp ? "Registration" : "Login"}</h1>
               </div>
-              <form onSubmit={handleSubmit} className="space-y-4 flex flex-col flex-grow overflow-y-auto pr-2 custom-scrollbar">
+              
+              <form onSubmit={handleSubmit} className="flex flex-col gap-3 sm:gap-4 overflow-y-auto pr-1 sm:pr-2 custom-scrollbar">
                 
-                {/* User Type selection is now ONLY visible during Sign Up */}
                 {isSignUp && (
-                  <div className="space-y-4">
-                    <label className="block text-sm font-medium text-gray-600 mb-2">Select User Type</label>
-                    <div className="flex flex-wrap gap-x-4 gap-y-2 text-sm">
+                  <div className="space-y-3 sm:space-y-4 shrink-0">
+                    <label className="block text-sm font-medium text-gray-600 mb-1 sm:mb-2">Select User Type</label>
+                    <div className="flex flex-wrap gap-x-3 gap-y-2 text-sm">
                       {["Student", "Teacher", "Institute", "Official", "Other"].map((type) => (
                         <label key={type} className="flex items-center gap-1 cursor-pointer">
                           <input type="radio" name="userType" value={type} checked={userType === type} onChange={() => { setUserType(type); resetForm(); }} />
@@ -423,7 +432,7 @@ export default function AuthPage() {
                   />
                 )}
                 
-                <p className="text-center text-sm text-gray-500 cursor-pointer hover:text-purple-600 mt-auto pt-2" onClick={() => { setIsSignUp(!isSignUp); resetForm(); }}>
+                <p className="text-center text-sm text-gray-500 cursor-pointer hover:text-purple-600 mt-4 shrink-0 pb-1" onClick={() => { setIsSignUp(!isSignUp); resetForm(); }}>
                   {isSignUp ? "Already have an account? Login" : "Don’t have an account? Register"}
                 </p>
               </form>
@@ -434,15 +443,20 @@ export default function AuthPage() {
 
       <motion.button
         key={isSignUp ? "help-register" : "help-login"}
-        className={`absolute bottom-8 z-[9999] p-4 bg-gradient-to-r from-purple-600 to-teal-600 text-white rounded-full shadow-2xl hover:shadow-lg hover:scale-105 flex items-center justify-center ${isSignUp ? "right-8" : "left-8"}`}
+        // 🟢 2. BUTTON SAFE AREA: Removed 'bottom-4' and replaced it dynamically in the style prop
+        className={`absolute z-[90] p-3 md:p-4 bg-gradient-to-r from-purple-600 to-teal-600 text-white rounded-full shadow-2xl hover:shadow-lg hover:scale-105 flex items-center justify-center ${isSignUp ? "right-4 md:right-8" : "left-4 md:left-8"}`}
         initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: showForgotPassword ? 0 : 1, y: 0 }}
         transition={{ duration: 0.6 }}
-        style={{ pointerEvents: showForgotPassword ? "none" : "auto" }}
+        style={{ 
+          pointerEvents: showForgotPassword ? "none" : "auto",
+          // This ensures the button sits 1rem (16px) above the gesture bar!
+          bottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" 
+        }}
         onClick={() => navigate('/helpdesk')} 
         title="Help Desk & Directory"
       >
-        <HelpCircle size={28} />
+        <HelpCircle size={24} className="md:w-7 md:h-7" />
       </motion.button>
     </div>
   );
