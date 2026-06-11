@@ -120,8 +120,9 @@ const Profile = ({ posts: allPosts }) => {
   if (isMobile) {
     return (
       <div className="w-full flex flex-col px-0 py-0 bg-gray-50/30 min-h-screen relative overflow-x-hidden">
-        {/* 🟢 THE FIX: We wrap the Sidebar AND the Posts in the exact same padding so they align perfectly! */}
-        <div className="w-full px-3 flex flex-col gap-4">
+        
+        {/* 🟢 FIXED: Added -mt-5 to pull the profile card up closer to the Institute Header! */}
+        <div className="w-full px-3 flex flex-col gap-4 -mt-4">
           
           <MobileProfileSidebar
             user={user}
@@ -135,7 +136,7 @@ const Profile = ({ posts: allPosts }) => {
             }}
           />
           
-          <div className="w-full pb-32">
+          <div className="w-full pb-6">
             <ProfileMainContent
               user={user}
               posts={posts}
@@ -151,7 +152,7 @@ const Profile = ({ posts: allPosts }) => {
 
         </div>
 
-        <MobileTabBar activeTab={activeTab} handleTabChange={handleTabChange} />
+        <MobileTabBar activeTab={activeTab} handleTabChange={handleTabChange} isCurrentUser={isCurrentUser} setShowEdit={setShowEdit} />
         {showEdit && isCurrentUser && <EditProfile user={user} setShowEdit={setShowEdit} setUser={setUser} />}
       </div>
     );

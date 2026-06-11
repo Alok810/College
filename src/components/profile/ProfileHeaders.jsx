@@ -2,7 +2,8 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Star, Image as ImageIcon, Users as FriendsIcon, BarChart3, FileText, Monitor, Printer, Edit } from 'lucide-react';
 
-export const DesktopProfileHeader = ({ activeTab, handleTabChange, isCurrentUser, resumeViewMode, setResumeViewMode }) => {
+// 🟢 Added 'setShowEdit' to the props
+export const DesktopProfileHeader = ({ activeTab, handleTabChange, isCurrentUser, resumeViewMode, setResumeViewMode, setShowEdit }) => {
   const navigate = useNavigate();
 
   const navItems = [
@@ -70,18 +71,28 @@ export const DesktopProfileHeader = ({ activeTab, handleTabChange, isCurrentUser
             );
           })}
         </div>
+
+        {/* 🟢 ADDED: Edit Profile button on the right side for Desktop */}
+        {isCurrentUser && (
+          <button
+            onClick={() => setShowEdit?.(true)}
+            className="px-4 py-2 text-sm font-bold rounded-lg flex items-center gap-1.5 transition-colors bg-gradient-to-r from-purple-600 to-teal-500 text-white shadow-sm hover:opacity-90 ml-2"
+          >
+            <Edit className="w-4 h-4" /> Edit Profile
+          </button>
+        )}
+
       </div>
     </div>
   );
 };
 
-// 🟢 RESTORED TO FLOATING BOTTOM BAR WITH RESULT BUTTON
-export const MobileTabBar = ({ activeTab, handleTabChange }) => {
+// 🟢 Added 'isCurrentUser' and 'setShowEdit' to the props
+export const MobileTabBar = ({ activeTab, handleTabChange, isCurrentUser, setShowEdit }) => {
   const navItems = [
     { name: "Posts", icon: Star, tab: "posts" },
     { name: "Media", icon: ImageIcon, tab: "media" },
     { name: "Friends", icon: FriendsIcon, tab: "friends" },
-    // 🟢 ADDED RESULT BUTTON HERE
     { name: "Results", icon: BarChart3, tab: "results" }, 
     { name: "Resume", icon: FileText, tab: "resume" },
   ];
@@ -89,8 +100,9 @@ export const MobileTabBar = ({ activeTab, handleTabChange }) => {
   return (
     <div className="lg:hidden fixed bottom-[4rem] left-0 right-0 z-40 w-full pointer-events-none">
       <div className="bg-white/95 backdrop-blur-xl border-t border-gray-200 shadow-[0_-4px_15px_-3px_rgba(0,0,0,0.05)] rounded-t-3xl px-4 py-2.5 flex justify-between items-center pointer-events-auto overflow-x-auto custom-scrollbar">
-        {/* Adjusted spacing to comfortably fit all 5 icons */}
         <div className="flex space-x-2 sm:space-x-4 flex-1 justify-center items-center min-w-max">
+          
+          {/* Navigation Tabs */}
           {navItems.map((item) => (
             <button
               key={item.name}
@@ -104,6 +116,23 @@ export const MobileTabBar = ({ activeTab, handleTabChange }) => {
               <item.icon className={`w-5 h-5 ${activeTab === item.tab ? "fill-current" : ""}`} />
             </button>
           ))}
+
+          {/* 🟢 ADDED: Edit Profile Icon integrated directly into the scrolling tab bar */}
+          {isCurrentUser && (
+            <>
+              {/* Subtle divider to separate tabs from actions */}
+              <div className="w-px h-6 bg-gray-200 mx-1 flex-shrink-0"></div>
+              
+              <button
+                onClick={() => setShowEdit?.(true)}
+                className="w-11 h-11 rounded-full flex items-center justify-center transition-all duration-200 flex-shrink-0 text-gray-600 bg-gray-50 border border-gray-200 shadow-sm hover:bg-gray-100 active:scale-95"
+                aria-label="Edit Profile"
+              >
+                <Edit className="w-5 h-5" />
+              </button>
+            </>
+          )}
+
         </div>
       </div>
     </div>

@@ -30,8 +30,52 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     return (
         <div 
             ref={contentRef} 
-            className="w-full max-w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-10 print:m-0"
+            // 🟢 FIXED: Added 'marksheet-print-wrapper' so we can isolate it from the rest of the app during print!
+            className="marksheet-print-wrapper w-full max-w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-4 print:m-0"
         >
+            <style>{`
+                @media print {
+                    /* 1. Reset Global Backgrounds & Heights */
+                    html, body, #root {
+                        background: white !important;
+                        height: auto !important;
+                        min-height: auto !important;
+                    }
+
+                    /* 2. Break overflow locks to allow multi-page printing */
+                    * {
+                        overflow: visible !important;
+                    }
+
+                    /* 3. Hide ALL standard app UI elements (Navbars, Backgrounds, etc.) */
+                    body * {
+                        visibility: hidden;
+                    }
+
+                    /* 4. Un-hide ONLY the marksheet and its internal contents */
+                    .marksheet-print-wrapper, .marksheet-print-wrapper * {
+                        visibility: visible;
+                    }
+
+                    /* 5. Pull the marksheet out of the app padding and make it full A4 width */
+                    .marksheet-print-wrapper {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 100% !important;
+                        max-width: 100% !important;
+                        margin: 0 !important;
+                        box-shadow: none !important;
+                    }
+
+                    /* Standard A4 layout rules */
+                    @page { size: A4 portrait; margin: 10mm; } 
+                    .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
+                    tr { break-inside: avoid; page-break-inside: avoid; }
+                    .watermark-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1; }
+                }
+            `}</style>
+
             {/* WATERMARK */}
             {instituteLogo && (
                 <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 print:watermark-container">
@@ -139,10 +183,10 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                 </div>
 
                 {/* 📋 GRADES CONTAINER */}
-                <div className="print:border-2 print:border-purple-200 print:rounded-xl print:overflow-hidden bg-white/50 w-full min-w-0">
+                <div className="print:border-2 print:border-purple-200 print:rounded-xl print:overflow-hidden bg-white w-full min-w-0 mt-4 print:mt-0">
                     
-                    {/* 📱 MOBILE VIEW: Subject Cards */}
-                    <div className="block md:hidden print:hidden px-3 py-2 space-y-3 w-full min-w-0">
+                    {/* 📱 MOBILE VIEW: Subject Cards (Hidden on Print) */}
+                    <div className="block md:hidden print:hidden px-3 py-2 space-y-3 w-full min-w-0 bg-gray-50/50 border border-purple-200 rounded-xl">
                         {result.subjects?.map((sub, index) => (
                             <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col gap-2 relative w-full min-w-0">
                                 <div className={`absolute top-3 right-3 text-lg font-black ${sub.grade === 'F' ? 'text-red-600' : 'text-teal-700'}`}>
@@ -208,8 +252,8 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                         </table>
                     </div>
                     
-                    {/* 📱 MOBILE VIEW: Totals Footer (With screenshot colors) */}
-                    <div className="block md:hidden print:hidden bg-white border-t border-purple-200 p-4 w-full min-w-0">
+                    {/* 📱 MOBILE VIEW: Totals Footer (Hidden on Print) */}
+                    <div className="block md:hidden print:hidden bg-white border border-purple-200 mt-[-2px] rounded-xl p-4 w-full min-w-0">
                         <div className="grid grid-cols-3 gap-y-5 text-center w-full min-w-0">
                             {/* Row 1 */}
                             <div className="flex flex-col border-r border-purple-200 min-w-0 px-1">
@@ -242,7 +286,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                         </div>
                     </div>
 
-                    {/* 💻 DESKTOP/PRINT VIEW: Totals Footer (Completely Untouched) */}
+                    {/* 💻 DESKTOP/PRINT VIEW: Totals Footer */}
                     <div className="hidden md:block print:block bg-gray-100/80 print:bg-purple-50/50 border-t-2 border-gray-300 print:border-purple-200 p-3 backdrop-blur-[2px] print:backdrop-blur-none print-break-inside-avoid w-full min-w-0">
                         <div className="grid grid-cols-6 gap-4 text-center divide-x divide-gray-300 print:divide-purple-200 w-full min-w-0">
                             <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Theory</p><p className="text-sm font-extrabold text-gray-900 truncate">{result.totalTheory || '-'}</p></div>
