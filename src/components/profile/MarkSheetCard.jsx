@@ -30,29 +30,57 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     return (
         <div 
             ref={contentRef} 
-            // 🟢 THE FIX: Added print:w-[800px] and print:mx-auto to force a wide A4 format
-            className="w-full max-w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-8 print:m-0 print:w-[800px] print:max-w-[800px] print:mx-auto"
+            // 🟢 THE FIX: Added 'marksheet-print-container' to hook into our aggressive CSS below
+            className="marksheet-print-container w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-300 relative"
         >
+            {/* 🟢 THE FIX: This CSS completely overrides the mobile browser and forces a flawless Desktop A4 printout */}
             <style>{`
                 @media print {
+                    /* 1. Force all wrappers to allow overflow so the table isn't cut off */
+                    * { overflow: visible !important; }
+                    
+                    /* 2. Hide everything else in the app (Navbars, Backgrounds) */
+                    body * { visibility: hidden; }
+                    
+                    /* 3. Force pure white backgrounds globally */
                     html, body {
+                        background-color: white !important;
+                        background-image: none !important;
+                        margin: 0 !important;
+                        padding: 0 !important;
+                    }
+
+                    /* 4. Un-hide ONLY our marksheet and its contents */
+                    .marksheet-print-container, .marksheet-print-container * {
+                        visibility: visible;
+                    }
+
+                    /* 5. Rip the marksheet out of the mobile layout and force Desktop width */
+                    .marksheet-print-container {
+                        position: absolute !important;
+                        left: 0 !important;
+                        top: 0 !important;
+                        width: 800px !important; /* Locks it to Desktop size */
+                        max-width: 800px !important;
+                        padding: 2rem !important;
+                        background: white !important;
+                        border: none !important;
+                        box-shadow: none !important;
+                        border-radius: 0 !important;
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
-                        /* 🟢 Forces the PDF generator to render as a desktop width! */
-                        width: 800px !important;
-                        min-width: 800px !important;
-                        background: white !important;
                     }
+
+                    /* 6. Ensure buttons stay hidden */
+                    .marksheet-print-container .print\\:hidden, 
+                    .marksheet-print-container .print\\:hidden * {
+                        display: none !important;
+                        visibility: hidden !important;
+                    }
+
                     @page { size: A4 portrait; margin: 10mm; } 
                     .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
                     tr { break-inside: avoid; page-break-inside: avoid; }
-                    
-                    /* 🟢 Aggressively hides your mobile BottomNav and TabBar during PDF download! */
-                    .fixed:not(.watermark-container) { 
-                        display: none !important; 
-                        opacity: 0 !important;
-                        visibility: hidden !important;
-                    }
                 }
             `}</style>
 
