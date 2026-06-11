@@ -30,17 +30,29 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     return (
         <div 
             ref={contentRef} 
-            className="w-full max-w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-8 print:m-0"
+            // 🟢 THE FIX: Added print:w-[800px] and print:mx-auto to force a wide A4 format
+            className="w-full max-w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-8 print:m-0 print:w-[800px] print:max-w-[800px] print:mx-auto"
         >
             <style>{`
                 @media print {
-                    body {
+                    html, body {
                         -webkit-print-color-adjust: exact !important;
                         print-color-adjust: exact !important;
+                        /* 🟢 Forces the PDF generator to render as a desktop width! */
+                        width: 800px !important;
+                        min-width: 800px !important;
+                        background: white !important;
                     }
                     @page { size: A4 portrait; margin: 10mm; } 
                     .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
                     tr { break-inside: avoid; page-break-inside: avoid; }
+                    
+                    /* 🟢 Aggressively hides your mobile BottomNav and TabBar during PDF download! */
+                    .fixed:not(.watermark-container) { 
+                        display: none !important; 
+                        opacity: 0 !important;
+                        visibility: hidden !important;
+                    }
                 }
             `}</style>
 
@@ -140,12 +152,11 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                 </div>
 
                 {/* 📋 GRADES CONTAINER */}
-                {/* 🟢 FIXED: Added md:mt-0 to eliminate the white gap on the desktop web view! */}
                 <div className="relative print:border-2 print:border-purple-200 print:rounded-xl print:overflow-hidden bg-white w-full min-w-0 mt-4 md:mt-0 print:mt-0">
                     
                     {/* Watermark Overlay */}
                     {instituteLogo && (
-                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 p-4">
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 p-4 print:watermark-container">
                             <img 
                                 src={instituteLogo} 
                                 alt="Institute Watermark" 
@@ -192,7 +203,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
 
                     {/* 💻 DESKTOP/PRINT VIEW: Standard Table */}
                     <div className="relative z-10 hidden md:block print:block overflow-x-auto bg-transparent print:overflow-visible w-full max-w-full">
-                        <table className="w-full text-left border-collapse min-w-[600px] bg-transparent">
+                        <table className="w-full text-left border-collapse min-w-[600px] print:min-w-full bg-transparent">
                             <thead>
                                 <tr className="bg-gray-100/60 print:bg-purple-50/80 text-[10px] sm:text-xs font-bold text-gray-700 print:text-purple-900 uppercase tracking-wider border-b-2 border-gray-300 print:border-purple-200">
                                     <th className="p-3 print:py-2 print:px-3 border-r border-gray-300 print:border-purple-200 w-24">Code</th>
