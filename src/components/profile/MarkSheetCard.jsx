@@ -30,62 +30,19 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
     return (
         <div 
             ref={contentRef} 
-            // 🟢 FIXED: Added 'marksheet-print-wrapper' so we can isolate it from the rest of the app during print!
-            className="marksheet-print-wrapper w-full max-w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-4 print:m-0"
+            className="w-full max-w-full min-w-0 bg-white rounded-xl shadow-sm border border-gray-300 overflow-hidden print:overflow-visible print:block print:h-auto print:border-none print:shadow-none animate-in fade-in slide-in-from-bottom-4 duration-300 relative print:p-8 print:m-0"
         >
             <style>{`
                 @media print {
-                    /* 1. Reset Global Backgrounds & Heights */
-                    html, body, #root {
-                        background: white !important;
-                        height: auto !important;
-                        min-height: auto !important;
+                    body {
+                        -webkit-print-color-adjust: exact !important;
+                        print-color-adjust: exact !important;
                     }
-
-                    /* 2. Break overflow locks to allow multi-page printing */
-                    * {
-                        overflow: visible !important;
-                    }
-
-                    /* 3. Hide ALL standard app UI elements (Navbars, Backgrounds, etc.) */
-                    body * {
-                        visibility: hidden;
-                    }
-
-                    /* 4. Un-hide ONLY the marksheet and its internal contents */
-                    .marksheet-print-wrapper, .marksheet-print-wrapper * {
-                        visibility: visible;
-                    }
-
-                    /* 5. Pull the marksheet out of the app padding and make it full A4 width */
-                    .marksheet-print-wrapper {
-                        position: absolute !important;
-                        left: 0 !important;
-                        top: 0 !important;
-                        width: 100% !important;
-                        max-width: 100% !important;
-                        margin: 0 !important;
-                        box-shadow: none !important;
-                    }
-
-                    /* Standard A4 layout rules */
                     @page { size: A4 portrait; margin: 10mm; } 
                     .print-break-inside-avoid { break-inside: avoid; page-break-inside: avoid; }
                     tr { break-inside: avoid; page-break-inside: avoid; }
-                    .watermark-container { position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: -1; }
                 }
             `}</style>
-
-            {/* WATERMARK */}
-            {instituteLogo && (
-                <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 print:watermark-container">
-                    <img 
-                        src={instituteLogo} 
-                        alt="Institute Watermark" 
-                        className="w-64 h-64 sm:w-[400px] sm:h-[400px] print:w-[500px] print:h-[500px] object-contain opacity-[0.06] print:opacity-[0.10]"
-                    />
-                </div>
-            )}
 
             <div className="relative z-10 print:block w-full min-w-0">
                 
@@ -152,7 +109,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                 </div>
 
                 {/* 🎓 OFFICIAL STUDENT DETAILS (PRINT ONLY) */}
-                <div className="hidden print:block w-full mb-4 mt-2 px-2">
+                <div className="hidden print:block w-full mb-4 mt-2 px-2 print-break-inside-avoid">
                     <table className="w-full text-left text-sm">
                         <tbody>
                             <tr>
@@ -183,12 +140,25 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                 </div>
 
                 {/* 📋 GRADES CONTAINER */}
-                <div className="print:border-2 print:border-purple-200 print:rounded-xl print:overflow-hidden bg-white w-full min-w-0 mt-4 print:mt-0">
+                {/* 🟢 FIXED: Added md:mt-0 to eliminate the white gap on the desktop web view! */}
+                <div className="relative print:border-2 print:border-purple-200 print:rounded-xl print:overflow-hidden bg-white w-full min-w-0 mt-4 md:mt-0 print:mt-0">
                     
+                    {/* Watermark Overlay */}
+                    {instituteLogo && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0 p-4">
+                            <img 
+                                src={instituteLogo} 
+                                alt="Institute Watermark" 
+                                className="w-[85%] h-[85%] object-contain opacity-10 print:opacity-[0.12]"
+                                style={{ mixBlendMode: 'multiply' }}
+                            />
+                        </div>
+                    )}
+
                     {/* 📱 MOBILE VIEW: Subject Cards (Hidden on Print) */}
-                    <div className="block md:hidden print:hidden px-3 py-2 space-y-3 w-full min-w-0 bg-gray-50/50 border border-purple-200 rounded-xl">
+                    <div className="relative z-10 block md:hidden print:hidden px-3 py-2 space-y-3 w-full min-w-0 bg-transparent border border-purple-200 rounded-xl">
                         {result.subjects?.map((sub, index) => (
-                            <div key={index} className="bg-white border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col gap-2 relative w-full min-w-0">
+                            <div key={index} className="bg-white/80 backdrop-blur-sm border border-gray-200 rounded-lg p-3 shadow-sm flex flex-col gap-2 relative w-full min-w-0">
                                 <div className={`absolute top-3 right-3 text-lg font-black ${sub.grade === 'F' ? 'text-red-600' : 'text-teal-700'}`}>
                                     {sub.grade}
                                 </div>
@@ -221,10 +191,10 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                     </div>
 
                     {/* 💻 DESKTOP/PRINT VIEW: Standard Table */}
-                    <div className="hidden md:block print:block overflow-x-auto bg-transparent print:overflow-visible w-full max-w-full">
+                    <div className="relative z-10 hidden md:block print:block overflow-x-auto bg-transparent print:overflow-visible w-full max-w-full">
                         <table className="w-full text-left border-collapse min-w-[600px] bg-transparent">
                             <thead>
-                                <tr className="bg-gray-100/60 print:bg-purple-50 text-[10px] sm:text-xs font-bold text-gray-700 print:text-purple-900 uppercase tracking-wider border-b-2 border-gray-300 print:border-purple-200">
+                                <tr className="bg-gray-100/60 print:bg-purple-50/80 text-[10px] sm:text-xs font-bold text-gray-700 print:text-purple-900 uppercase tracking-wider border-b-2 border-gray-300 print:border-purple-200">
                                     <th className="p-3 print:py-2 print:px-3 border-r border-gray-300 print:border-purple-200 w-24">Code</th>
                                     <th className="p-3 print:py-2 print:px-3 border-r border-gray-300 print:border-purple-200">Subject Name</th>
                                     <th className="p-3 print:py-2 print:px-3 border-r border-gray-300 print:border-purple-200 w-16 text-center">Type</th>
@@ -237,7 +207,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                             </thead>
                             <tbody className="text-xs sm:text-sm print:text-xs font-medium text-gray-800 divide-y divide-gray-200 print:divide-purple-100">
                                 {result.subjects?.map((sub, index) => (
-                                    <tr key={index} className="hover:bg-gray-50/80 print:hover:bg-transparent transition-colors bg-transparent">
+                                    <tr key={index} className="hover:bg-gray-50/80 transition-colors bg-transparent">
                                         <td className="p-3 print:py-2 print:px-3 border-r border-gray-200 print:border-purple-100 font-bold">{sub.subjectCode}</td>
                                         <td className="p-3 print:py-2 print:px-3 border-r border-gray-200 print:border-purple-100 text-gray-700">{sub.subjectName || '-'}</td>
                                         <td className="p-3 print:py-2 print:px-3 border-r border-gray-200 print:border-purple-100 text-center text-[10px] uppercase text-gray-500">{sub.type}</td>
@@ -253,7 +223,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                     </div>
                     
                     {/* 📱 MOBILE VIEW: Totals Footer (Hidden on Print) */}
-                    <div className="block md:hidden print:hidden bg-white border border-purple-200 mt-[-2px] rounded-xl p-4 w-full min-w-0">
+                    <div className="relative z-10 block md:hidden print:hidden bg-white/90 backdrop-blur-sm border border-purple-200 mt-[-2px] rounded-xl p-4 w-full min-w-0">
                         <div className="grid grid-cols-3 gap-y-5 text-center w-full min-w-0">
                             {/* Row 1 */}
                             <div className="flex flex-col border-r border-purple-200 min-w-0 px-1">
@@ -287,7 +257,7 @@ const MarkSheetCard = ({ result, displayData, instituteData, instituteLogo }) =>
                     </div>
 
                     {/* 💻 DESKTOP/PRINT VIEW: Totals Footer */}
-                    <div className="hidden md:block print:block bg-gray-100/80 print:bg-purple-50/50 border-t-2 border-gray-300 print:border-purple-200 p-3 backdrop-blur-[2px] print:backdrop-blur-none print-break-inside-avoid w-full min-w-0">
+                    <div className="relative z-10 hidden md:block print:block bg-gray-100/80 print:bg-purple-50/50 border-t-2 border-gray-300 print:border-purple-200 p-3 backdrop-blur-[2px] print:backdrop-blur-none print-break-inside-avoid w-full min-w-0">
                         <div className="grid grid-cols-6 gap-4 text-center divide-x divide-gray-300 print:divide-purple-200 w-full min-w-0">
                             <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Theory</p><p className="text-sm font-extrabold text-gray-900 truncate">{result.totalTheory || '-'}</p></div>
                             <div className="px-1 min-w-0"><p className="text-[10px] font-bold text-gray-500 uppercase truncate">Practical</p><p className="text-sm font-extrabold text-gray-900 truncate">{result.totalPractical || '-'}</p></div>
