@@ -5,7 +5,6 @@ import { Users, Zap, Mic2, Presentation, Lock, Sparkles } from "lucide-react";
 export default function TalkHive() {
   const navigate = useNavigate();
 
-  // 🟢 We use full Tailwind class strings here so Vite doesn't purge them during build!
   const modes = [
     {
       id: "focus-pod",
@@ -58,31 +57,33 @@ export default function TalkHive() {
   ];
 
   return (
-    <div className="p-4 sm:p-6 md:p-10 h-full flex flex-col items-center custom-scrollbar overflow-y-auto pb-32">
+    // 🟢 THE FIX: Removed pt-[...] and replaced it with pt-0. 
+    // App.jsx is already pushing this container down to clear the InstituteHeader!
+    <div className="relative w-full max-w-[100vw] flex flex-col items-center overflow-x-hidden px-4 sm:px-6 md:px-10 pt-0 pb-6">
       
-      {/* 🟢 Premium Header */}
-      <div className="text-center mb-8 md:mb-12 max-w-2xl mt-4 sm:mt-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-black uppercase tracking-widest mb-4">
+      {/* 🟢 Premium Header (Removed the mt-8 margin to pull it up!) */}
+      <div className="text-center mb-6 md:mb-10 max-w-2xl mt-0 sm:mt-2 animate-in fade-in slide-in-from-bottom-4 duration-500 px-2">
+        <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-600 text-xs font-black uppercase tracking-widest mb-3 sm:mb-4">
           <Sparkles size={14} /> The Rigya Network
         </div>
-        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-900 via-purple-800 to-indigo-600 mb-4 tracking-tight leading-tight">
+        <h1 className="text-4xl md:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-br from-gray-900 via-purple-800 to-indigo-600 mb-3 tracking-tight leading-tight">
           Welcome to TalkHive
         </h1>
-        <p className="text-gray-500 font-medium text-sm sm:text-base px-4">
+        <p className="text-gray-500 font-medium text-sm sm:text-base px-2 sm:px-4">
           Connect, collaborate, and grow with your peers in real-time. Choose your preferred mode of interaction below.
         </p>
       </div>
 
       {/* 🟢 Interactive Mode Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6 w-full max-w-5xl animate-in fade-in slide-in-from-bottom-6 duration-700 delay-100 px-1">
         {modes.map((mode) => (
           <button
             key={mode.id}
             onClick={() => mode.active && navigate(mode.path)}
             disabled={!mode.active}
-            className={`group relative flex flex-col items-start p-6 sm:p-8 rounded-[2rem] border transition-all duration-500 text-left overflow-hidden ${
+            className={`group relative flex flex-col items-start p-6 sm:p-8 rounded-[2rem] border transition-all duration-500 text-left overflow-hidden w-full ${
               mode.active 
-                ? `${mode.cardBg} ${mode.cardBorder} ${mode.cardShadow} cursor-pointer hover:-translate-y-1.5` 
+                ? `${mode.cardBg} ${mode.cardBorder} ${mode.cardShadow} cursor-pointer hover:-translate-y-1.5 active:scale-[0.98]` 
                 : "bg-gray-50/50 border-gray-200 opacity-80 cursor-not-allowed"
             }`}
           >
@@ -92,26 +93,26 @@ export default function TalkHive() {
             )}
 
             {/* Icon Block */}
-            <div className={`p-4 rounded-2xl shadow-sm border mb-5 relative z-10 transition-colors duration-300 ${
+            <div className={`p-4 rounded-2xl shadow-sm border mb-4 sm:mb-5 relative z-10 transition-colors duration-300 ${
               mode.active ? mode.iconBg : "bg-gray-100 border-gray-200"
             }`}>
               {mode.active ? mode.icon : React.cloneElement(mode.icon, { className: "text-gray-400" })}
             </div>
 
             {/* Text Content */}
-            <div className="relative z-10">
-              <h2 className={`text-xl sm:text-2xl font-black mb-2 transition-colors duration-300 ${mode.active ? 'text-gray-800' : 'text-gray-500'}`}>
+            <div className="relative z-10 w-full pr-12 sm:pr-0">
+              <h2 className={`text-xl sm:text-2xl font-black mb-1.5 sm:mb-2 transition-colors duration-300 ${mode.active ? 'text-gray-800' : 'text-gray-500'}`}>
                 {mode.title}
               </h2>
-              <p className={`text-xs sm:text-sm font-semibold transition-colors duration-300 ${mode.active ? 'text-gray-500' : 'text-gray-400'}`}>
+              <p className={`text-[13px] sm:text-sm font-semibold leading-relaxed transition-colors duration-300 ${mode.active ? 'text-gray-500' : 'text-gray-400'}`}>
                 {mode.desc}
               </p>
             </div>
 
             {/* Glassy "Coming Soon" Badge */}
             {!mode.active && (
-              <div className="absolute top-6 right-6 bg-white/80 backdrop-blur-md border border-gray-200 text-gray-500 px-3 py-1.5 rounded-full text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
-                <Lock size={12} className="stroke-[2.5px]" /> Locked
+              <div className="absolute top-4 right-4 sm:top-6 sm:right-6 bg-white/80 backdrop-blur-md border border-gray-200 text-gray-500 px-3 py-1.5 rounded-full text-[9px] sm:text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shadow-sm">
+                <Lock size={12} className="stroke-[2.5px]" /> <span className="hidden sm:block">Locked</span>
               </div>
             )}
           </button>
