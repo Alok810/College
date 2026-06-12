@@ -219,7 +219,9 @@ const AppContent = () => {
     ? "0px" 
     : `calc(env(safe-area-inset-top, 0px) + ${headerHeight} + 2rem)`;
 
-  const lockOuterScroll = (isProfilePage || isClubPage || isDeptPage || isResultPage || isLibraryPage || isInteractionPage) && !isMobile;
+  // 🟢 THE FIX: We removed `&& !isMobile` from the result page check.
+  // Now, the result page will lock the outer app scrollbar on BOTH desktop and mobile!
+  const lockOuterScroll = (isProfilePage || isClubPage || isDeptPage || isLibraryPage || isInteractionPage) && !isMobile || isResultPage;
 
   if (loading) {
     return (
@@ -268,7 +270,7 @@ const AppContent = () => {
           )}
 
           <div
-            className={`px-0 md:px-6 ${hideSidebar ? "pb-0 md:pb-0" : "pb-32 md:pb-4"} ${lockOuterScroll ? "overflow-hidden" : "overflow-y-auto"} overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
+            className={`px-0 md:px-6 ${hideSidebar ? "pb-0 md:pb-0" : lockOuterScroll ? "pb-24 md:pb-4" : "pb-32 md:pb-4"} ${lockOuterScroll ? "overflow-hidden" : "overflow-y-auto"} overflow-x-hidden z-10 ${homePageRightPadding} custom-scrollbar`}
             onScroll={handleScroll}
             style={{
               paddingTop: contentPaddingTop,

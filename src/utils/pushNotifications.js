@@ -55,7 +55,11 @@ export const subscribeToOSNotifications = async () => {
 
             // 4. Listen for the successful Firebase Token
             PushNotifications.addListener('registration', async (token) => {
-                console.log('✅ Native Firebase Token Received:', token.value);
+                
+                // 🟢 THE FIX: Only log the token if we are running in local development mode
+                if (import.meta.env.DEV) {
+                    console.log('✅ Native Firebase Token Received:', token.value);
+                }
                 
                 // Send this token to backend with an 'isNative' flag!
                 await api.post('/push/subscribe', { 

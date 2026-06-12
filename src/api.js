@@ -813,6 +813,15 @@ export const resolveRevaluation = async (resultId, status, remarks) => {
   }
 };
 
+export const uploadTempPdf = async (base64, fileName) => {
+  try {
+    const res = await api.post('/results/upload-temp-pdf', { base64, fileName });
+    return res.data;
+  } catch (error) {
+    throw error.response?.data || error;
+  }
+};
+
 // ------------------- COURSE BLUEPRINT ENDPOINTS -------------------
 
 // 🟢 NEW: Add this right here!
