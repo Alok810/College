@@ -7,7 +7,7 @@ const AppPromoBanner = () => {
 
   useEffect(() => {
     const isWeb = !Capacitor.isNativePlatform();
-    // Remember to put this back if you removed it for testing!
+    // Re-add the !hasDismissed check if you removed it for testing!
     const hasDismissed = localStorage.getItem('rigya_promo_dismissed');
 
     if (isWeb && !hasDismissed) {
@@ -36,10 +36,10 @@ const AppPromoBanner = () => {
         </div>
       </div>
       
-      {/* 🟢 FIXED: Removed the Skip button, leaving only the Install button! */}
       <div className="flex items-center">
         <a
-          href="https://drive.google.com/file/d/14nrlaMlMmcYYb7c8YdBpCWqX5xD42LF_/view?usp=sharing"
+          // 🟢 DIRECT DOWNLOAD LINK INJECTED HERE
+          href="https://drive.google.com/uc?export=download&id=14nrlaMlMmcYYb7c8YdBpCWqX5xD42LF_"
           target="_blank"
           rel="noopener noreferrer"
           onClick={handleDismiss} 
