@@ -4,6 +4,8 @@ import rigyaLogo from '../assets/rigya.png';
 
 const AppPromoBanner = () => {
   const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+  const apkDownloadUrl = `${backendUrl}/Rigya.apk`;
+  
   // 1. Starts as TRUE every time the component loads (shows after every refresh!)
   const [showBanner, setShowBanner] = useState(true);
   
@@ -43,12 +45,11 @@ const AppPromoBanner = () => {
     setHasInstalled(true);
   };
 
-  // 🟢 THE SMART LINK LOGIC
-  // If they are on mobile AND clicked install before, try to force-open the app via Android Intent.
-  // Otherwise, give them the direct download link to the APK.
+  // 🟢 THE SMART LINK LOGIC (Fully Updated Intent)
+  // We use strict MAIN and LAUNCHER intent actions so Chrome doesn't panic and default to the Play Store.
   const actionLink = (hasInstalled && isMobile)
-    ? "intent://#Intent;package=com.rigya.app;scheme=https;end;" 
-    : `${backendUrl}/Rigya.apk`;
+    ? `intent://#Intent;action=android.intent.action.MAIN;category=android.intent.category.LAUNCHER;package=com.rigya.app;S.browser_fallback_url=${encodeURIComponent(apkDownloadUrl)};end;` 
+    : apkDownloadUrl;
 
   return (
     // 🟢 OUTER WRAPPER: Handles the rounded corners, overflow, and the 2px "border" padding
