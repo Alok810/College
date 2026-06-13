@@ -3,8 +3,8 @@ import { Capacitor } from '@capacitor/core';
 import rigyaLogo from '../assets/rigya.png';
 
 const AppPromoBanner = () => {
-  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
-  const apkDownloadUrl = `${backendUrl}/Rigya.apk`;
+  const backendUrl = "https://api.rigya.in"; // Replace with your actual live backend domain
+const apkDownloadUrl = `${backendUrl}/Rigya.apk`;
   
   // 1. Starts as TRUE every time the component loads (shows after every refresh!)
   const [showBanner, setShowBanner] = useState(true);
