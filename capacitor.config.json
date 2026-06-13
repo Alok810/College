@@ -15,7 +15,7 @@
       "forceCodeForRefreshToken": true
     },
     "SplashScreen": {
-      "launchShowDuration": 0,
+      "launchAutoHide": false,
       "backgroundColor": "#ffffff",
       "showSpinner": false,
       "androidSplashResourceName": "splash"
