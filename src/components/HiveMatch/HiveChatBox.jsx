@@ -1,8 +1,14 @@
-import React, { useRef } from "react";
+import React, { useRef, useEffect } from "react";
 import { MessageSquare, ShieldCheck, Send, Loader2, Sparkles } from "lucide-react";
 
-export default function HiveChatBox({ hive, chatInput, setChatInput, handleSend, setIsKeyboardOpen, mobileTab }) {
+export default function HiveChatBox({ hive, chatInput, setChatInput, handleSend, setIsKeyboardOpen, isKeyboardOpen, mobileTab }) {
     const inputRef = useRef(null);
+
+    useEffect(() => {
+        if (hive.chatScrollRef && hive.chatScrollRef.current) {
+            hive.chatScrollRef.current.scrollTop = hive.chatScrollRef.current.scrollHeight;
+        }
+    }, [hive.messages, hive.chatScrollRef]);
 
     const onFormSubmit = (e) => {
         e.preventDefault();
@@ -12,26 +18,26 @@ export default function HiveChatBox({ hive, chatInput, setChatInput, handleSend,
     };
 
     return (
-        <div className={`bg-white rounded-2xl shadow-sm border border-blue-100 flex-col overflow-hidden shrink-0 w-full lg:w-auto lg:flex-[3] min-h-0 ${mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'}`}>
+        <div className={`bg-white rounded-xl lg:rounded-2xl shadow-sm border border-blue-100 flex-col overflow-hidden flex-1 w-full lg:w-auto lg:flex-[3] min-h-0 ${mobileTab === 'chat' ? 'flex' : 'hidden lg:flex'}`}>
             
-            {/* 🟢 COLOR & THEMING PILLAR: Gradients properly isolated */}
+            {/* CHAT HEADER */}
             <div className="shrink-0 p-3 lg:p-5 border-b border-gray-50 z-10 bg-white">
                 {typeof hive.activeTopic === "object" ? (
-                    <div className="p-4 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl shadow-md relative overflow-hidden text-white border border-emerald-400/50">
-                        <div className="absolute -right-4 -top-4 text-white/10"><MessageSquare size={80} /></div>
-                        <h3 className="font-black text-[10px] uppercase tracking-widest mb-2 flex items-center gap-1.5 opacity-90 relative z-10">
+                    <div className="p-3 lg:p-4 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl lg:rounded-2xl shadow-md relative overflow-hidden text-white border border-emerald-400/50">
+                        <div className="absolute -right-4 -top-4 text-white/10"><MessageSquare size={60} className="lg:w-[80px]" /></div>
+                        <h3 className="font-black text-[9px] lg:text-[10px] uppercase tracking-widest mb-1 lg:mb-2 flex items-center gap-1.5 opacity-90 relative z-10">
                             <Sparkles size={12} /> Live Discussion Topic
                         </h3>
-                        <p className="text-[14px] font-bold leading-relaxed relative z-10 text-white drop-shadow-sm">
+                        <p className="text-[12px] lg:text-[14px] font-bold leading-snug lg:leading-relaxed relative z-10 text-white drop-shadow-sm">
                             "{hive.activeTopic.question}"
                         </p>
                     </div>
                 ) : (
-                    <div className="p-4 bg-gray-50 rounded-2xl border border-gray-100 text-left">
-                        <h3 className="text-gray-900 font-black text-sm mb-2 uppercase tracking-wide">WELCOME STUDENT.</h3>
-                        <div className="text-[12px] text-gray-600 space-y-1 font-medium">
+                    <div className="p-3 lg:p-4 bg-gray-50 rounded-xl lg:rounded-2xl border border-gray-100 text-left">
+                        <h3 className="text-gray-900 font-black text-xs lg:text-sm mb-1.5 lg:mb-2 uppercase tracking-wide">WELCOME STUDENT.</h3>
+                        <div className="text-[10px] lg:text-[12px] text-gray-600 space-y-1 font-medium">
                             <p className="text-rose-600 font-bold flex items-center gap-1.5 mb-1">
-                                <ShieldCheck size={14} /> Campus verified only
+                                <ShieldCheck size={12} className="lg:w-[14px]" /> Campus verified only
                             </p>
                             <p>• Keep it professional.</p>
                         </div>
@@ -39,13 +45,13 @@ export default function HiveChatBox({ hive, chatInput, setChatInput, handleSend,
                 )}
             </div>
 
-            {/* 🟢 SCROLLING PILLAR: flex-1 combined with min-h-0 stops layout breakage */}
+            {/* MESSAGES LIST */}
             <div ref={hive.chatScrollRef} className="flex-1 overflow-y-auto min-h-0 p-3 lg:p-4 space-y-3 lg:space-y-4 custom-scrollbar bg-slate-50/30">
                 {hive.messages.map((msg, i) => {
                     if (msg.system) {
                         return (
                             <div key={i} className="flex justify-center my-3 lg:my-4">
-                                <span className="bg-indigo-50 text-indigo-500 border border-indigo-100 font-bold text-[9px] lg:text-[10px] uppercase tracking-widest py-1.5 px-4 rounded-full text-center">
+                                <span className="bg-indigo-50 text-indigo-500 border border-indigo-100 font-bold text-[9px] lg:text-[10px] uppercase tracking-widest py-1.5 px-3 lg:px-4 rounded-full text-center">
                                     {msg.text}
                                 </span>
                             </div>
@@ -69,9 +75,10 @@ export default function HiveChatBox({ hive, chatInput, setChatInput, handleSend,
                 })}
             </div>
 
-            {/* 🟢 TOUCH TARGET PILLAR: Larger inputs (min-h-[48px]) and tall buttons (min-h-[44px]) */}
-            <div className="shrink-0 p-2 lg:p-3 bg-white border-t border-gray-100 flex flex-col gap-2 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)]">
-                <form onSubmit={onFormSubmit} className="flex items-stretch gap-2 pb-1 lg:pb-0">
+            {/* CONTROLS FOOTER */}
+            <div className={`shrink-0 p-2 lg:p-3 bg-white border-t border-gray-100 flex flex-col gap-2 z-10 shadow-[0_-4px_10px_rgba(0,0,0,0.02)] ${isKeyboardOpen ? 'rounded-b-xl lg:rounded-none' : ''}`}>
+                {/* 🟢 INPUT GAP FIX: Removed pb-1 entirely so the form sits perfectly on the edge */}
+                <form onSubmit={onFormSubmit} className="flex items-stretch gap-2">
                     <input
                         ref={inputRef}
                         type="text"
@@ -94,7 +101,7 @@ export default function HiveChatBox({ hive, chatInput, setChatInput, handleSend,
                     </button>
                 </form>
 
-                <div className="flex gap-2 min-h-[44px]">
+                <div className={`flex gap-2 min-h-[44px] transition-all duration-300 ${isKeyboardOpen ? 'hidden lg:flex' : ''}`}>
                     {hive.status === "connected" ? (
                         <button onClick={hive.skipMatch} className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold text-sm flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95">
                             Next Stranger

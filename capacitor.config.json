@@ -13,6 +13,12 @@
       "scopes": ["profile", "email"],
       "serverClientId": "762569744606-vjfc9pmmipo6naord6f3aqotscfobfti.apps.googleusercontent.com",
       "forceCodeForRefreshToken": true
+    },
+    "SplashScreen": {
+      "launchShowDuration": 0,
+      "backgroundColor": "#ffffff",
+      "showSpinner": false,
+      "androidSplashResourceName": "splash"
     }
   }
 }
