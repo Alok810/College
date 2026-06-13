@@ -432,7 +432,7 @@ export default function AuthPage() {
                   />
                 )}
                 
-                <p className="text-center text-sm text-gray-500 cursor-pointer hover:text-purple-600 mt-4 shrink-0 pb-1" onClick={() => { setIsSignUp(!isSignUp); resetForm(); }}>
+                <p className="text-center text-md:text-[14px] font-semibold text-purple-600 cursor-pointer hover:text-purple-800 transition-colors" onClick={() => { setIsSignUp(!isSignUp); resetForm(); }}>
                   {isSignUp ? "Already have an account? Login" : "Don’t have an account? Register"}
                 </p>
               </form>

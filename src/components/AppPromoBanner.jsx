@@ -3,50 +3,100 @@ import { Capacitor } from '@capacitor/core';
 import rigyaLogo from '../assets/rigya.png';
 
 const AppPromoBanner = () => {
-  const [showBanner, setShowBanner] = useState(false);
+  const backendUrl = import.meta.env.VITE_BACKEND_URL || "http://localhost:4000";
+  // 1. Starts as TRUE every time the component loads (shows after every refresh!)
+  const [showBanner, setShowBanner] = useState(true);
+  
+  // 2. Track if the user is on a mobile screen
+  const [isMobile, setIsMobile] = useState(window.innerWidth < 768);
+  
+  // 3. Track if they have previously clicked the "Install" button
+  const [hasInstalled, setHasInstalled] = useState(false);
 
   useEffect(() => {
-    const isWeb = !Capacitor.isNativePlatform();
-    // Re-add the !hasDismissed check if you removed it for testing!
-    const hasDismissed = localStorage.getItem('rigya_promo_dismissed');
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener("resize", handleResize);
 
-    if (isWeb && !hasDismissed) {
-      setShowBanner(true);
+    // Check browser memory to see if they clicked Install in the past
+    if (localStorage.getItem('rigya_app_installed') === 'true') {
+      setHasInstalled(true);
     }
+
+    return () => window.removeEventListener("resize", handleResize);
   }, []);
 
-  const handleDismiss = () => {
-    localStorage.setItem('rigya_promo_dismissed', 'true');
+  // NEVER show this banner if they are actively using the compiled Capacitor Native App
+  if (Capacitor.isNativePlatform()) return null;
+
+  // Hide if they clicked Skip during THIS specific browsing session
+  if (!showBanner) return null;
+
+  const handleSkip = () => {
+    // We only update React state. No local storage! 
+    // This guarantees it resets and comes back on the next page refresh.
     setShowBanner(false);
   };
 
-  if (!showBanner) return null;
+  const handleActionClick = () => {
+    // When they click Install, save that fact to their browser memory permanently
+    localStorage.setItem('rigya_app_installed', 'true');
+    setHasInstalled(true);
+  };
+
+  // 🟢 THE SMART LINK LOGIC
+  // If they are on mobile AND clicked install before, try to force-open the app via Android Intent.
+  // Otherwise, give them the direct download link to the APK.
+  const actionLink = (hasInstalled && isMobile)
+    ? "intent://#Intent;package=com.rigya.app;scheme=https;end;" 
+    : `${backendUrl}/Rigya.apk`;
 
   return (
-    <div className="w-full sm:w-[320px] bg-gradient-to-r from-indigo-50 to-purple-50 border border-indigo-100 rounded-lg p-2.5 flex items-center justify-between shadow-sm mx-auto">
-      <div className="flex items-center gap-2.5">
-        <img 
-          src={rigyaLogo} 
-          alt="Rigya" 
-          className="w-8 h-8 rounded-md drop-shadow-sm bg-white p-1" 
-        />
-        <div>
-          <p className="text-[13px] font-bold text-slate-800 leading-tight">Get the Rigya App</p>
-          <p className="text-[10px] text-slate-500 font-medium mt-0.5">Faster, smoother, native.</p>
-        </div>
-      </div>
+    // 🟢 OUTER WRAPPER: Handles the rounded corners, overflow, and the 2px "border" padding
+    <div className="relative w-full sm:w-[320px] mx-auto rounded-lg p-[2px] overflow-hidden shadow-md">
       
-      <div className="flex items-center">
-        <a
-          // 🟢 DIRECT DOWNLOAD LINK INJECTED HERE
-          href="https://drive.google.com/uc?export=download&id=14nrlaMlMmcYYb7c8YdBpCWqX5xD42LF_"
-          target="_blank"
-          rel="noopener noreferrer"
-          onClick={handleDismiss} 
-          className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-md transition-all shadow-md active:scale-95 whitespace-nowrap"
-        >
-          Install
-        </a>
+      {/* 🟢 THE TRAVELING COLOR BEAM: A spinning conic-gradient trailing fading purple */}
+      <div className="absolute top-1/2 left-1/2 aspect-square w-[200%] -translate-x-1/2 -translate-y-1/2 animate-[spin_3s_linear_infinite] bg-[conic-gradient(from_90deg_at_50%_50%,transparent_50%,#8b5cf6_100%)]"></div>
+
+      {/* 🟢 INNER CARD: Sits on top of the spinner, keeping your original background and styling */}
+      <div className="relative bg-gradient-to-r from-indigo-50 to-purple-50 rounded-[6px] p-2.5 flex items-center justify-between w-full h-full">
+        
+        <div className="flex items-center gap-2.5">
+          <img 
+            src={rigyaLogo} 
+            alt="Rigya" 
+            className="w-8 h-8 rounded-md drop-shadow-sm bg-white p-1 relative z-10" 
+          />
+          <div>
+            <p className="text-[13px] font-bold text-slate-800 leading-tight relative z-10">Get the Rigya App</p>
+            <p className="text-[10px] text-slate-500 font-medium mt-0.5 relative z-10">Faster, smoother, native.</p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-3">
+          
+          {/* 🟢 CONDITIONAL SKIP BUTTON: Only renders if the screen is mobile-sized */}
+          {isMobile && (
+            <button 
+              onClick={handleSkip} 
+              className="text-slate-400 hover:text-slate-600 text-[11px] font-semibold active:scale-95 transition-transform relative z-10"
+            >
+              Skip
+            </button>
+          )}
+
+          <a
+            href={actionLink}
+            // If it is an intent link, open in same tab to trigger Android system. Otherwise, new tab.
+            target={(hasInstalled && isMobile) ? "_self" : "_blank"} 
+            rel="noopener noreferrer"
+            onClick={handleActionClick} 
+            className="bg-indigo-600 hover:bg-indigo-700 text-white text-[11px] font-bold py-1.5 px-3 rounded-md transition-all shadow-md active:scale-95 whitespace-nowrap relative z-10"
+          >
+            {/* 🟢 CONDITIONAL TEXT: Shows "Open" if installed on mobile, otherwise "Install" */}
+            {(hasInstalled && isMobile) ? "Open" : "Install"}
+          </a>
+
+        </div>
       </div>
     </div>
   );

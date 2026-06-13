@@ -100,7 +100,7 @@ export default function LoginForm({
           name="email"
           type="email"
           value={formData.email}
-          placeholder="e.g., student@institute.edu"
+          placeholder="alok@gmail.com"
           onChange={handleChange}
           autoComplete="email"
           className="w-full px-3 py-3 md:py-2 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 shadow-sm text-sm sm:text-base md:text-sm"
@@ -115,7 +115,7 @@ export default function LoginForm({
             Password
           </label>
           <p 
-            className="text-xs md:text-[11px] font-semibold text-purple-600 cursor-pointer hover:text-purple-800 transition-colors" 
+            className="text-xs md:text-[14px] font-semibold text-purple-600 cursor-pointer hover:text-purple-800 transition-colors" 
             onClick={() => { setShowForgotPassword(true); resetForm(); }}
           >
             Forgot Password?

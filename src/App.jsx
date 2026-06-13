@@ -245,7 +245,6 @@ const AppContent = () => {
       }}
     >
       <AnnouncementBanner />
-      <AppPromoBanner />
 
       <div className="flex h-[100dvh] transition-all duration-300">
 
@@ -395,6 +394,13 @@ const AppContent = () => {
               />
             )}
           </>
+        )}
+        {/* 🟢 NEW: SAFELY ANCHORED PROMO BANNER */}
+        {/* We use isHomePage to ensure it ONLY shows on the Home feed */}
+        {isHomePage && (
+          <div className="fixed bottom-17 left-4 right-4 sm:left-auto sm:right-6 sm:bottom-6 lg:right-10 lg:bottom-10 z-[100] drop-shadow-2xl pointer-events-auto">
+            <AppPromoBanner />
+          </div>
         )}
       </div>
     </div>
