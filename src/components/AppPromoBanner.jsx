@@ -34,9 +34,9 @@ const AppPromoBanner = () => {
     setHasInstalled(true);
   };
 
-  // 🟢 Cleanest, most reliable Intent string for Android
+  // 🟢 THE SMART LINK LOGIC (Now using your Custom Scheme)
   const actionLink = (hasInstalled && isMobile)
-    ? `intent://#Intent;package=com.rigya.app;S.browser_fallback_url=${encodeURIComponent(apkDownloadUrl)};end;` 
+    ? `intent://app#Intent;scheme=rigya;package=com.rigya.app;S.browser_fallback_url=${encodeURIComponent(apkDownloadUrl)};end;` 
     : apkDownloadUrl;
 
   return (
