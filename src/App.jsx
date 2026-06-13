@@ -42,6 +42,7 @@ import MessageSidebar from "./components/Message";
 import NotificationSidebar from "./components/NotificationSidebar";
 import InstallPrompt from './components/InstallPrompt';
 import AnnouncementBanner from "./components/AnnouncementBanner";
+import AppPromoBanner from "./components/AppPromoBanner";
 import ResumeBuilder from './pages/ResumeBuilder';
 import { subscribeToOSNotifications } from './utils/pushNotifications'; // Ensure this path matches your folder structure
 
@@ -244,6 +245,7 @@ const AppContent = () => {
       }}
     >
       <AnnouncementBanner />
+      <AppPromoBanner />
 
       <div className="flex h-[100dvh] transition-all duration-300">
 

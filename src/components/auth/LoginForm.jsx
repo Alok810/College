@@ -2,13 +2,14 @@ import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
 import { subscribeToOSNotifications } from "../../utils/pushNotifications";
-import { useGoogleLogin } from "@react-oauth/google"; // 🟢 Changed import to the Hook
+import { useGoogleLogin } from "@react-oauth/google"; 
 import { api } from "../../api";
 import { Capacitor } from '@capacitor/core';
 import { GoogleAuth } from '@codetrix-studio/capacitor-google-auth'; 
 
 import EyeIcon from "../../assets/eye.png";
 import HiddenIcon from "../../assets/hidden.png";
+import AppPromoBanner from "../../components/AppPromoBanner";
 
 export default function LoginForm({
   formData,
@@ -35,7 +36,6 @@ export default function LoginForm({
     }
   }, [isNativeApp]);
 
-  // 📱 MOBILE LOGIC
   const handleNativeGoogleLogin = async () => {
     try {
       try {
@@ -45,7 +45,7 @@ export default function LoginForm({
       const googleUser = await GoogleAuth.signIn();
 
       const { data } = await api.post("/auth/google-login", { 
-        token: googleUser.authentication.idToken // Mobile sends an ID Token
+        token: googleUser.authentication.idToken 
       });
 
       if (data.success) {
@@ -64,12 +64,11 @@ export default function LoginForm({
     }
   };
 
-  // 💻 WEB LOGIC
   const handleWebGoogleLogin = useGoogleLogin({
     onSuccess: async (tokenResponse) => {
       try {
         const { data } = await api.post("/auth/google-login", { 
-          token: tokenResponse.access_token // Web sends an Access Token
+          token: tokenResponse.access_token 
         });
 
         if (data.success) {
@@ -90,11 +89,11 @@ export default function LoginForm({
   });
 
   return (
-    <div className="flex flex-col gap-4 sm:gap-5 mt-2 w-full max-w-md mx-auto px-2 sm:px-0">
+    <div className="flex flex-col gap-4 md:gap-3 w-full max-w-md mx-auto px-2 sm:px-0 mt-2 md:mt-0">
       
       {/* Email Field */}
       <div>
-        <label className="block text-sm font-semibold text-gray-700 mb-1.5 ml-1">
+        <label className="block text-[15px] md:text-sm font-semibold text-gray-700 mb-1.5 md:mb-1 ml-1">
           Email Address
         </label>
         <input
@@ -104,19 +103,19 @@ export default function LoginForm({
           placeholder="e.g., student@institute.edu"
           onChange={handleChange}
           autoComplete="email"
-          className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 shadow-sm text-sm sm:text-base"
+          className="w-full px-3 py-3 md:py-2 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 shadow-sm text-sm sm:text-base md:text-sm"
           required
         />
       </div>
 
       {/* Password Field */}
       <div>
-        <div className="flex justify-between items-center mb-1.5 ml-1">
-          <label className="block text-sm font-semibold text-gray-700">
+        <div className="flex justify-between items-center mb-1.5 md:mb-1 ml-1">
+          <label className="block text-[15px] md:text-sm font-semibold text-gray-700">
             Password
           </label>
           <p 
-            className="text-xs sm:text-sm font-semibold text-purple-600 cursor-pointer hover:text-purple-800 transition-colors" 
+            className="text-xs md:text-[11px] font-semibold text-purple-600 cursor-pointer hover:text-purple-800 transition-colors" 
             onClick={() => { setShowForgotPassword(true); resetForm(); }}
           >
             Forgot Password?
@@ -130,26 +129,26 @@ export default function LoginForm({
             placeholder="••••••••"
             onChange={handleChange}
             autoComplete="current-password"
-            className="w-full px-3 py-2 sm:px-4 sm:py-2.5 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 pr-10 sm:pr-12 text-sm sm:text-base"
+            className="w-full px-3 py-3 md:py-2 bg-gray-50/50 border border-gray-300 rounded-xl focus:ring-2 focus:ring-inset focus:ring-purple-500 focus:border-purple-500 transition-all outline-none text-gray-800 pr-10 text-sm sm:text-base md:text-sm"
             required
           />
           <div 
-            className="absolute right-2 sm:right-3 top-1/2 -translate-y-1/2 p-1.5 cursor-pointer hover:bg-gray-200 rounded-full transition-colors"
+            className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 cursor-pointer hover:bg-gray-200 rounded-full transition-colors"
             onClick={() => setShowPassword(!showPassword)}
           >
             <img
               src={showPassword ? HiddenIcon : EyeIcon}
               alt="toggle password visibility"
-              className="w-4 h-4 sm:w-5 sm:h-5 opacity-60"
+              className="w-5 h-5 md:w-4 md:h-4 opacity-60"
             />
           </div>
         </div>
       </div>
 
       {/* Security Captcha Box */}
-      <div className="bg-gradient-to-br from-purple-50 to-indigo-50/50 p-3 sm:p-3.5 rounded-xl border border-purple-100 shadow-sm w-full">
-        <label className="block text-xs sm:text-sm font-medium text-gray-700 mb-2 ml-1">
-          Security Check: Solve <span className="font-bold text-base sm:text-lg text-purple-700 ml-1 drop-shadow-sm">{mathQuestion.question}</span>
+      <div className="bg-gradient-to-br from-purple-50 to-indigo-50/50 p-3.5 md:p-2.5 rounded-xl border border-purple-100 shadow-sm w-full">
+        <label className="block text-sm md:text-xs font-medium text-gray-700 mb-2 md:mb-1.5 ml-1">
+          Security Check: Solve <span className="font-bold text-lg md:text-base text-purple-700 ml-1 drop-shadow-sm">{mathQuestion.question}</span>
         </label>
         <div className="flex gap-2">
           <input
@@ -157,13 +156,13 @@ export default function LoginForm({
             value={formData.captcha}
             placeholder="Enter answer"
             onChange={handleChange}
-            className="flex-1 px-3 py-2 sm:px-4 bg-white border border-purple-200 rounded-lg focus:ring-2 focus:ring-inset focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-800 font-medium shadow-inner text-sm sm:text-base"
+            className="flex-1 px-3 py-2 md:py-1.5 bg-white border border-purple-200 rounded-lg focus:ring-2 focus:ring-inset focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all text-gray-800 font-medium shadow-inner text-sm"
             required
           />
           <button
             type="button"
             onClick={generateNewCaptcha}
-            className="px-3 sm:px-4 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-sm font-bold text-base sm:text-lg flex items-center justify-center flex-shrink-0"
+            className="px-4 md:px-3 bg-white border border-indigo-200 text-indigo-600 rounded-lg hover:bg-indigo-50 hover:border-indigo-300 transition-colors shadow-sm font-bold text-lg md:text-base flex items-center justify-center flex-shrink-0"
             title="Get a new question"
           >
             ↻
@@ -174,28 +173,29 @@ export default function LoginForm({
       {/* Submit Button */}
       <button 
         type="submit" 
-        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-sm sm:text-[15px] py-2.5 sm:py-3 rounded-xl shadow-md hover:shadow-lg hover:from-purple-700 hover:to-indigo-700 active:scale-[0.98] transition-all mt-1 sm:mt-2"
+        className="w-full bg-gradient-to-r from-purple-600 to-indigo-600 text-white font-bold text-[15px] md:text-sm py-3 md:py-2 rounded-xl shadow-md hover:shadow-lg hover:from-purple-700 hover:to-indigo-700 active:scale-[0.98] transition-all"
       >
         SIGN IN
       </button>
 
       {/* Modern Divider */}
-      <div className="relative flex items-center mt-2 sm:mt-3 mb-1 sm:mb-2">
+      <div className="relative flex items-center my-3 md:my-1.5">
         <div className="flex-grow border-t border-gray-200"></div>
-        <span className="flex-shrink-0 mx-3 sm:mx-4 text-[10px] sm:text-xs font-semibold tracking-wider text-gray-400 uppercase">
+        <span className="flex-shrink-0 mx-4 md:mx-3 text-xs md:text-[10px] font-semibold tracking-wider text-gray-400 uppercase">
           or continue with
         </span>
         <div className="flex-grow border-t border-gray-200"></div>
       </div>
 
-      {/* 🟢 THE UNIFIED BUTTON */}
-      <div className="flex justify-center w-full mt-1 mb-1">
+      {/* 🟢 NEW: Grouped Google Button and App Promo Banner inside a stacked flex column */}
+      <div className="flex flex-col items-center gap-3 w-full">
         <button
           type="button"
-          // Smart switch triggers the correct function based on the platform!
           onClick={isNativeApp ? handleNativeGoogleLogin : handleWebGoogleLogin}
-          className="w-full sm:w-auto flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 active:bg-gray-100 active:translate-y-0 active:shadow-sm transition-all duration-200"
+          // 🟢 FIXED: Size increased back to py-2.5 and text-base. Added sm:w-[320px] to match banner.
+          className="w-full sm:w-[320px] flex items-center justify-center bg-white border border-gray-300 text-gray-700 font-medium py-2.5 px-6 rounded-lg shadow-sm hover:bg-gray-50 hover:shadow-md hover:-translate-y-0.5 active:bg-gray-100 active:translate-y-0 active:shadow-sm transition-all duration-200 text-base"
         >
+          {/* 🟢 FIXED: SVG size increased back to w-5 h-5 */}
           <svg className="w-5 h-5 mr-3" viewBox="0 0 24 24">
             <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
             <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
@@ -204,6 +204,8 @@ export default function LoginForm({
           </svg>
           Sign in with Google
         </button>
+
+        <AppPromoBanner />
       </div>
 
     </div>
