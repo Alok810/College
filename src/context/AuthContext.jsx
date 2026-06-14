@@ -4,7 +4,7 @@ import { getUserProfile, getInstituteByRegNumber } from '../api';
 import rigyaLogo from '../assets/rigya.png'; 
 import { App as CapacitorApp } from '@capacitor/app';
 import { Capacitor } from '@capacitor/core';
-import { SplashScreen } from '@capacitor/splash-screen'; // 🟢 ADDED: Import Splash Screen here!
+import { SplashScreen } from '@capacitor/splash-screen';
 
 const AuthContext = createContext(null);
 
@@ -54,7 +54,6 @@ export const AuthProvider = ({ children }) => {
       setInstituteData(null); 
       console.error("Auth check failed (Server error):", error.message);
     }
-    // Note: We removed finally { setLoading(false) } from here so we can control it better in the init block!
   };
 
   useEffect(() => {
@@ -113,7 +112,8 @@ export const AuthProvider = ({ children }) => {
       <div className="h-[100dvh] w-full flex items-center justify-center bg-indigo-950/90 fixed inset-0 z-[99999] px-6">
         <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl text-center">
             <div className="w-16 h-16 bg-indigo-50 rounded-2xl flex items-center justify-center mx-auto mb-4">
-                <span className="text-3xl">🚀</span>
+                {/* 🟢 CHANGED: Replaced Rocket with Rigya Logo */}
+                <img src={rigyaLogo} alt="Rigya" className="w-10 h-10 object-contain drop-shadow-sm" />
             </div>
             <h2 className="text-xl font-black text-slate-800 mb-2">Update Available!</h2>
             <p className="text-sm text-slate-600 mb-6 font-medium">
