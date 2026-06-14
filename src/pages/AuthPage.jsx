@@ -30,7 +30,7 @@ export default function AuthPage() {
     adminEmail: "", adminPhone: "", alternateContact: "",
   });
 
-  const [userType, setUserType] = useState("Teacher");
+  const [userType, setUserType] = useState("Student");
   const [showPassword, setShowPassword] = useState(false);
   const [mathQuestion, setMathQuestion] = useState(generateCaptcha());
   const [isSignUp, setIsSignUp] = useState(false);

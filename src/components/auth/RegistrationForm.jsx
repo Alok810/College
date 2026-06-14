@@ -77,28 +77,50 @@ export default function RegistrationForm({
           <option value="Other">Other</option>
         </motion.select>
         
-        {/* Institute OTP */}
+        {/* Institute OTP - UPDATED FOR MOBILE LAYOUT */}
         <motion.div layout>
-          <div className="flex flex-col sm:flex-row gap-2 relative">
-            <input name="instituteEmail" type="email" value={formData.instituteEmail} placeholder="Institute Email" onChange={handleChange} className={`${baseInputClass} ${isInstituteOtpVerified ? 'pr-20' : ''}`} required disabled={isInstituteOtpVerified || showInstituteOtpInput} />
-            
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input 
+                name="instituteEmail" 
+                type="email" 
+                value={formData.instituteEmail} 
+                placeholder="Institute Email" 
+                onChange={handleChange} 
+                className={`${baseInputClass} w-full ${isInstituteOtpVerified ? 'pr-20' : ''}`} 
+                required 
+                disabled={isInstituteOtpVerified || showInstituteOtpInput} 
+              />
+              <AnimatePresence mode="wait">
+                {isInstituteOtpVerified && (
+                  <motion.span key="verified-badge" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm font-bold bg-gray-50 px-1">
+                    ✓ Verified
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
+
             <AnimatePresence mode="wait">
               {!isInstituteOtpVerified && !showInstituteOtpInput && (
-                <motion.button key="send-btn" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }} type="button" onClick={() => handleSendOtp("institute", formData.instituteEmail)} className={`${btnBaseClass} bg-purple-600 hover:bg-purple-700 w-full sm:w-auto absolute right-0 top-0 bottom-0 sm:relative`}>
+                <motion.button 
+                  key="send-btn" 
+                  initial={{ opacity: 0, scale: 0.9 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.9 }} 
+                  transition={{ duration: 0.2 }} 
+                  type="button" 
+                  onClick={() => handleSendOtp("institute", formData.instituteEmail)} 
+                  className={`${btnBaseClass} bg-purple-600 hover:bg-purple-700 flex-shrink-0`}
+                >
                   Send OTP
                 </motion.button>
-              )}
-              {isInstituteOtpVerified && (
-                <motion.span key="verified-badge" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm font-bold bg-gray-50 px-1">
-                  ✓ Verified
-                </motion.span>
               )}
             </AnimatePresence>
           </div>
 
           <AnimatePresence>
             {showInstituteOtpInput && !isInstituteOtpVerified && (
-              <motion.div variants={expandVariant} initial="hidden" animate="visible" exit="exit" className="flex gap-2 w-full">
+              <motion.div variants={expandVariant} initial="hidden" animate="visible" exit="exit" className="flex gap-2 w-full mt-2">
                 <input name="instituteOtp" type="text" value={instituteOtp} onChange={(e) => setInstituteOtp(e.target.value)} placeholder="Enter OTP" className={getOtpInputClass(instituteOtpStatus)} required />
                 <button type="button" onClick={() => handleVerifyOtp("institute", instituteOtp)} className={`${btnBaseClass} bg-teal-500 hover:bg-teal-600 flex-shrink-0`}>Verify</button>
               </motion.div>
@@ -132,28 +154,50 @@ export default function RegistrationForm({
         </motion.select>
         <motion.input layout name="registrationNo" type="text" value={formData.registrationNo} placeholder="Admin ID" onChange={handleChange} className={baseInputClass} required />
         
-        {/* Admin OTP */}
+        {/* Admin OTP - UPDATED FOR MOBILE LAYOUT */}
         <motion.div layout>
-          <div className="flex flex-col sm:flex-row gap-2 relative">
-            <input name="adminEmail" type="email" value={formData.adminEmail} placeholder="Admin Email" onChange={handleChange} className={`${baseInputClass} ${isAdminOtpVerified ? 'pr-20' : ''}`} required disabled={isAdminOtpVerified || showAdminOtpInput} />
-            
+          <div className="flex gap-2">
+            <div className="relative flex-1">
+              <input 
+                name="adminEmail" 
+                type="email" 
+                value={formData.adminEmail} 
+                placeholder="Admin Email" 
+                onChange={handleChange} 
+                className={`${baseInputClass} w-full ${isAdminOtpVerified ? 'pr-20' : ''}`} 
+                required 
+                disabled={isAdminOtpVerified || showAdminOtpInput} 
+              />
+              <AnimatePresence mode="wait">
+                {isAdminOtpVerified && (
+                  <motion.span key="verified-badge" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm font-bold bg-gray-50 px-1">
+                    ✓ Verified
+                  </motion.span>
+                )}
+              </AnimatePresence>
+            </div>
+
             <AnimatePresence mode="wait">
               {!isAdminOtpVerified && !showAdminOtpInput && (
-                <motion.button key="send-btn" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }} type="button" onClick={() => handleSendOtp("admin", formData.adminEmail)} className={`${btnBaseClass} bg-purple-600 hover:bg-purple-700 w-full sm:w-auto absolute right-0 top-0 bottom-0 sm:relative`}>
+                <motion.button 
+                  key="send-btn" 
+                  initial={{ opacity: 0, scale: 0.9 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  exit={{ opacity: 0, scale: 0.9 }} 
+                  transition={{ duration: 0.2 }} 
+                  type="button" 
+                  onClick={() => handleSendOtp("admin", formData.adminEmail)} 
+                  className={`${btnBaseClass} bg-purple-600 hover:bg-purple-700 flex-shrink-0`}
+                >
                   Send OTP
                 </motion.button>
-              )}
-              {isAdminOtpVerified && (
-                <motion.span key="verified-badge" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm font-bold bg-gray-50 px-1">
-                  ✓ Verified
-                </motion.span>
               )}
             </AnimatePresence>
           </div>
 
           <AnimatePresence>
             {showAdminOtpInput && !isAdminOtpVerified && (
-              <motion.div variants={expandVariant} initial="hidden" animate="visible" exit="exit" className="flex gap-2 w-full">
+              <motion.div variants={expandVariant} initial="hidden" animate="visible" exit="exit" className="flex gap-2 w-full mt-2">
                 <input name="adminOtp" type="text" value={adminOtp} onChange={(e) => setAdminOtp(e.target.value)} placeholder="Enter OTP" className={getOtpInputClass(adminOtpStatus)} required />
                 <button type="button" onClick={() => handleVerifyOtp("admin", adminOtp)} className={`${btnBaseClass} bg-teal-500 hover:bg-teal-600 flex-shrink-0`}>Verify</button>
               </motion.div>
@@ -204,9 +248,9 @@ export default function RegistrationForm({
           <motion.input layout name="registrationNo" type="text" value={formData.registrationNo} placeholder="Registration (e.g., 220536...)" onChange={handleChange} className={baseInputClass} required />
           <motion.div layout>{renderSearchBox()}</motion.div>
           
-          {/* 🟢 FIXED: Wrapped BOTH dropdowns in w-full sm:flex-1 to force a perfect 50/50 split */}
-          <motion.div layout className="flex flex-col sm:flex-row gap-4 sm:gap-3">
-            <div className="w-full sm:flex-1">
+          {/* 🟢 FIXED: Removed flex-col so they stay side-by-side on mobile too */}
+          <motion.div layout className="flex gap-3">
+            <div className="flex-1">
               <select name="batch" value={formData.batch || ""} onChange={handleChange} className={baseInputClass} required>
                 <option value="" disabled>Select Batch</option>
                 <option value="2026-2030">2026-2030</option>
@@ -218,7 +262,7 @@ export default function RegistrationForm({
               </select>
             </div>
             
-            <div className="w-full sm:flex-1 relative">
+            <div className="flex-1 relative">
               <select name="branch" value={formData.branch || ""} onChange={handleChange} className={`${baseInputClass} ${fetchingBranches ? 'opacity-50' : ''}`} required disabled={fetchingBranches || availableBranches.length === 0}>
                 <option value="" disabled>{availableBranches.length > 0 ? "Select Branch" : "No branches found"}</option>
                 {availableBranches.map(dept => <option key={dept._id} value={dept.abbreviation}>{dept.name} ({dept.abbreviation})</option>)}
@@ -273,30 +317,73 @@ export default function RegistrationForm({
         </>
       )}
 
-      {/* Standard User OTP Section */}
+      {/* Standard User OTP Section - UPDATED FOR MOBILE LAYOUT */}
       <motion.div layout>
-        <div className="flex flex-col sm:flex-row gap-2 relative">
-          <input name="email" type="email" value={formData.email} placeholder="Enter Email" onChange={handleChange} className={`${baseInputClass} ${isOtpVerified ? 'pr-20' : ''}`} required disabled={isOtpVerified || showOtpInput} />
+        <div className="flex gap-2">
           
+          <div className="relative flex-1">
+            <input 
+              name="email" 
+              type="email" 
+              value={formData.email} 
+              placeholder="Enter Email" 
+              onChange={handleChange} 
+              className={`${baseInputClass} w-full ${isOtpVerified ? 'pr-20' : ''}`} 
+              required 
+              disabled={isOtpVerified || showOtpInput} 
+            />
+            
+            <AnimatePresence>
+              {isOtpVerified && (
+                <motion.span 
+                  key="verified-badge" 
+                  initial={{ opacity: 0, scale: 0.5 }} 
+                  animate={{ opacity: 1, scale: 1 }} 
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm font-bold bg-gray-50 px-1"
+                >
+                  ✓ Verified
+                </motion.span>
+              )}
+            </AnimatePresence>
+          </div>
+
           <AnimatePresence mode="wait">
             {!isOtpVerified && !showOtpInput && (
-              <motion.button key="send-btn" initial={{ opacity: 0, scale: 0.9 }} animate={{ opacity: 1, scale: 1 }} exit={{ opacity: 0, scale: 0.9 }} transition={{ duration: 0.2 }} type="button" onClick={() => handleSendOtp("user", formData.email)} className={`${btnBaseClass} bg-purple-600 hover:bg-purple-700 w-full sm:w-auto absolute right-0 top-0 bottom-0 sm:relative`}>
+              <motion.button 
+                key="send-btn" 
+                initial={{ opacity: 0, scale: 0.9 }} 
+                animate={{ opacity: 1, scale: 1 }} 
+                exit={{ opacity: 0, scale: 0.9 }} 
+                transition={{ duration: 0.2 }} 
+                type="button" 
+                onClick={() => handleSendOtp("user", formData.email)} 
+                className={`${btnBaseClass} bg-purple-600 hover:bg-purple-700 flex-shrink-0`}
+              >
                 Send OTP
               </motion.button>
-            )}
-            {isOtpVerified && (
-              <motion.span key="verified-badge" initial={{ opacity: 0, scale: 0.5 }} animate={{ opacity: 1, scale: 1 }} className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 text-sm font-bold bg-gray-50 px-1">
-                ✓ Verified
-              </motion.span>
             )}
           </AnimatePresence>
         </div>
 
         <AnimatePresence>
           {showOtpInput && !isOtpVerified && (
-            <motion.div variants={expandVariant} initial="hidden" animate="visible" exit="exit" className="flex gap-2 w-full">
-              <input name="otp" type="text" value={otp} onChange={(e) => setOtp(e.target.value)} placeholder="Enter OTP" className={getOtpInputClass(otpStatus)} required />
-              <button type="button" onClick={() => handleVerifyOtp("user", otp)} className={`${btnBaseClass} bg-teal-500 hover:bg-teal-600 flex-shrink-0`}>Verify</button>
+            <motion.div variants={expandVariant} initial="hidden" animate="visible" exit="exit" className="flex gap-2 w-full mt-2">
+              <input 
+                name="otp" 
+                type="text" 
+                value={otp} 
+                onChange={(e) => setOtp(e.target.value)} 
+                placeholder="Enter OTP" 
+                className={getOtpInputClass(otpStatus)} 
+                required 
+              />
+              <button 
+                type="button" 
+                onClick={() => handleVerifyOtp("user", otp)} 
+                className={`${btnBaseClass} bg-teal-500 hover:bg-teal-600 flex-shrink-0`}
+              >
+                Verify
+              </button>
             </motion.div>
           )}
         </AnimatePresence>
