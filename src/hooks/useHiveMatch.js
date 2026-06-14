@@ -91,9 +91,16 @@ export const useHiveMatch = (userData) => {
         if (socket) socket.emit("find-match", userData);
     };
 
+    // 🟢 UPDATED: Makes sure we notify the stranger if we leave mid-call
     const stopSearch = () => {
         setStatus("idle");
-        if (socket) socket.emit("cancel-match");
+        if (socket) {
+            if (status === "connected" && roomCode) {
+                socket.emit("end-call", { to: roomCode });
+            } else {
+                socket.emit("cancel-match");
+            }
+        }
         cleanupMedia();
     };
 
@@ -392,6 +399,39 @@ export const useHiveMatch = (userData) => {
     useEffect(() => {
         if (chatScrollRef.current) chatScrollRef.current.scrollTop = chatScrollRef.current.scrollHeight;
     }, [messages]);
+
+    // 🟢 NEW: Handles unmounting (navigating away) and mobile app backgrounding
+    useEffect(() => {
+        const handleVisibilityChange = () => {
+            if (document.hidden) {
+                // User minimized browser or went to phone home screen
+                stopSearch();
+            }
+        };
+
+        // Listen for mobile browser backgrounding
+        document.addEventListener("visibilitychange", handleVisibilityChange);
+
+        // Cleanup function runs when React unmounts the component (navigating away)
+        return () => {
+            document.removeEventListener("visibilitychange", handleVisibilityChange);
+            
+            // Hard kill the hardware tracks instantly on unmount
+            if (streamRef.current) {
+                streamRef.current.getTracks().forEach(track => track.stop());
+            }
+            
+            // Notify partner/server that we left
+            if (socket) {
+                if (status === "connected" && roomCode) {
+                    socket.emit("end-call", { to: roomCode });
+                } else if (status === "searching") {
+                    socket.emit("cancel-match");
+                }
+            }
+        };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [socket, status, roomCode]); 
 
     return {
         status, partnerInfo, messages, myVideoRef, partnerVideoRef, chatScrollRef, isPeerConnected,
